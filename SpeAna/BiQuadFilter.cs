@@ -4,14 +4,10 @@ class BiQuadFilter {
 	private double mInput2 = 0.0;
 	private double mInput3 = 0.0;
 	private double mInput4 = 0.0;
-	private double mInput5 = 0.0;
-	private double mInput6 = 0.0;
 	private double mOutput1 = 0.0;
 	private double mOutput2 = 0.0;
 	private double mOutput3 = 0.0;
 	private double mOutput4 = 0.0;
-	private double mOutput5 = 0.0;
-	private double mOutput6 = 0.0;
 	private double mA1 = 0.0;
 	private double mA2 = 0.0;
 	private double mB0 = 0.0;
@@ -128,17 +124,5 @@ class BiQuadFilter {
 		mInput3 = input;
 		mOutput4 = mOutput3;
 		mOutput3 = Output;
-
-		input = Output;
-		Output
-			= mB0 * input
-			+ mB1 * mInput5
-			+ mB2 * mInput6
-			- mA1 * mOutput5
-			- mA2 * mOutput6;
-		mInput6 = mInput5;
-		mInput5 = input;
-		mOutput6 = mOutput5;
-		mOutput5 = Output;
 	}
 }

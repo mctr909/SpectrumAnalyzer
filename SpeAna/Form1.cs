@@ -1,11 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace SpeAna {
@@ -19,7 +13,7 @@ namespace SpeAna {
 
         private void Form1_Load(object sender, EventArgs e) {
             mGraph = new DoubleBufferGraphic(pictureBox1, null);
-            mWaveIn = new SpeAna(24, 44100, 30);
+            mWaveIn = new SpeAna(60, 44100, 32.7);
 
             var list = WinMM.WaveIn.GetList();
             comboBox1.Items.Clear();
@@ -32,6 +26,14 @@ namespace SpeAna {
             timer1.Start();
         }
 
+        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
+            var deviceNum = 0xFFFFFFFF;
+            if (0 < comboBox1.SelectedIndex) {
+                deviceNum = (uint)comboBox1.SelectedIndex - 1;
+            }
+            mWaveIn.Open(deviceNum);
+        }
+
         private void timer1_Tick(object sender, EventArgs e) {
             var graph = mGraph.Graphics;
             var width = pictureBox1.Width;
@@ -41,31 +43,23 @@ namespace SpeAna {
             var divX = (float)width / mWaveIn.Amp.Length;
             var divY = (float)height / divLevel;
 
-            var black = new Pen(Color.FromArgb(0, 32, 0), 1.0f).Brush;
-            var green = new Pen(Color.FromArgb(0, 192, 0), 1.0f).Brush;
+            var black = new Pen(Color.FromArgb(11, 31, 31), 1.0f).Brush;
+            var green = new Pen(Color.FromArgb(127, 211, 211), 1.0f).Brush;
 
             for (int x = 0; x < mWaveIn.Amp.Length; x++) {
                 var px = x * divX;
-                var db = divLevel + (int)Math.Max(-divLevel, mWaveIn.Amp[x] * 3 / 5 + 15);
+                var db = divLevel + (int)Math.Max(-divLevel, mWaveIn.Amp[x] * 0.5 + 9);
                 for (int y = 0; y < db; y++) {
                     var py = height - y * divY;
-                    graph.FillRectangle(green, px, py, divX - 2, divY - 2);
+                    graph.FillRectangle(green, px, py, divX - 2, divY - 3);
                 }
-                for (int y = db; y <= 30; y++) {
+                for (int y = db; y <= divLevel; y++) {
                     var py = height - y * divY;
-                    graph.FillRectangle(black, px, py, divX - 2, divY - 2);
+                    graph.FillRectangle(black, px, py, divX - 2, divY - 3);
                 }
             }
 
             mGraph.Render();
-        }
-
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
-            if (comboBox1.SelectedIndex == 0) {
-                mWaveIn.Open(0xFFFFFFFF);
-            } else {
-                mWaveIn.Open((uint)comboBox1.SelectedIndex - 1);
-            }
         }
     }
 }

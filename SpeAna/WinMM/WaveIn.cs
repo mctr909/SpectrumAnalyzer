@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace WinMM {
     class WaveIn : IDisposable {
@@ -97,8 +96,6 @@ namespace WinMM {
                 Close();
             }
 
-            mIsRec = true;
-
             mWaveFormatEx = new WAVEFORMATEX() {
                 wFormatTag = 1,
                 nChannels = (ushort)Channels,
@@ -139,6 +136,7 @@ namespace WinMM {
                 Unprepare();
                 return;
             }
+            mIsRec = true;
         }
 
         public void Close() {
