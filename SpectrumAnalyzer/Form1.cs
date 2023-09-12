@@ -2,9 +2,9 @@
 using System.Drawing;
 using System.Windows.Forms;
 
-namespace SpeAna {
+namespace SpectrumAnalyzer {
     public partial class Form1 : Form {
-        private SpeAna mWaveIn;
+        private SpectrumAnalyzer mWaveIn;
         private DoubleBufferGraphic mGraph;
 
         public Form1() {
@@ -13,7 +13,7 @@ namespace SpeAna {
 
         private void Form1_Load(object sender, EventArgs e) {
             mGraph = new DoubleBufferGraphic(pictureBox1, null);
-            mWaveIn = new SpeAna(60, 44100, 32.7);
+            mWaveIn = new SpectrumAnalyzer(32, 44100, 20);
 
             var list = WinMM.WaveIn.GetList();
             comboBox1.Items.Clear();

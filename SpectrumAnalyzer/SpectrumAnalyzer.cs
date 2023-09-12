@@ -1,11 +1,11 @@
 ﻿using System;
 
-namespace SpeAna {
-    class SpeAna : WinMM.WaveIn {
+namespace SpectrumAnalyzer {
+    class SpectrumAnalyzer : WinMM.WaveIn {
         public double[] Amp { get; private set; }
         private readonly BiQuadFilter[] mFilter;
 
-        public SpeAna(int banks, int sampleRate, double baseFreq)
+        public SpectrumAnalyzer(int banks, int sampleRate, double baseFreq)
             : base(sampleRate, 1, 736, 2) {
             Amp = new double[banks];
             mFilter = new BiQuadFilter[banks];
