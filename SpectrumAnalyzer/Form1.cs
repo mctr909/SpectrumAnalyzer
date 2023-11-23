@@ -1,65 +1,394 @@
 ﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
+using System.IO;
+using System.Drawing.Imaging;
+using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
-    public partial class Form1 : Form {
-        private SpectrumAnalyzer mWaveIn;
-        private DoubleBufferGraphic mGraph;
+	public partial class Form1 : Form {
+		const int RANGE_DB = -30;
+		const int NOTE_COUNT = 120;
+		const int KEYBOARD_HEIGHT = 34;
+		const int SCROLL_SPEED = 2;
 
-        public Form1() {
-            InitializeComponent();
-        }
+		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, (3 - 1/3.0) / 12.0);
 
-        private void Form1_Load(object sender, EventArgs e) {
-            mGraph = new DoubleBufferGraphic(pictureBox1, null);
-            mWaveIn = new SpectrumAnalyzer(32, 44100, 20);
+		readonly Font FONT = new Font("Meiryo UI", 8.0f);
+		readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
+		readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
+		readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
+		readonly Pen BAR = new Pen(Color.FromArgb(0, 95, 0), 1.0f);
+		readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
+		readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
+		readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
 
-            var list = WinMM.WaveIn.GetList();
-            comboBox1.Items.Clear();
-            foreach(var str in list) {
-                comboBox1.Items.Add(str.Item1);
-            }
-            comboBox1.SelectedIndex = 0;
+		WavePlayback mWaveOut;
+		byte[] mPix;
+		bool mIsScrol;
+		bool mSetLayout = true;
 
-            timer1.Interval = 10;
-            timer1.Start();
-        }
+		public Form1() {
+			InitializeComponent();
+			mWaveOut = new WavePlayback(NOTE_COUNT, BASE_FREQ);
+		}
 
-        private void comboBox1_SelectedIndexChanged(object sender, EventArgs e) {
-            var deviceNum = 0xFFFFFFFF;
-            if (0 < comboBox1.SelectedIndex) {
-                deviceNum = (uint)comboBox1.SelectedIndex - 1;
-            }
-            mWaveIn.Open(deviceNum);
-        }
+		private void Form1_Load(object sender, EventArgs e) {
+			timer1.Interval = 1;
+			timer1.Enabled = true;
+			timer1.Start();
+		}
 
-        private void timer1_Tick(object sender, EventArgs e) {
-            var graph = mGraph.Graphics;
-            var width = pictureBox1.Width;
-            var height = pictureBox1.Height;
+		private void button1_Click(object sender, EventArgs e) {
+			mWaveOut.IsPlay = false;
+			mWaveOut.Position = 0;
+			button2.Text = "再生";
 
-            var divLevel = 24;
-            var divX = (float)width / mWaveIn.Amp.Length;
-            var divY = (float)height / divLevel;
+			openFileDialog1.FileName = "";
+			openFileDialog1.Filter = "PCMファイル(*.wav)|*.wav";
+			openFileDialog1.ShowDialog();
+			var filePath = openFileDialog1.FileName;
+			if (!File.Exists(filePath)) {
+				return;
+			}
+			mWaveOut.SetValue(filePath);
+			TrkSeek.Minimum = 0;
+			TrkSeek.Maximum = mWaveOut.Size / mWaveOut.SampleRate;
+			TrkSeek.Value = 0;
+		}
 
-            var black = new Pen(Color.FromArgb(11, 31, 31), 1.0f).Brush;
-            var green = new Pen(Color.FromArgb(127, 211, 211), 1.0f).Brush;
+		private void button2_Click(object sender, EventArgs e) {
+			if ("再生" == button2.Text) {
+				mWaveOut.IsPlay = true;
+				button2.Text = "停止";
+			} else {
+				mWaveOut.IsPlay = false;
+				button2.Text = "再生";
+			}
+		}
 
-            for (int x = 0; x < mWaveIn.Amp.Length; x++) {
-                var px = x * divX;
-                var db = divLevel + (int)Math.Max(-divLevel, mWaveIn.Amp[x] * 0.5 + 9);
-                for (int y = 0; y < db; y++) {
-                    var py = height - y * divY;
-                    graph.FillRectangle(green, px, py, divX - 2, divY - 3);
-                }
-                for (int y = db; y <= divLevel; y++) {
-                    var py = height - y * divY;
-                    graph.FillRectangle(black, px, py, divX - 2, divY - 3);
-                }
-            }
+		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
+			mIsScrol = true;
+		}
 
-            mGraph.Render();
-        }
-    }
+		private void TrkSeek_MouseUp(object sender, EventArgs e) {
+			mWaveOut.Position = TrkSeek.Value * mWaveOut.SampleRate;
+			mIsScrol = false;
+		}
+
+		private void TrkKey_Scroll(object sender, EventArgs e) {
+			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
+			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+		}
+
+		private void TrkSpeed_Scroll(object sender, EventArgs e) {
+			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
+			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+		}
+
+		private void timer1_Tick(object sender, EventArgs e) {
+			if (!mIsScrol) {
+				var temp = mWaveOut.Position / mWaveOut.SampleRate;
+				if (temp <= TrkSeek.Maximum) {
+					TrkSeek.Value = temp;
+				}
+			}
+			if (mSetLayout) {
+				SetLayout();
+			}
+			var g = Graphics.FromImage(pictureBox1.Image);
+			g.Clear(Color.Transparent);
+			var width = pictureBox1.Width;
+			var gaugeHeight = pictureBox1.Height / 3;
+			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
+			DrawBar(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
+			DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
+			DrawScrollBar(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
+			pictureBox1.Image = pictureBox1.Image;
+			g.Dispose();
+			mSetLayout = false;
+		}
+
+		private void Form1_Resize(object sender, EventArgs e) {
+			mSetLayout = true;
+		}
+
+		void SetLayout() {
+			TrkSeek.Top = 0;
+			TrkSeek.Width = Width - TrkSeek.Left - 16;
+			TrkKey.Top = TrkSeek.Bottom;
+			TrkKey.Width = TrkSeek.Width / 2;
+			TrkSpeed.Top = TrkKey.Top;
+			TrkSpeed.Left = TrkKey.Right;
+			TrkSpeed.Width = TrkSeek.Width / 2;
+			pictureBox1.Top = TrkKey.Bottom;
+			pictureBox1.Left = 0;
+			pictureBox1.Width = Width - 16;
+			pictureBox1.Height = Height - TrkKey.Bottom - 39;
+			if (null != pictureBox1.Image) {
+				pictureBox1.Image.Dispose();
+				pictureBox1.Image = null;
+			}
+			pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
+			mPix = new byte[4 * pictureBox1.Width * pictureBox1.Height];
+			DrawBackground();
+		}
+
+		void DrawBackground() {
+			if (null != pictureBox1.BackgroundImage) {
+				pictureBox1.BackgroundImage.Dispose();
+				pictureBox1.BackgroundImage = null;
+			}
+			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
+			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
+			g.Clear(Color.Black);
+			var gaugeHeight = pictureBox1.Height / 3;
+			DrawKeyboard(g, pictureBox1.Width, gaugeHeight);
+			DrawGauge(g, pictureBox1.Width, gaugeHeight);
+			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
+			g.Dispose();
+		}
+
+		void DrawKeyboard(Graphics g, int width, int top) {
+			var barHeight = pictureBox1.Height;
+			var barBottom = barHeight - 1;
+			for (int note = 0; note < NOTE_COUNT; note++) {
+				var px = width * (note + 0.0f) / NOTE_COUNT;
+				var barWidth = width * (note + 1.0f) / NOTE_COUNT - px + 1;
+				switch (note % 12) {
+				case 0:
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, barHeight);
+					g.DrawLine(KEYBOARD_BORDER, px, 0, px, barBottom);
+					break;
+				case 2:
+				case 4:
+				case 7:
+				case 9:
+				case 11:
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, barHeight);
+					break;
+				case 5:
+					g.DrawLine(BLACK_KEY, px, 0, px, barBottom);
+					break;
+				default:
+					g.FillRectangle(BLACK_KEY.Brush, px, 0, barWidth, barHeight);
+					break;
+				}
+			}
+			var right = width - 1;
+			var keyboardBottom = top + KEYBOARD_HEIGHT - 1;
+			var textBottom = keyboardBottom + 1;
+			var textHeight = g.MeasureString("9", FONT).Height;
+			var textOfsX = textHeight * 0.5f;
+			var textArea = new RectangleF(0f, 0f, KEYBOARD_HEIGHT, textHeight);
+			var stringFormat = new StringFormat() {
+				Alignment = StringAlignment.Far,
+				LineAlignment = StringAlignment.Center
+			};
+			for (int note = 9; note < NOTE_COUNT; note += 12) {
+				var px = width * (note + 0.5f) / NOTE_COUNT - textOfsX;
+				g.TranslateTransform(px, textBottom);
+				g.RotateTransform(-90);
+				g.DrawString(
+					ToString(BASE_FREQ * Math.Pow(2.0, (note+1/3.0) / 12.0)),
+					FONT, Brushes.Gray, textArea, stringFormat
+				);
+				g.RotateTransform(90);
+				g.TranslateTransform(-px, -textBottom);
+			}
+			g.DrawLine(KEYBOARD_BORDER, 0, keyboardBottom, right, keyboardBottom);
+		}
+
+		void DrawGauge(Graphics g, int width, int height) {
+			var right = width - 1;
+			for (double db = 0; RANGE_DB <= db; db -= 1.0) {
+				var py = DbToY(db, height, 0);
+				if (db % 10 == 0) {
+					g.DrawLine(GRID_MAJOR, 0, py, right, py);
+				} else if (height >= -RANGE_DB && db % 5 == 0) {
+					g.DrawLine(GRID_MINOR1, 0, py, right, py);
+				} else if (height >= -4 * RANGE_DB) {
+					g.DrawLine(GRID_MINOR2, 0, py, right, py);
+				}
+			}
+			var textSize = g.MeasureString("9", FONT);
+			var textArea = new RectangleF(0f, 0f, 24, textSize.Height);
+			var textBottom = height - textArea.Height + 4;
+			var stringFormat = new StringFormat() {
+				Alignment = StringAlignment.Near
+			};
+			for (double db = 0; RANGE_DB < db; db -= 10.0) {
+				var py = DbToY(db, height, 0) - 2;
+				if (py < textBottom) {
+					g.TranslateTransform(0, py);
+					g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+					g.TranslateTransform(0, -py);
+				} else {
+					g.TranslateTransform(0, textBottom);
+					g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+					g.TranslateTransform(0, -textBottom);
+				}
+			}
+		}
+
+		void DrawBar(Graphics g, double[] arr, int width, int height) {
+			var count = arr.Length;
+			for (int i = 0; i < count; i++) {
+				var barX = width * (i + 0.0f) / count;
+				var barWidth = width * (i + 1.0f) / count - barX;
+				var barY = AmpToY(arr[i], height, 0);
+				var barHeight = height - barY;
+				g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
+			}
+		}
+
+		void DrawSlope(Graphics g, double[] arr, int width, int height, Pen color) {
+			var idxA = 0;
+			var preX = 0;
+			var preY = AmpToY(arr[idxA], height, 0);
+			for (int x = 0; x < width; x++) {
+				var idxB = arr.Length * x / width;
+				int y;
+				if (1 < idxB - idxA) {
+					y = AmpToY(arr[idxA], height, 0);
+					g.DrawLine(color, preX, preY, x, y);
+					var max = double.MinValue;
+					var min = double.MaxValue;
+					for (var i = idxA; i <= idxB; i++) {
+						var v = arr[i];
+						min = Math.Min(min, v);
+						max = Math.Max(max, v);
+					}
+					var minY = AmpToY(min, height, 0);
+					var maxY = AmpToY(max, height, 0);
+					g.DrawLine(color, x, minY, x, maxY);
+					y = AmpToY(arr[idxB], height, 0);
+				} else {
+					y = AmpToY(arr[idxB], height, 0);
+					g.DrawLine(color, preX, preY, x, y);
+				}
+				preX = x;
+				preY = y;
+				idxA = idxB;
+			}
+		}
+
+		void DrawScrollBar(double[] arr, int top, int height) {
+			var bmp = (Bitmap)pictureBox1.Image;
+			var data = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
+			var offsetY0 = data.Stride * top;
+			var idxA = 0;
+			for (int x = 0, pos = offsetY0; x < bmp.Width; x++, pos += 4) {
+				var idxB = arr.Length * x / bmp.Width;
+				if (1 < idxB - idxA) {
+					var max = double.MinValue;
+					for (var i = idxA; i <= idxB; i++) {
+						var v = arr[i];
+						max = Math.Max(max, v);
+					}
+					SetHue(mPix, pos, max);
+				} else {
+					SetHue(mPix, pos, arr[idxB]);
+				}
+				idxA = idxB;
+			}
+			for (int y = 1; y < KEYBOARD_HEIGHT; y++) {
+				Array.Copy(
+					mPix, offsetY0,
+					mPix, offsetY0 + data.Stride * y,
+					data.Stride
+				);
+			}
+			var offsetY1 = data.Stride * (top + KEYBOARD_HEIGHT);
+			Array.Copy(
+				mPix, offsetY1,
+				mPix, offsetY1 + data.Stride * SCROLL_SPEED,
+				data.Stride * (height - SCROLL_SPEED)
+			);
+			Array.Copy(
+				mPix, offsetY0,
+				mPix, offsetY1,
+				data.Stride * SCROLL_SPEED
+			);
+			Marshal.Copy(
+				mPix, offsetY0,
+				data.Scan0 + offsetY0,
+				data.Stride * (KEYBOARD_HEIGHT + height)
+			);
+			bmp.UnlockBits(data);
+		}
+
+		string ToString(double value) {
+			if (10000 <= value) {
+				return (value / 1000).ToString("#.#k");
+			} else if (1000 <= value) {
+				return (value / 1000).ToString("#.##k");
+			} else {
+				return value.ToString("#.#");
+			}
+		}
+
+		int DbToY(double db, int height, int offset) {
+			if (db < RANGE_DB) {
+				db = RANGE_DB;
+			}
+			return (int)(offset + db * height / RANGE_DB);
+		}
+
+		int AmpToY(double amp, int height, int offset) {
+			if (amp < 1 / 32768.0) {
+				amp = 1 / 32768.0;
+			}
+			var db = 20 * Math.Log10(amp);
+			if (db < RANGE_DB) {
+				db = RANGE_DB;
+			}
+			return (int)(offset + db * height / RANGE_DB);
+		}
+
+		void SetHue(byte[] pix, int pos, double amp) {
+			if (amp < 1 / 32768.0) {
+				amp = 1 / 32768.0;
+			}
+			var db = 20 * Math.Log10(amp);
+			if (db < RANGE_DB) {
+				pix[pos + 0] = 0;
+				pix[pos + 1] = 0;
+				pix[pos + 2] = 0;
+				pix[pos + 3] = 0;
+				return;
+			}
+			var g = (int)((1.0 - db / RANGE_DB) * 1279);
+			if (g < 256) {
+				pix[pos + 0] = 255;
+				pix[pos + 1] = 0;
+				pix[pos + 2] = 0;
+				pix[pos + 3] = (byte)g;
+			} else if (g < 512) {
+				g -= 256;
+				pix[pos + 0] = 255;
+				pix[pos + 1] = (byte)g;
+				pix[pos + 2] = 0;
+				pix[pos + 3] = 191;
+			} else if (g < 768) {
+				g -= 512;
+				pix[pos + 0] = (byte)(255 - g);
+				pix[pos + 1] = 255;
+				pix[pos + 2] = 0;
+				pix[pos + 3] = 191;
+			} else if (g < 1024) {
+				g -= 768;
+				pix[pos + 0] = 0;
+				pix[pos + 1] = 255;
+				pix[pos + 2] = (byte)g;
+				pix[pos + 3] = 167;
+			} else {
+				g -= 1024;
+				pix[pos + 0] = 0;
+				pix[pos + 1] = (byte)(255 - g);
+				pix[pos + 2] = 255;
+				pix[pos + 3] = 191;
+			}
+		}
+	}
 }
