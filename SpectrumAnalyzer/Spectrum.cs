@@ -21,7 +21,7 @@ public class Spectrum {
 
 	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
-	const int AVG_WIDTH_WIDE = TONE_DIV * 4;
+	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
 	const int AVG_WIDTH_NARROW = TONE_DIV * 2;
 
 	readonly double FREQ_TO_OMEGA;
@@ -37,6 +37,7 @@ public class Spectrum {
 	public double[] Slope { get; private set; }
 	public double[] Peak { get; private set; }
 	public double[] Spec { get; private set; }
+	public double[] Average { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
@@ -50,6 +51,7 @@ public class Spectrum {
 		Slope = new double[Count];
 		Peak = new double[Count];
 		Spec = new double[Count];
+		Average = new double[Count];
 		mMax = GAIN_MIN;
 		mBanks = new BANK[Count];
 		for (var b = 0; b < Count; ++b) {
@@ -131,6 +133,7 @@ public class Spectrum {
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
 			Peak[b] = 0.0;
+			Average[b] = average;
 			if (slope < average) {
 				if (0 <= lastPeakIndex) {
 					Peak[lastPeakIndex] = lastPeak;

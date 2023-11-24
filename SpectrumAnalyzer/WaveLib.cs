@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-unsafe public abstract class WaveLib {
+public abstract class WaveLib {
 	[StructLayout(LayoutKind.Sequential)]
 	protected struct WAVEFORMATEX {
 		public ushort wFormatTag;
@@ -23,19 +23,6 @@ unsafe public abstract class WaveLib {
 		public uint dwLoops;
 		public IntPtr lpNext;
 		public uint reserved;
-	}
-
-	[StructLayout(LayoutKind.Sequential)]
-	protected struct WAVEOUTCAPS {
-		public ushort wMid;
-		public ushort wPid;
-		public uint vDriverVersion;
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-		public char[] szPname;
-		public uint dwFormats;
-		public ushort wChannels;
-		public ushort wReserved1;
-		public uint dwSupport;
 	}
 
 	protected enum MMRESULT {
@@ -72,20 +59,28 @@ unsafe public abstract class WaveLib {
 		WHDR_INQUEUE = 0x00000010
 	}
 
-	protected enum WaveOutMessage {
-		Close = 0x3BC,
-		Done = 0x3BD,
-		Open = 0x3BB
+	protected enum WAVE_FORMAT {
+		MONO_11kHz_8bit  = 0x1,
+		MONO_11kHz_16bit = 0x4,
+		MONO_22kHz_8bit  = 0x10,
+		MONO_22kHz_16bit = 0x40,
+		MONO_44kHz_8bit  = 0x100,
+		MONO_44kHz_16bit = 0x400,
+		MONO_48kHz_8bit  = 0x1000,
+		MONO_48kHz_16bit = 0x4000,
+		MONO_96kHz_8bit  = 0x10000,
+		MONO_96kHz_16bit = 0x40000,
+		STEREO_11kHz_8bit  = 0x2,
+		STEREO_11kHz_16bit = 0x8,
+		STEREO_22kHz_8bit  = 0x20,
+		STEREO_22kHz_16bit = 0x80,
+		STEREO_44kHz_8bit  = 0x200,
+		STEREO_44kHz_16bit = 0x800,
+		STEREO_48kHz_8bit  = 0x2000,
+		STEREO_48kHz_16bit = 0x8000,
+		STEREO_96kHz_8bit  = 0x20000,
+		STEREO_96kHz_16bit = 0x80000,
 	}
-
-	protected enum WaveInMessage {
-		Open = 0x3BE,
-		Close = 0x3BF,
-		Data = 0x3C0
-	}
-
-	protected delegate void DOutCallback(IntPtr hdrvr, WaveOutMessage uMsg, int dwUser, IntPtr wavhdr, int dwParam2);
-	protected delegate void DInCallback(IntPtr hdrvr, WaveInMessage uMsg, int dwUser, IntPtr wavhdr, int dwParam2);
 
 	protected const uint WAVE_MAPPER = unchecked((uint)-1);
 
@@ -96,21 +91,21 @@ unsafe public abstract class WaveLib {
 	protected int mBufferIndex;
 	protected short[] mBuffer;
 
-	public int SampleRate { get; protected set; }
-	public int Channels { get; protected set; }
-	public int BufferSize { get; protected set; }
-	public int BufferCount { get; protected set; }
+	public int SampleRate { get; private set; }
+	public int Channels { get; private set; }
+	public int BufferSize { get; private set; }
+	public int BufferCount { get; private set; }
 
-	WaveLib() { }
 	protected WaveLib(int sampleRate, int channels, int bufferSize, int bufferCount) {
 		SampleRate = sampleRate;
 		Channels = channels;
 		BufferSize = bufferSize;
 		BufferCount = bufferCount;
 		mBufferIndex = 0;
+		mBuffer = new short[bufferSize];
 	}
 
-	protected void SetHeader() {
+	protected void AllocHeader() {
 		mWaveFormatEx = new WAVEFORMATEX();
 		mWaveFormatEx.wFormatTag = 1;
 		mWaveFormatEx.nChannels = (ushort)Channels;
@@ -123,10 +118,10 @@ unsafe public abstract class WaveLib {
 		mWaveHeader = new WAVEHDR[BufferCount];
 		for (int i = 0; i < BufferCount; ++i) {
 			mWaveHeaderPtr[i] = Marshal.AllocHGlobal(Marshal.SizeOf(mWaveHeader[i]));
-			mWaveHeader[i].dwBufferLength = (uint)(mBuffer.Length * 16 >> 3);
+			mWaveHeader[i].dwBufferLength = (uint)(BufferSize * 16 >> 3);
 			mWaveHeader[i].lpData = Marshal.AllocHGlobal((int)mWaveHeader[i].dwBufferLength);
 			mWaveHeader[i].dwFlags = 0;
-			Marshal.Copy(mBuffer, 0, mWaveHeader[i].lpData, mBuffer.Length);
+			Marshal.Copy(mBuffer, 0, mWaveHeader[i].lpData, BufferSize);
 			Marshal.StructureToPtr(mWaveHeader[i], mWaveHeaderPtr[i], true);
 		}
 	}
@@ -143,43 +138,4 @@ unsafe public abstract class WaveLib {
 			}
 		}
 	}
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveOutOpen(ref IntPtr hWaveOut, uint uDeviceID, ref WAVEFORMATEX lpFormat, DOutCallback dwCallback, IntPtr dwInstance, uint dwFlags);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInOpen(ref IntPtr hwi, uint uDeviceID, ref WAVEFORMATEX lpFormat, DInCallback dwCallback, IntPtr dwInstance, uint dwFlags = 0x00030000);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveOutClose(IntPtr hwo);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInClose(IntPtr hwi);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveOutPrepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int uSize);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInPrepareHeader(IntPtr hwi, IntPtr lpWaveInHdr, int uSize);
-
-	[DllImport("winmm.dll")]
-	protected static extern MMRESULT waveOutUnprepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int cbwh);
-
-	[DllImport("winmm.dll")]
-	protected static extern MMRESULT waveInUnprepareHeader(IntPtr hwi, IntPtr lpWaveInHdr, int uSize);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveOutReset(IntPtr hwo);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInReset(IntPtr hwi);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr pwh, uint cbwh);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInAddBuffer(IntPtr hwi, IntPtr pwh, uint cbwh);
-
-	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	protected static extern MMRESULT waveInStart(IntPtr hwi);
 }

@@ -69,6 +69,8 @@ namespace SpectrumAnalyzer {
 				BtnRec.Text = "録音";
 				mWaveOut.Enabled = true;
 				BtnPlayStop.Text = "停止";
+				TrkSeek.Enabled = true;
+				TrkSpeed.Enabled = true;
 			} else {
 				mWaveOut.Enabled = false;
 				BtnPlayStop.Text = "再生";
@@ -81,6 +83,8 @@ namespace SpectrumAnalyzer {
 				BtnPlayStop.Text = "再生";
 				mWaveIn.Enabled = true;
 				BtnRec.Text = "停止";
+				TrkSeek.Enabled = false;
+				TrkSpeed.Enabled = false;
 			} else {
 				mWaveIn.Enabled = false;
 				BtnRec.Text = "録音";
@@ -123,12 +127,14 @@ namespace SpectrumAnalyzer {
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (mWaveOut.Enabled) {
 				DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
-				DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
+				DrawSlope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Gray);
+				DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
 				DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
 			}
 			if (mWaveIn.Enabled) {
 				DrawPeak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
-				DrawSlope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
+				DrawSlope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Gray);
+				DrawSlope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
 				DrawSpectrum(mWaveIn.FilterBank.Spec, gaugeHeight, scrollHeight);
 			}
 			pictureBox1.Image = pictureBox1.Image;
