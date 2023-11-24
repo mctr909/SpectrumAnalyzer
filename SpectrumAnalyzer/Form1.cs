@@ -12,7 +12,7 @@ namespace SpectrumAnalyzer {
 		const int KEYBOARD_HEIGHT = 34;
 		const int SCROLL_SPEED = 2;
 
-		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, (3 - 1/3.0) / 12.0);
+		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, (3 - 1 / 3.0) / 12.0);
 
 		readonly Font FONT = new Font("Meiryo UI", 8.0f);
 		readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
@@ -39,10 +39,14 @@ namespace SpectrumAnalyzer {
 			timer1.Start();
 		}
 
-		private void button1_Click(object sender, EventArgs e) {
+		private void Form1_Resize(object sender, EventArgs e) {
+			mSetLayout = true;
+		}
+
+		private void BtnFileOpen_Click(object sender, EventArgs e) {
 			mWaveOut.IsPlay = false;
 			mWaveOut.Position = 0;
-			button2.Text = "再生";
+			BtnPlayStop.Text = "再生";
 
 			openFileDialog1.FileName = "";
 			openFileDialog1.Filter = "PCMファイル(*.wav)|*.wav";
@@ -53,17 +57,17 @@ namespace SpectrumAnalyzer {
 			}
 			mWaveOut.SetValue(filePath);
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = mWaveOut.Size / mWaveOut.SampleRate;
+			TrkSeek.Maximum = mWaveOut.Length / mWaveOut.SampleRate;
 			TrkSeek.Value = 0;
 		}
 
-		private void button2_Click(object sender, EventArgs e) {
-			if ("再生" == button2.Text) {
+		private void BtnPlayStop_Click(object sender, EventArgs e) {
+			if ("再生" == BtnPlayStop.Text) {
 				mWaveOut.IsPlay = true;
-				button2.Text = "停止";
+				BtnPlayStop.Text = "停止";
 			} else {
 				mWaveOut.IsPlay = false;
-				button2.Text = "再生";
+				BtnPlayStop.Text = "再生";
 			}
 		}
 
@@ -101,16 +105,12 @@ namespace SpectrumAnalyzer {
 			var width = pictureBox1.Width;
 			var gaugeHeight = pictureBox1.Height / 3;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
-			DrawBar(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
+			DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
 			DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
-			DrawScrollBar(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
+			DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
 			mSetLayout = false;
-		}
-
-		private void Form1_Resize(object sender, EventArgs e) {
-			mSetLayout = true;
 		}
 
 		void SetLayout() {
@@ -143,21 +143,20 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
 			var gaugeHeight = pictureBox1.Height / 3;
-			DrawKeyboard(g, pictureBox1.Width, gaugeHeight);
+			DrawKeyboard(g, pictureBox1.Width, pictureBox1.Height, gaugeHeight);
 			DrawGauge(g, pictureBox1.Width, gaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();
 		}
 
-		void DrawKeyboard(Graphics g, int width, int top) {
-			var barHeight = pictureBox1.Height;
-			var barBottom = barHeight - 1;
+		void DrawKeyboard(Graphics g, int width, int height, int gaugeHeight) {
+			var barBottom = height - 1;
 			for (int note = 0; note < NOTE_COUNT; note++) {
-				var px = width * (note + 0.0f) / NOTE_COUNT;
-				var barWidth = width * (note + 1.0f) / NOTE_COUNT - px + 1;
+				var px = (note + 0.0f) * width / NOTE_COUNT;
+				var barWidth = (note + 1.0f) * width / NOTE_COUNT - px + 1;
 				switch (note % 12) {
 				case 0:
-					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, barHeight);
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
 					g.DrawLine(KEYBOARD_BORDER, px, 0, px, barBottom);
 					break;
 				case 2:
@@ -165,18 +164,18 @@ namespace SpectrumAnalyzer {
 				case 7:
 				case 9:
 				case 11:
-					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, barHeight);
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
 					break;
 				case 5:
 					g.DrawLine(BLACK_KEY, px, 0, px, barBottom);
 					break;
 				default:
-					g.FillRectangle(BLACK_KEY.Brush, px, 0, barWidth, barHeight);
+					g.FillRectangle(BLACK_KEY.Brush, px, 0, barWidth, height);
 					break;
 				}
 			}
 			var right = width - 1;
-			var keyboardBottom = top + KEYBOARD_HEIGHT - 1;
+			var keyboardBottom = gaugeHeight + KEYBOARD_HEIGHT - 1;
 			var textBottom = keyboardBottom + 1;
 			var textHeight = g.MeasureString("9", FONT).Height;
 			var textOfsX = textHeight * 0.5f;
@@ -190,7 +189,7 @@ namespace SpectrumAnalyzer {
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
 				g.DrawString(
-					ToString(BASE_FREQ * Math.Pow(2.0, (note+1/3.0) / 12.0)),
+					ToString(BASE_FREQ * Math.Pow(2.0, (note + 1 / 3.0) / 12.0)),
 					FONT, Brushes.Gray, textArea, stringFormat
 				);
 				g.RotateTransform(90);
@@ -231,11 +230,11 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		void DrawBar(Graphics g, double[] arr, int width, int height) {
+		void DrawPeak(Graphics g, double[] arr, int width, int height) {
 			var count = arr.Length;
 			for (int i = 0; i < count; i++) {
-				var barX = width * (i + 0.0f) / count;
-				var barWidth = width * (i + 1.0f) / count - barX;
+				var barX = (i + 0.0f) * width / count;
+				var barWidth = (i + 1.0f) * width / count - barX;
 				var barY = AmpToY(arr[i], height, 0);
 				var barHeight = height - barY;
 				g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
@@ -247,7 +246,7 @@ namespace SpectrumAnalyzer {
 			var preX = 0;
 			var preY = AmpToY(arr[idxA], height, 0);
 			for (int x = 0; x < width; x++) {
-				var idxB = arr.Length * x / width;
+				var idxB = x * arr.Length / width;
 				int y;
 				if (1 < idxB - idxA) {
 					y = AmpToY(arr[idxA], height, 0);
@@ -273,18 +272,17 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		void DrawScrollBar(double[] arr, int top, int height) {
+		void DrawSpectrum(double[] arr, int top, int height) {
 			var bmp = (Bitmap)pictureBox1.Image;
 			var data = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = data.Stride * top;
 			var idxA = 0;
 			for (int x = 0, pos = offsetY0; x < bmp.Width; x++, pos += 4) {
-				var idxB = arr.Length * x / bmp.Width;
+				var idxB = x * arr.Length / bmp.Width;
 				if (1 < idxB - idxA) {
 					var max = double.MinValue;
 					for (var i = idxA; i <= idxB; i++) {
-						var v = arr[i];
-						max = Math.Max(max, v);
+						max = Math.Max(max, arr[i]);
 					}
 					SetHue(mPix, pos, max);
 				} else {
@@ -323,8 +321,12 @@ namespace SpectrumAnalyzer {
 				return (value / 1000).ToString("#.#k");
 			} else if (1000 <= value) {
 				return (value / 1000).ToString("#.##k");
-			} else {
+			} else if (100 <= value) {
+				return value.ToString("#");
+			} else if (10 <= value) {
 				return value.ToString("#.#");
+			} else {
+				return value.ToString("#.##");
 			}
 		}
 

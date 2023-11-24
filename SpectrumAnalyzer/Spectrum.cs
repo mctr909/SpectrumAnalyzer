@@ -21,8 +21,8 @@ public class Spectrum {
 
 	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
-	const int AVG_WIDTH_LOW = TONE_DIV * 4;
-	const int AVG_WIDTH_HIGH = TONE_DIV * 2;
+	const int AVG_WIDTH_WIDE = TONE_DIV * 4;
+	const int AVG_WIDTH_NARROW = TONE_DIV * 2;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -84,12 +84,12 @@ public class Spectrum {
 		bank.gain = 1.0 / bank.attenuation - 1.0;
 	}
 
-	public void SetLevel(short[] data) {
+	public void SetLevel(short[] inputWave) {
 		mMax = Math.Max(mMax * GAIN_ATTENUATION, GAIN_MIN);
-		for (int b = 0; b < Count; b++) {
+		for (int b = 0; b < Count; ++b) {
 			var bank = mBanks[b];
-			for (int t = 0; t < data.Length; t++) {
-				var input = data[t] / 32768.0;
+			for (int t = 0; t < inputWave.Length; ++t) {
+				var input = inputWave[t] / 32768.0;
 				var output
 					= bank.b0 * input
 					+ bank.b1 * bank.bDelay1
@@ -110,18 +110,18 @@ public class Spectrum {
 		var lastPeak = 0.0;
 		var lastPeakIndex = -1;
 		for (int b = 0; b < Count; ++b) {
-			int width;
+			int avgWidth;
 			if (b < MID_BEGIN) {
-				width = AVG_WIDTH_LOW;
+				avgWidth = AVG_WIDTH_WIDE;
 			} else {
-				width = AVG_WIDTH_HIGH;
+				avgWidth = AVG_WIDTH_NARROW;
 			}
 			var sum = 0.0;
-			for (int i = -width; i <= width; ++i) {
-				var w = Math.Min(Count - 1, Math.Max(0, b + i));
-				sum += mBanks[w].power;
+			for (int w = -avgWidth; w <= avgWidth; ++w) {
+				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
+				sum += mBanks[bw].power;
 			}
-			sum /= width * 2 + 1;
+			sum /= avgWidth * 2 + 1;
 			var average = Math.Sqrt(sum / mMax);
 			if (b < MID_BEGIN) {
 				average *= 1.1;
@@ -139,6 +139,7 @@ public class Spectrum {
 				lastPeak = 0.0;
 				lastPeakIndex = -1;
 			}
+			Spec[b] = slope;
 			if (lastPeak < slope) {
 				lastPeak = slope;
 				if (b < HIGH_BEGIN) {
@@ -147,7 +148,6 @@ public class Spectrum {
 					lastPeakIndex = b;
 				}
 			}
-			Spec[b] = slope;
 		}
 		if (0 <= lastPeakIndex) {
 			Peak[lastPeakIndex] = lastPeak;

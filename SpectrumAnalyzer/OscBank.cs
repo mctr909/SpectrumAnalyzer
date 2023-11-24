@@ -5,10 +5,10 @@ public class OscBank {
 		public double amp;
 		public double time;
 		public double delta;
-		public double amp_transition;
+		public double declick_speed;
 	}
 
-	const double AMP_MIN = 1.0 / 32768.0;
+	const double AMP_MIN = 0.001;
 	const int TABLE_LENGTH = 192;
 	static readonly double[] TABLE;
 
@@ -23,33 +23,35 @@ public class OscBank {
 	readonly int BUFFER_LENGTH;
 	double[] mBuffer;
 
-	public double Pitch = 1.0;
+	public double Pitch { get; set; } = 1.0;
 
 	public OscBank(int sampleRate, double baseFreq, int octDiv, int banks, int bufferLength) {
 		BANKS = new BANK[banks];
-		var rnd = new Random();
+		var random = new Random();
 		for (var b = 0; b < banks; ++b) {
 			var freq = baseFreq * Math.Pow(2.0, (double)b / octDiv);
-			var bank = new BANK();
-			bank.time = rnd.NextDouble();
-			bank.delta = freq / sampleRate;
-			bank.amp = 0.0;
+			double declickSpeed;
 			if (freq < 220) {
-				bank.amp_transition = 1000.0 / sampleRate;
+				declickSpeed = 1000;
 			} else if (freq < 800) {
-				bank.amp_transition = 200.0 / sampleRate;
+				declickSpeed = 200;
 			} else if (freq < 1600) {
-				bank.amp_transition = 500.0 / sampleRate;
+				declickSpeed = 500;
 			} else {
-				bank.amp_transition = 2.0 * freq / sampleRate;
+				declickSpeed = freq * 2;
 			}
-			BANKS[b] = bank;
+			BANKS[b] = new BANK() {
+				amp = 0.0,
+				time = random.NextDouble(),
+				delta = freq / sampleRate,
+				declick_speed = declickSpeed / sampleRate
+			};
 		}
 		BUFFER_LENGTH = bufferLength;
 		mBuffer = new double[BUFFER_LENGTH];
 	}
 
-	public void SetData(double gain, double[] levels, short[] data) {
+	public void SetWave(double gain, double[] levels, short[] output) {
 		for (int b = 0; b < levels.Length; b++) {
 			var bank = BANKS[b];
 			var level = levels[b];
@@ -75,7 +77,7 @@ public class OscBank {
 				if (idxB == TABLE_LENGTH) {
 					idxB = 0;
 				}
-				bank.amp += (level - bank.amp) * bank.amp_transition;
+				bank.amp += (level - bank.amp) * bank.declick_speed;
 				mBuffer[i] += (TABLE[idxA] * (1.0 - a2b) + TABLE[idxB] * a2b) * bank.amp;
 			}
 		}
@@ -88,7 +90,7 @@ public class OscBank {
 			if (v < -1.0) {
 				v = -1.0;
 			}
-			data[i] = (short)(v * 32767);
+			output[i] = (short)(v * 32767);
 		}
 	}
 }

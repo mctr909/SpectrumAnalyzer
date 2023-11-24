@@ -28,8 +28,8 @@
 		private void InitializeComponent()
 		{
             this.components = new System.ComponentModel.Container();
-            this.button1 = new System.Windows.Forms.Button();
-            this.button2 = new System.Windows.Forms.Button();
+            this.BtnFileOpen = new System.Windows.Forms.Button();
+            this.BtnPlayStop = new System.Windows.Forms.Button();
             this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
             this.TrkSeek = new System.Windows.Forms.TrackBar();
             this.timer1 = new System.Windows.Forms.Timer(this.components);
@@ -42,25 +42,25 @@
             ((System.ComponentModel.ISupportInitialize)(this.TrkSpeed)).BeginInit();
             this.SuspendLayout();
             // 
-            // button1
+            // BtnFileOpen
             // 
-            this.button1.Location = new System.Drawing.Point(4, 4);
-            this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(75, 23);
-            this.button1.TabIndex = 0;
-            this.button1.Text = "開く";
-            this.button1.UseVisualStyleBackColor = true;
-            this.button1.Click += new System.EventHandler(this.button1_Click);
+            this.BtnFileOpen.Location = new System.Drawing.Point(4, 4);
+            this.BtnFileOpen.Name = "BtnFileOpen";
+            this.BtnFileOpen.Size = new System.Drawing.Size(75, 23);
+            this.BtnFileOpen.TabIndex = 0;
+            this.BtnFileOpen.Text = "開く";
+            this.BtnFileOpen.UseVisualStyleBackColor = true;
+            this.BtnFileOpen.Click += new System.EventHandler(this.BtnFileOpen_Click);
             // 
-            // button2
+            // BtnPlayStop
             // 
-            this.button2.Location = new System.Drawing.Point(4, 33);
-            this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(75, 23);
-            this.button2.TabIndex = 1;
-            this.button2.Text = "再生";
-            this.button2.UseVisualStyleBackColor = true;
-            this.button2.Click += new System.EventHandler(this.button2_Click);
+            this.BtnPlayStop.Location = new System.Drawing.Point(4, 33);
+            this.BtnPlayStop.Name = "BtnPlayStop";
+            this.BtnPlayStop.Size = new System.Drawing.Size(75, 23);
+            this.BtnPlayStop.TabIndex = 1;
+            this.BtnPlayStop.Text = "再生";
+            this.BtnPlayStop.UseVisualStyleBackColor = true;
+            this.BtnPlayStop.Click += new System.EventHandler(this.BtnPlayStop_Click);
             // 
             // openFileDialog1
             // 
@@ -121,8 +121,8 @@
             this.ClientSize = new System.Drawing.Size(390, 403);
             this.Controls.Add(this.TrkSpeed);
             this.Controls.Add(this.pictureBox1);
-            this.Controls.Add(this.button2);
-            this.Controls.Add(this.button1);
+            this.Controls.Add(this.BtnPlayStop);
+            this.Controls.Add(this.BtnFileOpen);
             this.Controls.Add(this.TrkKey);
             this.Controls.Add(this.TrkSeek);
             this.Name = "Form1";
@@ -139,8 +139,8 @@
 
 		#endregion
 
-		private System.Windows.Forms.Button button1;
-		private System.Windows.Forms.Button button2;
+		private System.Windows.Forms.Button BtnFileOpen;
+		private System.Windows.Forms.Button BtnPlayStop;
 		private System.Windows.Forms.OpenFileDialog openFileDialog1;
 		private System.Windows.Forms.TrackBar TrkSeek;
 		private System.Windows.Forms.Timer timer1;
