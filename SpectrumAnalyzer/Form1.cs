@@ -7,7 +7,7 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	public partial class Form1 : Form {
-		const int RANGE_DB = -30;
+		const int RANGE_DB = -40;
 		const int NOTE_COUNT = 120;
 		const int KEYBOARD_HEIGHT = 34;
 		const int SCROLL_SPEED = 2;
@@ -18,7 +18,7 @@ namespace SpectrumAnalyzer {
 		readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
-		readonly Pen BAR = new Pen(Color.FromArgb(0, 95, 0), 1.0f);
+		readonly Pen BAR = new Pen(Color.FromArgb(111, 0, 255, 255), 1.0f);
 		readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
 		readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
@@ -123,17 +123,15 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(pictureBox1.Image);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
-			var gaugeHeight = pictureBox1.Height / 3;
+			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (mWaveOut.Enabled) {
 				DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
-				DrawSlope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Gray);
 				DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
 				DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
 			}
 			if (mWaveIn.Enabled) {
 				DrawPeak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
-				DrawSlope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Gray);
 				DrawSlope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
 				DrawSpectrum(mWaveIn.FilterBank.Spec, gaugeHeight, scrollHeight);
 			}
@@ -171,7 +169,7 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			var gaugeHeight = pictureBox1.Height / 3;
+			var gaugeHeight = pictureBox1.Height / 2;
 			DrawKeyboard(g, pictureBox1.Width, pictureBox1.Height, gaugeHeight);
 			DrawGauge(g, pictureBox1.Width, gaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
@@ -262,11 +260,13 @@ namespace SpectrumAnalyzer {
 		void DrawPeak(Graphics g, double[] arr, int width, int height) {
 			var count = arr.Length;
 			for (int i = 0; i < count; i++) {
-				var barX = (i + 0.0f) * width / count;
-				var barWidth = (i + 1.0f) * width / count - barX;
 				var barY = AmpToY(arr[i], height, 0);
 				var barHeight = height - barY;
-				g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
+				if (0 < barHeight) {
+					var barX = (i - 1.0f) * width / count;
+					var barWidth = (i + 2.0f) * width / count - barX;
+					g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
+				}
 			}
 		}
 

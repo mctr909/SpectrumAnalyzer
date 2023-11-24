@@ -46,7 +46,7 @@ public class Spectrum {
 		RESPONSE_FREQ = sampleRate / 256.0;
 		int octDiv = TONE_DIV * 12;
 		MID_BEGIN = (int)(octDiv * 3.5);
-		HIGH_BEGIN = (int)(octDiv * 6.0);
+		HIGH_BEGIN = (int)(octDiv * 5.5);
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
@@ -76,8 +76,8 @@ public class Spectrum {
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
 		var responseSpeed = 100.0 * freq / 1000.0;
-		if (responseSpeed < 1.0) {
-			responseSpeed = 1.0;
+		if (responseSpeed < 6.0) {
+			responseSpeed = 6.0;
 		}
 		if (RESPONSE_FREQ < responseSpeed) {
 			responseSpeed = RESPONSE_FREQ;
@@ -126,9 +126,7 @@ public class Spectrum {
 			sum /= avgWidth * 2 + 1;
 			var average = Math.Sqrt(sum / mMax);
 			if (b < MID_BEGIN) {
-				average *= 1.1;
-			} else {
-				average *= 1.01;
+				average *= 1.08;
 			}
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;

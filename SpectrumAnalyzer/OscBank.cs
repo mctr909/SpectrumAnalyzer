@@ -8,7 +8,7 @@ public class OscBank {
 		public double declick_speed;
 	}
 
-	const double AMP_MIN = 0.001;
+	const double AMP_MIN = 1.0 / 32768.0;
 	const int TABLE_LENGTH = 192;
 	static readonly double[] TABLE;
 
@@ -33,12 +33,8 @@ public class OscBank {
 			double declickSpeed;
 			if (freq < 220) {
 				declickSpeed = 1000;
-			} else if (freq < 800) {
-				declickSpeed = 200;
-			} else if (freq < 1600) {
-				declickSpeed = 500;
 			} else {
-				declickSpeed = freq * 2;
+				declickSpeed = freq;
 			}
 			BANKS[b] = new BANK() {
 				amp = 0.0,
