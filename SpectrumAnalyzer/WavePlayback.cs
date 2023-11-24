@@ -1,4 +1,4 @@
-﻿public class WavePlayback : WaveOutLib {
+﻿public class WavePlayback : WaveOut {
 	short[] mWaveL;
 	short[] mWaveR;
 	short[] mData;

@@ -83,7 +83,9 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="RiffWav.cs" />
-    <Compile Include="WaveOutLib.cs" />
+    <Compile Include="WaveIn.cs" />
+    <Compile Include="WaveLib.cs" />
+    <Compile Include="WaveOut.cs" />
     <Compile Include="WavePlayback.cs" />
     <EmbeddedResource Include="Form1.resx">
       <DependentUpon>Form1.cs</DependentUpon>

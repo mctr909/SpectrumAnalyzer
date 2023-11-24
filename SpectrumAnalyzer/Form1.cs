@@ -63,11 +63,25 @@ namespace SpectrumAnalyzer {
 
 		private void BtnPlayStop_Click(object sender, EventArgs e) {
 			if ("再生" == BtnPlayStop.Text) {
+				//mWaveIn.IsRec = false;
+				BtnRec.Text = "録音";
 				mWaveOut.IsPlay = true;
 				BtnPlayStop.Text = "停止";
 			} else {
 				mWaveOut.IsPlay = false;
 				BtnPlayStop.Text = "再生";
+			}
+		}
+
+		private void BtnRec_Click(object sender, EventArgs e) {
+			if ("録音" == BtnRec.Text) {
+				mWaveOut.IsPlay = false;
+				BtnPlayStop.Text = "再生";
+				//mWaveIn.IsRec = true;
+				BtnRec.Text = "停止";
+			} else {
+				//mWaveIn.IsRec = false;
+				BtnRec.Text = "録音";
 			}
 		}
 
