@@ -87,11 +87,14 @@ unsafe public abstract class WaveLib {
 	protected delegate void DOutCallback(IntPtr hdrvr, WaveOutMessage uMsg, int dwUser, IntPtr wavhdr, int dwParam2);
 	protected delegate void DInCallback(IntPtr hdrvr, WaveInMessage uMsg, int dwUser, IntPtr wavhdr, int dwParam2);
 
+	protected const uint WAVE_MAPPER = unchecked((uint)-1);
+
 	protected IntPtr mHandle;
 	protected WAVEFORMATEX mWaveFormatEx;
 	protected WAVEHDR[] mWaveHeader;
 	protected IntPtr[] mWaveHeaderPtr;
 	protected int mBufferIndex;
+	protected short[] mBuffer;
 
 	public int SampleRate { get; protected set; }
 	public int Channels { get; protected set; }
@@ -105,8 +108,6 @@ unsafe public abstract class WaveLib {
 		BufferSize = bufferSize;
 		BufferCount = bufferCount;
 		mBufferIndex = 0;
-		mWaveHeaderPtr = new IntPtr[BufferCount];
-		mWaveHeader = new WAVEHDR[BufferCount];
 	}
 
 	protected void SetHeader() {
@@ -118,6 +119,29 @@ unsafe public abstract class WaveLib {
 		mWaveFormatEx.nBlockAlign = (ushort)(Channels * 16 >> 3);
 		mWaveFormatEx.wBitsPerSample = 16;
 		mWaveFormatEx.cbSize = 0;
+		mWaveHeaderPtr = new IntPtr[BufferCount];
+		mWaveHeader = new WAVEHDR[BufferCount];
+		for (int i = 0; i < BufferCount; ++i) {
+			mWaveHeaderPtr[i] = Marshal.AllocHGlobal(Marshal.SizeOf(mWaveHeader[i]));
+			mWaveHeader[i].dwBufferLength = (uint)(mBuffer.Length * 16 >> 3);
+			mWaveHeader[i].lpData = Marshal.AllocHGlobal((int)mWaveHeader[i].dwBufferLength);
+			mWaveHeader[i].dwFlags = 0;
+			Marshal.Copy(mBuffer, 0, mWaveHeader[i].lpData, mBuffer.Length);
+			Marshal.StructureToPtr(mWaveHeader[i], mWaveHeaderPtr[i], true);
+		}
+	}
+
+	protected void DisposeHeader() {
+		for (int i = 0; i < BufferCount; ++i) {
+			if (mWaveHeader[i].lpData != IntPtr.Zero) {
+				Marshal.FreeHGlobal(mWaveHeader[i].lpData);
+				mWaveHeader[i].lpData = IntPtr.Zero;
+			}
+			if (mWaveHeaderPtr[i] != IntPtr.Zero) {
+				Marshal.FreeHGlobal(mWaveHeaderPtr[i]);
+				mWaveHeaderPtr[i] = IntPtr.Zero;
+			}
+		}
 	}
 
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]

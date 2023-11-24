@@ -23,14 +23,16 @@ namespace SpectrumAnalyzer {
 		readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
 
-		WavePlayback mWaveOut;
+		Playback mWaveOut;
+		Record mWaveIn;
 		byte[] mPix;
 		bool mIsScrol;
 		bool mSetLayout = true;
 
 		public Form1() {
 			InitializeComponent();
-			mWaveOut = new WavePlayback(NOTE_COUNT, BASE_FREQ);
+			mWaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
+			mWaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
@@ -44,7 +46,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void BtnFileOpen_Click(object sender, EventArgs e) {
-			mWaveOut.IsPlay = false;
+			mWaveOut.Enabled = false;
 			mWaveOut.Position = 0;
 			BtnPlayStop.Text = "再生";
 
@@ -63,24 +65,24 @@ namespace SpectrumAnalyzer {
 
 		private void BtnPlayStop_Click(object sender, EventArgs e) {
 			if ("再生" == BtnPlayStop.Text) {
-				//mWaveIn.IsRec = false;
+				mWaveIn.Enabled = false;
 				BtnRec.Text = "録音";
-				mWaveOut.IsPlay = true;
+				mWaveOut.Enabled = true;
 				BtnPlayStop.Text = "停止";
 			} else {
-				mWaveOut.IsPlay = false;
+				mWaveOut.Enabled = false;
 				BtnPlayStop.Text = "再生";
 			}
 		}
 
 		private void BtnRec_Click(object sender, EventArgs e) {
 			if ("録音" == BtnRec.Text) {
-				mWaveOut.IsPlay = false;
+				mWaveOut.Enabled = false;
 				BtnPlayStop.Text = "再生";
-				//mWaveIn.IsRec = true;
+				mWaveIn.Enabled = true;
 				BtnRec.Text = "停止";
 			} else {
-				//mWaveIn.IsRec = false;
+				mWaveIn.Enabled = false;
 				BtnRec.Text = "録音";
 			}
 		}
@@ -119,9 +121,16 @@ namespace SpectrumAnalyzer {
 			var width = pictureBox1.Width;
 			var gaugeHeight = pictureBox1.Height / 3;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
-			DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
-			DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
-			DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
+			if (mWaveOut.Enabled) {
+				DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
+				DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
+				DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
+			}
+			if (mWaveIn.Enabled) {
+				DrawPeak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
+				DrawSlope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Gray);
+				DrawSpectrum(mWaveIn.FilterBank.Spec, gaugeHeight, scrollHeight);
+			}
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
 			mSetLayout = false;
