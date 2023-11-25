@@ -21,12 +21,13 @@ public class Spectrum {
 
 	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
+	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
 	const int AVG_WIDTH_NARROW = TONE_DIV * 1;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
-	readonly double RESPONSE_FREQ;
+	readonly double RESPONSE_SPEED_MAX;
 	readonly int MID_BEGIN;
 	readonly BANK[] mBanks;
 	double mMax;
@@ -35,31 +36,32 @@ public class Spectrum {
 
 	public double[] Slope { get; private set; }
 	public double[] Peak { get; private set; }
-	public double[] Spec { get; private set; }
 	public double[] Average { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
 		GAIN_ATTENUATION = 1.0 - 50 * FREQ_TO_OMEGA;
-		RESPONSE_FREQ = sampleRate / 256.0;
+		RESPONSE_SPEED_MAX = sampleRate / 8.0;
 		int octDiv = TONE_DIV * 12;
 		MID_BEGIN = (int)(octDiv * 4.0);
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
-		Spec = new double[Count];
 		Average = new double[Count];
 		mMax = GAIN_MIN;
 		mBanks = new BANK[Count];
-		for (var b = 0; b < Count; ++b) {
-			var freq = baseFreq * Math.Pow(2.0, (double)b / octDiv);
-			var width = Math.Log(2000.0 / freq, 2.0);
-			if (width < 1.0) {
-				width = 1.0;
+		for (int b = 0, n = 0; b < Count; b += TONE_DIV, n++) {
+			var freqN = baseFreq * Math.Pow(2.0, n / 12.0);
+			for (var d = 0; d < TONE_DIV; ++d) {
+				var freqW = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / octDiv);
+				var width = Math.Log(2000.0 / freqW, 2.0);
+				if (width < 1.0) {
+					width = 1.0;
+				}
+				mBanks[b + d] = new BANK();
+				Bandpass(mBanks[b + d], freqW, width / 12.0);
 			}
-			mBanks[b] = new BANK();
-			Bandpass(mBanks[b], freq, width / 12.0);
 		}
 	}
 
@@ -73,12 +75,12 @@ public class Spectrum {
 		bank.b0 = alpha / a0;
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
-		var responseSpeed = 120.0 * freq / 1000.0;
+		var responseSpeed = 200.0 * freq / 1000.0;
 		if (responseSpeed < 4.0) {
 			responseSpeed = 4.0;
 		}
-		if (RESPONSE_FREQ < responseSpeed) {
-			responseSpeed = RESPONSE_FREQ;
+		if (RESPONSE_SPEED_MAX < responseSpeed) {
+			responseSpeed = RESPONSE_SPEED_MAX;
 		}
 		bank.attenuation = 1.0 - responseSpeed * FREQ_TO_OMEGA;
 		bank.gain = 1.0 / bank.attenuation - 1.0;
@@ -124,7 +126,7 @@ public class Spectrum {
 			sum /= avgWidth * 2 + 1;
 			var average = Math.Sqrt(sum / mMax);
 			if (b < MID_BEGIN) {
-				average *= 1.08;
+				average *= 1.01;
 			}
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
@@ -138,7 +140,6 @@ public class Spectrum {
 				lastPeak = 0.0;
 				lastPeakIndex = -1;
 			}
-			Spec[b] = slope;
 			if (lastPeak < slope) {
 				lastPeak = slope;
 				lastPeakIndex = b;

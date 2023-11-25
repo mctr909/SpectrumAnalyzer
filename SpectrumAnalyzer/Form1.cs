@@ -7,18 +7,18 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	public partial class Form1 : Form {
-		const int RANGE_DB = -40;
+		const int RANGE_DB = -30;
 		const int NOTE_COUNT = 124;
 		const int KEYBOARD_HEIGHT = 34;
 		const int SCROLL_SPEED = 3;
 
-		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, (3 - 1 / 3.0) / 12.0);
+		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, 3 / 12.0);
 
 		readonly Font FONT = new Font("Meiryo UI", 8.0f);
 		readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
-		readonly Pen BAR = new Pen(Color.FromArgb(111, 0, 255, 255), 1.0f);
+		readonly Pen BAR = new Pen(Color.FromArgb(111, 0, 191, 191), 1.0f);
 		readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
 		readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
@@ -132,12 +132,12 @@ namespace SpectrumAnalyzer {
 			if (mWaveOut.Enabled) {
 				DrawPeak(g, mWaveOut.FilterBankL.Peak, width, gaugeHeight);
 				DrawSlope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.OrangeRed);
-				DrawSpectrum(mWaveOut.FilterBankL.Spec, gaugeHeight, scrollHeight);
+				DrawSpectrum(mWaveOut.FilterBankL.Peak, gaugeHeight, scrollHeight);
 			}
 			if (mWaveIn.Enabled) {
 				DrawPeak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
 				DrawSlope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
-				DrawSpectrum(mWaveIn.FilterBank.Spec, gaugeHeight, scrollHeight);
+				DrawSpectrum(mWaveIn.FilterBank.Peak, gaugeHeight, scrollHeight);
 			}
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
@@ -223,7 +223,7 @@ namespace SpectrumAnalyzer {
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
 				g.DrawString(
-					ToString(BASE_FREQ * Math.Pow(2.0, (n + 1 / 3.0) / 12.0)),
+					ToString(BASE_FREQ * Math.Pow(2.0, n / 12.0)),
 					FONT, Brushes.Gray, textArea, stringFormat
 				);
 				g.RotateTransform(90);
@@ -270,8 +270,8 @@ namespace SpectrumAnalyzer {
 				var barY = AmpToY(arr[i], height, 0);
 				var barHeight = height - barY;
 				if (0 < barHeight) {
-					var barX = (i - 1.0f) * width / count;
-					var barWidth = (i + 2.0f) * width / count - barX;
+					var barX = (i - 1) * width / count + 1;
+					var barWidth = (i + 2) * width / count - barX + 1;
 					g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
 				}
 			}
@@ -310,20 +310,26 @@ namespace SpectrumAnalyzer {
 
 		void DrawSpectrum(double[] arr, int top, int height) {
 			var bmp = (Bitmap)pictureBox1.Image;
+			var width = bmp.Width;
+			var count = arr.Length;
 			var data = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = data.Stride * top;
+			Array.Clear(mPix, offsetY0, data.Stride);
 			var idxA = 0;
-			for (int x = 0, pos = offsetY0; x < bmp.Width; x++, pos += 4) {
-				var idxB = x * arr.Length / bmp.Width;
+			for (int x = 0; x < width; x++) {
+				var idxB = x * count / width;
+				double amp;
 				if (1 < idxB - idxA) {
-					var max = double.MinValue;
+					amp = double.MinValue;
 					for (var i = idxA; i <= idxB; i++) {
-						max = Math.Max(max, arr[i]);
+						amp = Math.Max(amp, arr[i]);
 					}
-					SetHue(mPix, pos, max);
 				} else {
-					SetHue(mPix, pos, arr[idxB]);
+					amp = arr[idxB];
 				}
+				var barX = (idxB - 1) * width / count + 1;
+				var barWidth = (idxB + 2) * width / count - barX + 1;
+				SetHue(mPix, amp, offsetY0 + barX * 4, barWidth);
 				idxA = idxB;
 			}
 			for (int y = 1; y < KEYBOARD_HEIGHT; y++) {
@@ -384,48 +390,51 @@ namespace SpectrumAnalyzer {
 			return (int)(offset + db * height / RANGE_DB);
 		}
 
-		void SetHue(byte[] pix, int pos, double amp) {
+		void SetHue(byte[] pix, double amp, int pos, int width) {
 			if (amp < 1 / 32768.0) {
 				amp = 1 / 32768.0;
 			}
 			var db = 20 * Math.Log10(amp);
 			if (db < RANGE_DB) {
-				pix[pos + 0] = 0;
-				pix[pos + 1] = 0;
-				pix[pos + 2] = 0;
-				pix[pos + 3] = 0;
 				return;
 			}
-			var g = (int)((1.0 - db / RANGE_DB) * 1279);
-			if (g < 256) {
-				pix[pos + 0] = 255;
-				pix[pos + 1] = 0;
-				pix[pos + 2] = 0;
-				pix[pos + 3] = (byte)g;
-			} else if (g < 512) {
-				g -= 256;
-				pix[pos + 0] = 255;
-				pix[pos + 1] = (byte)g;
-				pix[pos + 2] = 0;
-				pix[pos + 3] = 191;
-			} else if (g < 768) {
-				g -= 512;
-				pix[pos + 0] = (byte)(255 - g);
-				pix[pos + 1] = 255;
-				pix[pos + 2] = 0;
-				pix[pos + 3] = 191;
-			} else if (g < 1024) {
-				g -= 768;
-				pix[pos + 0] = 0;
-				pix[pos + 1] = 255;
-				pix[pos + 2] = (byte)g;
-				pix[pos + 3] = 167;
+			var v = (int)((1.0 - db / RANGE_DB) * 1279);
+			byte a,r,g,b;
+			if (v < 256) {
+				b = 255;
+				g = 0;
+				r = 0;
+				a = (byte)v;
+			} else if (v < 512) {
+				v -= 256;
+				b = 255;
+				g = (byte)v;
+				r = 0;
+				a = 167;
+			} else if (v < 768) {
+				v -= 512;
+				b = (byte)(255 - v);
+				g = 255;
+				r = 0;
+				a = 167;
+			} else if (v < 1024) {
+				v -= 768;
+				b = 0;
+				g = 255;
+				r = (byte)v;
+				a = 167;
 			} else {
-				g -= 1024;
-				pix[pos + 0] = 0;
-				pix[pos + 1] = (byte)(255 - g);
-				pix[pos + 2] = 255;
-				pix[pos + 3] = 191;
+				v -= 1024;
+				b = 0;
+				g = (byte)(255 - v);
+				r = 255;
+				a = 167;
+			}
+			for (int x = 0, p = pos; x < width; x++, p += 4) {
+				pix[p + 0] = b;
+				pix[p + 1] = g;
+				pix[p + 2] = r;
+				pix[p + 3] = a;
 			}
 		}
 	}
