@@ -1,14 +1,16 @@
 ﻿public class Playback : WaveOut {
 	short[] mWaveL;
 	short[] mWaveR;
-	short[] mData;
+	short[] mDataL;
+	short[] mDataR;
 	uint mLoopBegin;
 	uint mLoopEnd;
 	double mDelta;
 	double mTime;
 	OscBank mOscBank;
 
-	public Spectrum FilterBank;
+	public Spectrum FilterBankL;
+	public Spectrum FilterBankR;
 
 	public bool Enabled { get; set; }
 	public int Position {
@@ -31,9 +33,11 @@
 		mLoopEnd = 1;
 		mDelta = 0.0;
 		mTime = 0.0;
-		mData = new short[BufferSize / 2];
+		mDataL = new short[BufferSize / 2];
+		mDataR = new short[BufferSize / 2];
 		mOscBank = new OscBank(SampleRate, baseFreq, 12 * 3, notes * 3, BufferSize / 2);
-		FilterBank = new Spectrum(SampleRate, baseFreq, notes);
+		FilterBankL = new Spectrum(SampleRate, baseFreq, notes);
+		FilterBankR = new Spectrum(SampleRate, baseFreq, notes);
 	}
 
 	public void SetValue(string filePath) {
@@ -105,19 +109,19 @@
 				waveL = mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
 				waveR = mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
 			}
-			mData[j] = (short)((waveL + waveR) / 2);
-			mBuffer[i] = 0;
-			mBuffer[i + 1] = 0;
+			mDataL[j] = (short)waveL;
+			mDataR[j] = (short)waveR;
 			mTime += Enabled ? (mDelta * Speed) : 0.0;
 			if (mLoopEnd <= mTime) {
 				mTime = mLoopBegin + mTime - mLoopEnd;
 			}
 		}
-		FilterBank.SetLevel(mData);
-		mOscBank.SetWave(FilterBank.Gain, FilterBank.Peak, mData);
-		for (int i = 0, j = 0; i < BufferSize; i += 2, j++) {
-			mBuffer[i] = mData[j];
-			mBuffer[i + 1] = mData[j];
-		}
+		FilterBankL.SetLevel(mDataL);
+		FilterBankR.SetLevel(mDataR);
+		mOscBank.SetWave(
+			FilterBankL.Gain, FilterBankR.Gain,
+			FilterBankL.Peak, FilterBankR.Peak,
+			mBuffer
+		);
 	}
 }

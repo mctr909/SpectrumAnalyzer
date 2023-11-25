@@ -130,9 +130,9 @@ namespace SpectrumAnalyzer {
 			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (mWaveOut.Enabled) {
-				DrawPeak(g, mWaveOut.FilterBank.Peak, width, gaugeHeight);
-				DrawSlope(g, mWaveOut.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
-				DrawSpectrum(mWaveOut.FilterBank.Spec, gaugeHeight, scrollHeight);
+				DrawPeak(g, mWaveOut.FilterBankL.Peak, width, gaugeHeight);
+				DrawSlope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.OrangeRed);
+				DrawSpectrum(mWaveOut.FilterBankL.Spec, gaugeHeight, scrollHeight);
 			}
 			if (mWaveIn.Enabled) {
 				DrawPeak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
