@@ -35,7 +35,7 @@
 		mTime = 0.0;
 		mDataL = new short[BufferSize / 2];
 		mDataR = new short[BufferSize / 2];
-		mOscBank = new OscBank(SampleRate, baseFreq, 12 * 3, notes * 3, BufferSize / 2);
+		mOscBank = new OscBank(SampleRate, BufferSize / 2, notes, baseFreq);
 		FilterBankL = new Spectrum(SampleRate, baseFreq, notes);
 		FilterBankR = new Spectrum(SampleRate, baseFreq, notes);
 	}

@@ -4,13 +4,15 @@ public class OscBank {
 	class BANK {
 		public double ampL;
 		public double ampR;
-		public double time;
-		public double delta;
 		public double declickSpeed;
+		public double time;
+		public double[] delta;
 	}
 
 	const double AMP_MIN = 1.0 / 32768.0;
-	const int TABLE_LENGTH = 48;
+	const int TONE_DIV = 3;
+	const int TONE_DIV_CENTER = 1;
+	const int TABLE_LENGTH = 192;
 	static readonly double[] TABLE;
 
 	static OscBank() {
@@ -27,22 +29,26 @@ public class OscBank {
 
 	public double Pitch { get; set; } = 1.0;
 
-	public OscBank(int sampleRate, double baseFreq, int octDiv, int banks, int bufferLength) {
+	public OscBank(int sampleRate, int bufferLength, int banks, double baseFreq) {
 		BANKS = new BANK[banks];
 		var random = new Random();
-		for (var b = 0; b < banks; ++b) {
-			var freq = baseFreq * Math.Pow(2.0, (double)b / octDiv);
+		for (var b = 0; b < banks; b++) {
+			var freq = baseFreq * Math.Pow(2.0, b / 12.0);
 			double declickSpeed;
 			if (freq < sampleRate * 0.25) {
-				declickSpeed = freq;
+				declickSpeed = freq * 2;
 			} else {
-				declickSpeed = sampleRate * 0.25;
+				declickSpeed = sampleRate * 0.5;
 			}
-			BANKS[b] = new BANK() {
+			var bank = new BANK() {
+				declickSpeed = declickSpeed / sampleRate,
 				time = random.NextDouble(),
-				delta = freq / sampleRate,
-				declickSpeed = declickSpeed / sampleRate
+				delta = new double[TONE_DIV],
 			};
+			for (int d = 0; d < TONE_DIV; d++) {
+				bank.delta[d] = freq * Math.Pow(2.0, (d - TONE_DIV_CENTER) / (TONE_DIV * 12.0)) / sampleRate;
+			}
+			BANKS[b] = bank;
 		}
 		BUFFER_LENGTH = bufferLength;
 		mBufferL = new double[BUFFER_LENGTH];
@@ -54,15 +60,15 @@ public class OscBank {
 		double[] levelL, double[] levelR,
 		short[] output
 	) {
-		for (int b = 0; b < levelL.Length; b += 3) {
-			var bank = BANKS[b + 1];
-			var delta = bank.delta * Pitch;
+		for (int b = 0, il = 0; b < BANKS.Length; b++, il += TONE_DIV) {
+			var bank = BANKS[b];
+			var delta = bank.delta[TONE_DIV_CENTER];
 			var peakL = 0.0;
 			var peakR = 0.0;
 			var peakC = 0.0;
-			for (int w = 0; w < 3; w++) {
-				var l = levelL[b + w];
-				var r = levelR[b + w];
+			for (int d = 0; d < TONE_DIV; d++) {
+				var l = levelL[il + d];
+				var r = levelR[il + d];
 				var c = l + r;
 				if (peakL < l) {
 					peakL = l;
@@ -72,14 +78,15 @@ public class OscBank {
 				}
 				if (peakC < c) {
 					peakC = c;
-					delta = BANKS[b + w].delta * Pitch;
+					delta = bank.delta[d];
 				}
 			}
 			if (peakL < AMP_MIN && peakR < AMP_MIN &&
 				bank.ampL < AMP_MIN && bank.ampR < AMP_MIN) {
 				continue;
 			}
-			for (int i = 0; i < BUFFER_LENGTH; i++) {
+			delta *= Pitch;
+			for (int t = 0; t < BUFFER_LENGTH; t++) {
 				var idxD = bank.time * TABLE_LENGTH;
 				bank.time += delta;
 				if (1.0 <= bank.time) {
@@ -97,15 +104,15 @@ public class OscBank {
 				bank.ampL += (peakL - bank.ampL) * bank.declickSpeed;
 				bank.ampR += (peakR - bank.ampR) * bank.declickSpeed;
 				var wave = TABLE[idxA] * (1.0 - a2b) + TABLE[idxB] * a2b;
-				mBufferL[i] += wave * bank.ampL;
-				mBufferR[i] += wave * bank.ampR;
+				mBufferL[t] += wave * bank.ampL;
+				mBufferR[t] += wave * bank.ampR;
 			}
 		}
-		for (int i = 0, j = 0; i < BUFFER_LENGTH; i++, j += 2) {
-			var l = mBufferL[i] * gainL;
-			var r = mBufferR[i] * gainR;
-			mBufferL[i] = 0.0;
-			mBufferR[i] = 0.0;
+		for (int t = 0, i = 0; t < BUFFER_LENGTH; t++, i += 2) {
+			var l = mBufferL[t] * gainL;
+			var r = mBufferR[t] * gainR;
+			mBufferL[t] = 0.0;
+			mBufferR[t] = 0.0;
 			if (1.0 < l) {
 				l = 1.0;
 			}
@@ -118,8 +125,8 @@ public class OscBank {
 			if (r < -1.0) {
 				r = -1.0;
 			}
-			output[j] = (short)(l * 32767);
-			output[j + 1] = (short)(r * 32767);
+			output[i] = (short)(l * 32767);
+			output[i + 1] = (short)(r * 32767);
 		}
 	}
 }
