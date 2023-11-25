@@ -28,7 +28,6 @@ public class Spectrum {
 	readonly double GAIN_ATTENUATION;
 	readonly double RESPONSE_FREQ;
 	readonly int MID_BEGIN;
-	readonly int HIGH_BEGIN;
 	readonly BANK[] mBanks;
 	double mMax;
 
@@ -46,7 +45,6 @@ public class Spectrum {
 		RESPONSE_FREQ = sampleRate / 256.0;
 		int octDiv = TONE_DIV * 12;
 		MID_BEGIN = (int)(octDiv * 4.0);
-		HIGH_BEGIN = (int)(octDiv * 5.5);
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
@@ -143,11 +141,7 @@ public class Spectrum {
 			Spec[b] = slope;
 			if (lastPeak < slope) {
 				lastPeak = slope;
-				if (b < HIGH_BEGIN) {
-					lastPeakIndex = b / TONE_DIV * TONE_DIV + 1;
-				} else {
-					lastPeakIndex = b;
-				}
+				lastPeakIndex = b;
 			}
 		}
 		if (0 <= lastPeakIndex) {
