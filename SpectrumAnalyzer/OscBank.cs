@@ -9,7 +9,7 @@ public class OscBank {
 	}
 
 	const double AMP_MIN = 1.0 / 32768.0;
-	const int TABLE_LENGTH = 192;
+	const int TABLE_LENGTH = 48;
 	static readonly double[] TABLE;
 
 	static OscBank() {
@@ -31,10 +31,12 @@ public class OscBank {
 		for (var b = 0; b < banks; ++b) {
 			var freq = baseFreq * Math.Pow(2.0, (double)b / octDiv);
 			double declickSpeed;
-			if (freq < 220) {
+			if (freq < 440) {
 				declickSpeed = 1000;
-			} else {
+			} else if (freq < sampleRate * 0.2) {
 				declickSpeed = freq;
+			} else {
+				declickSpeed = sampleRate * 0.2;
 			}
 			BANKS[b] = new BANK() {
 				amp = 0.0,

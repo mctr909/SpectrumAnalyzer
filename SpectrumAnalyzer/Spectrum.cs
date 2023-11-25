@@ -22,7 +22,7 @@ public class Spectrum {
 	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
-	const int AVG_WIDTH_NARROW = TONE_DIV * 2;
+	const int AVG_WIDTH_NARROW = TONE_DIV * 1;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -45,7 +45,7 @@ public class Spectrum {
 		GAIN_ATTENUATION = 1.0 - 50 * FREQ_TO_OMEGA;
 		RESPONSE_FREQ = sampleRate / 256.0;
 		int octDiv = TONE_DIV * 12;
-		MID_BEGIN = (int)(octDiv * 3.5);
+		MID_BEGIN = (int)(octDiv * 4.0);
 		HIGH_BEGIN = (int)(octDiv * 5.5);
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
@@ -75,9 +75,9 @@ public class Spectrum {
 		bank.b0 = alpha / a0;
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
-		var responseSpeed = 100.0 * freq / 1000.0;
-		if (responseSpeed < 6.0) {
-			responseSpeed = 6.0;
+		var responseSpeed = 120.0 * freq / 1000.0;
+		if (responseSpeed < 4.0) {
+			responseSpeed = 4.0;
 		}
 		if (RESPONSE_FREQ < responseSpeed) {
 			responseSpeed = RESPONSE_FREQ;

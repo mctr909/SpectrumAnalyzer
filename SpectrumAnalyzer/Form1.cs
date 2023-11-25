@@ -8,9 +8,9 @@ using System.Runtime.InteropServices;
 namespace SpectrumAnalyzer {
 	public partial class Form1 : Form {
 		const int RANGE_DB = -40;
-		const int NOTE_COUNT = 120;
+		const int NOTE_COUNT = 125;
 		const int KEYBOARD_HEIGHT = 34;
-		const int SCROLL_SPEED = 2;
+		const int SCROLL_SPEED = 3;
 
 		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, (3 - 1 / 3.0) / 12.0);
 
@@ -105,11 +105,13 @@ namespace SpectrumAnalyzer {
 		private void TrkKey_Scroll(object sender, EventArgs e) {
 			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+			DrawBackground();
 		}
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+			DrawBackground();
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
@@ -179,11 +181,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		void DrawKeyboard(Graphics g, int width, int height, int gaugeHeight) {
+			var transepose = TrkKey.Value - TrkSpeed.Value;
 			var barBottom = height - 1;
-			for (int note = 0; note < NOTE_COUNT; note++) {
-				var px = (note + 0.0f) * width / NOTE_COUNT;
-				var barWidth = (note + 1.0f) * width / NOTE_COUNT - px + 1;
-				switch (note % 12) {
+			for (int n = 0; n < NOTE_COUNT; n++) {
+				var note = n + transepose;
+				var px = (n + 0.0f) * width / NOTE_COUNT;
+				var barWidth = (n + 1.0f) * width / NOTE_COUNT - px + 1;
+				switch ((note + 24) % 12) {
 				case 0:
 					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
 					g.DrawLine(KEYBOARD_BORDER, px, 0, px, barBottom);
@@ -213,12 +217,13 @@ namespace SpectrumAnalyzer {
 				Alignment = StringAlignment.Far,
 				LineAlignment = StringAlignment.Center
 			};
-			for (int note = 9; note < NOTE_COUNT; note += 12) {
+			for (int n = -3; n < NOTE_COUNT + 12; n += 12) {
+				var note = n - transepose;
 				var px = width * (note + 0.5f) / NOTE_COUNT - textOfsX;
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
 				g.DrawString(
-					ToString(BASE_FREQ * Math.Pow(2.0, (note + 1 / 3.0) / 12.0)),
+					ToString(BASE_FREQ * Math.Pow(2.0, (n + 1 / 3.0) / 12.0)),
 					FONT, Brushes.Gray, textArea, stringFormat
 				);
 				g.RotateTransform(90);
