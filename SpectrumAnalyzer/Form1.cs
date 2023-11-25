@@ -8,7 +8,7 @@ using System.Runtime.InteropServices;
 namespace SpectrumAnalyzer {
 	public partial class Form1 : Form {
 		const int RANGE_DB = -40;
-		const int NOTE_COUNT = 125;
+		const int NOTE_COUNT = 124;
 		const int KEYBOARD_HEIGHT = 34;
 		const int SCROLL_SPEED = 3;
 

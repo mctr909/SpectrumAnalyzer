@@ -50,19 +50,27 @@ public class OscBank {
 	}
 
 	public void SetWave(double gain, double[] levels, short[] output) {
-		for (int b = 0; b < levels.Length; b++) {
-			var bank = BANKS[b];
-			var level = levels[b];
-			if (level < AMP_MIN) {
+		for (int b = 0; b < levels.Length; b += 3) {
+			var bank = BANKS[b + 1];
+			var peak = 0.0;
+			var delta = bank.delta * Pitch;
+			for (int w = 0; w < 3; w++) {
+				var level = levels[b + w];
+				if (peak < level) {
+					peak = level;
+					delta = BANKS[w + b].delta * Pitch;
+				}
+			}
+			if (peak < AMP_MIN) {
 				if (bank.amp < AMP_MIN) {
 					continue;
 				} else {
-					level = 0.0;
+					peak = 0.0;
 				}
 			}
 			for (int i = 0; i < BUFFER_LENGTH; i++) {
 				var idxD = bank.time * TABLE_LENGTH;
-				bank.time += bank.delta * Pitch;
+				bank.time += delta;
 				if (1.0 <= bank.time) {
 					bank.time -= 1.0;
 				}
@@ -75,7 +83,7 @@ public class OscBank {
 				if (idxB == TABLE_LENGTH) {
 					idxB = 0;
 				}
-				bank.amp += (level - bank.amp) * bank.declick_speed;
+				bank.amp += (peak - bank.amp) * bank.declick_speed;
 				mBuffer[i] += (TABLE[idxA] * (1.0 - a2b) + TABLE[idxB] * a2b) * bank.amp;
 			}
 		}
