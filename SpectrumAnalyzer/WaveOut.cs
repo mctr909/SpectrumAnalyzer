@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 
 public abstract class WaveOut : WaveLib, IDisposable {
@@ -7,13 +8,13 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		Done = 0x3BD,
 		Open = 0x3BB
 	}
-	[StructLayout(LayoutKind.Sequential)]
+	[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
 	struct WAVEOUTCAPS {
 		public ushort wMid;
 		public ushort wPid;
 		public uint vDriverVersion;
-		[MarshalAs(UnmanagedType.ByValArray, SizeConst = 32)]
-		public char[] szPname;
+		[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+		public string szPname;
 		public uint dwFormats;
 		public ushort wChannels;
 		public ushort wReserved1;
@@ -34,43 +35,46 @@ public abstract class WaveOut : WaveLib, IDisposable {
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 	static extern MMRESULT waveOutPrepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int size);
 	[DllImport("winmm.dll")]
-	static extern MMRESULT waveOutUnprepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int cbwh);
+	static extern MMRESULT waveOutUnprepareHeader(IntPtr hWaveOut, IntPtr lpWaveOutHdr, int size);
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 	static extern MMRESULT waveOutReset(IntPtr hwo);
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-	static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr pwh, uint cbwh);
+	static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr pwh, int size);
 
-	public static void GetDeviceList() {
+	public static List<string> GetDeviceList() {
+		var list = new List<string>();
 		var deviceCount = waveOutGetNumDevs();
 		for (uint i = 0; i < deviceCount; i++) {
 			var caps = new WAVEOUTCAPS();
 			var ret = waveOutGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
-			//if (MMRESULT.MMSYSERR_NOERROR != ret) {
-			//	throw new Exception(ret.ToString());
-			//}
+			if (MMRESULT.MMSYSERR_NOERROR == ret) {
+				list.Add(caps.szPname);
+			} else {
+				list.Add(ret.ToString());
+			}
 		}
+		return list;
 	}
 
 	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 256, int bufferCount = 32) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = new DCallback(Callback);
-		Open();
 	}
 
 	public void Dispose() {
 		Close();
 	}
 
-	public void Open() {
+	public void Open(uint deviceId = WAVE_MAPPER) {
 		Close();
 		AllocHeader();
-		var ret = waveOutOpen(ref mHandle, WAVE_MAPPER, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+		var ret = waveOutOpen(ref mHandle, deviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 		if (MMRESULT.MMSYSERR_NOERROR != ret) {
 			//throw new Exception(mr.ToString());
 		}
 		for (int i = 0; i < BufferCount; ++i) {
-			waveOutPrepareHeader(mHandle, mWaveHeaderPtr[i], Marshal.SizeOf(typeof(WAVEHDR)));
-			waveOutWrite(mHandle, mWaveHeaderPtr[i], (uint)Marshal.SizeOf(typeof(WAVEHDR)));
+			waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
+			waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
 	}
 
@@ -79,7 +83,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 			return;
 		}
 		for (int i = 0; i < BufferCount; ++i) {
-			waveOutUnprepareHeader(mHandle, mWaveHeaderPtr[i], Marshal.SizeOf(typeof(WAVEHDR)));
+			waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
 		var ret = waveOutReset(mHandle);
 		if (MMRESULT.MMSYSERR_NOERROR != ret) {
@@ -100,13 +104,13 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		case WaveOutMessage.Close:
 			break;
 		case WaveOutMessage.Done: {
-			waveOutWrite(mHandle, waveHdr, (uint)Marshal.SizeOf(typeof(WAVEHDR)));
+			waveOutWrite(mHandle, waveHdr, Marshal.SizeOf(typeof(WAVEHDR)));
 			for (mBufferIndex = 0; mBufferIndex < BufferCount; ++mBufferIndex) {
-				if (mWaveHeaderPtr[mBufferIndex] == waveHdr) {
+				if (mpWaveHeader[mBufferIndex] == waveHdr) {
 					SetData();
-					mWaveHeader[mBufferIndex] = (WAVEHDR)Marshal.PtrToStructure(mWaveHeaderPtr[mBufferIndex], typeof(WAVEHDR));
-					Marshal.Copy(mBuffer, 0, mWaveHeader[mBufferIndex].lpData, BufferSize);
-					Marshal.StructureToPtr(mWaveHeader[mBufferIndex], mWaveHeaderPtr[mBufferIndex], true);
+					var hdr = (WAVEHDR)Marshal.PtrToStructure(mpWaveHeader[mBufferIndex], typeof(WAVEHDR));
+					Marshal.Copy(mBuffer, 0, hdr.lpData, BufferSize);
+					Marshal.StructureToPtr(hdr, mpWaveHeader[mBufferIndex], true);
 				}
 			}
 			break;

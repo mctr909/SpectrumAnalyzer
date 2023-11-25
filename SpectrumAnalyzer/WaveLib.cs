@@ -60,34 +60,33 @@ public abstract class WaveLib {
 	}
 
 	protected enum WAVE_FORMAT {
-		MONO_11kHz_8bit  = 0x1,
-		MONO_11kHz_16bit = 0x4,
-		MONO_22kHz_8bit  = 0x10,
-		MONO_22kHz_16bit = 0x40,
-		MONO_44kHz_8bit  = 0x100,
-		MONO_44kHz_16bit = 0x400,
-		MONO_48kHz_8bit  = 0x1000,
-		MONO_48kHz_16bit = 0x4000,
-		MONO_96kHz_8bit  = 0x10000,
-		MONO_96kHz_16bit = 0x40000,
-		STEREO_11kHz_8bit  = 0x2,
-		STEREO_11kHz_16bit = 0x8,
-		STEREO_22kHz_8bit  = 0x20,
-		STEREO_22kHz_16bit = 0x80,
-		STEREO_44kHz_8bit  = 0x200,
-		STEREO_44kHz_16bit = 0x800,
-		STEREO_48kHz_8bit  = 0x2000,
-		STEREO_48kHz_16bit = 0x8000,
-		STEREO_96kHz_8bit  = 0x20000,
-		STEREO_96kHz_16bit = 0x80000,
+		MONO_8bit_11kHz    = 0x1,
+		MONO_8bit_22kHz    = 0x10,
+		MONO_8bit_44kHz    = 0x100,
+		MONO_8bit_48kHz    = 0x1000,
+		MONO_8bit_96kHz    = 0x10000,
+		STEREO_8bit_11kHz  = 0x2,
+		STEREO_8bit_22kHz  = 0x20,
+		STEREO_8bit_44kHz  = 0x200,
+		STEREO_8bit_48kHz  = 0x2000,
+		STEREO_8bit_96kHz  = 0x20000,
+		MONO_16bit_11kHz   = 0x4,
+		MONO_16bit_22kHz   = 0x40,
+		MONO_16bit_44kHz   = 0x400,
+		MONO_16bit_48kHz   = 0x4000,
+		MONO_16bit_96kHz   = 0x40000,
+		STEREO_16bit_11kHz = 0x8,
+		STEREO_16bit_22kHz = 0x80,
+		STEREO_16bit_44kHz = 0x800,
+		STEREO_16bit_48kHz = 0x8000,
+		STEREO_16bit_96kHz = 0x80000,
 	}
 
 	protected const uint WAVE_MAPPER = unchecked((uint)-1);
 
 	protected IntPtr mHandle;
 	protected WAVEFORMATEX mWaveFormatEx;
-	protected WAVEHDR[] mWaveHeader;
-	protected IntPtr[] mWaveHeaderPtr;
+	protected IntPtr[] mpWaveHeader;
 	protected int mBufferIndex;
 	protected short[] mBuffer;
 
@@ -103,39 +102,41 @@ public abstract class WaveLib {
 		BufferCount = bufferCount;
 		mBufferIndex = 0;
 		mBuffer = new short[bufferSize];
+		mWaveFormatEx = new WAVEFORMATEX();
+		mWaveFormatEx.wFormatTag = 1;
+		mWaveFormatEx.nChannels = (ushort)channels;
+		mWaveFormatEx.nSamplesPerSec = (uint)sampleRate;
+		mWaveFormatEx.nAvgBytesPerSec = (uint)(sampleRate * channels * 16 >> 3);
+		mWaveFormatEx.nBlockAlign = (ushort)(channels * 16 >> 3);
+		mWaveFormatEx.wBitsPerSample = 16;
+		mWaveFormatEx.cbSize = 0;
 	}
 
 	protected void AllocHeader() {
-		mWaveFormatEx = new WAVEFORMATEX();
-		mWaveFormatEx.wFormatTag = 1;
-		mWaveFormatEx.nChannels = (ushort)Channels;
-		mWaveFormatEx.nSamplesPerSec = (uint)SampleRate;
-		mWaveFormatEx.nAvgBytesPerSec = (uint)(SampleRate * Channels * 16 >> 3);
-		mWaveFormatEx.nBlockAlign = (ushort)(Channels * 16 >> 3);
-		mWaveFormatEx.wBitsPerSample = 16;
-		mWaveFormatEx.cbSize = 0;
-		mWaveHeaderPtr = new IntPtr[BufferCount];
-		mWaveHeader = new WAVEHDR[BufferCount];
+		var defaultValue = new short[BufferSize];
+		mpWaveHeader = new IntPtr[BufferCount];
 		for (int i = 0; i < BufferCount; ++i) {
-			mWaveHeaderPtr[i] = Marshal.AllocHGlobal(Marshal.SizeOf(mWaveHeader[i]));
-			mWaveHeader[i].dwBufferLength = (uint)(BufferSize * 16 >> 3);
-			mWaveHeader[i].lpData = Marshal.AllocHGlobal((int)mWaveHeader[i].dwBufferLength);
-			mWaveHeader[i].dwFlags = 0;
-			Marshal.Copy(mBuffer, 0, mWaveHeader[i].lpData, BufferSize);
-			Marshal.StructureToPtr(mWaveHeader[i], mWaveHeaderPtr[i], true);
+			var hdr = new WAVEHDR();
+			hdr.dwFlags = 0;
+			hdr.dwBufferLength = (uint)(BufferSize * 16 >> 3);
+			hdr.lpData = Marshal.AllocHGlobal((int)hdr.dwBufferLength);
+			Marshal.Copy(defaultValue, 0, hdr.lpData, BufferSize);
+			mpWaveHeader[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());
+			Marshal.StructureToPtr(hdr, mpWaveHeader[i], true);
 		}
 	}
 
 	protected void DisposeHeader() {
 		for (int i = 0; i < BufferCount; ++i) {
-			if (mWaveHeader[i].lpData != IntPtr.Zero) {
-				Marshal.FreeHGlobal(mWaveHeader[i].lpData);
-				mWaveHeader[i].lpData = IntPtr.Zero;
+			if (mpWaveHeader[i] == IntPtr.Zero) {
+				continue;
 			}
-			if (mWaveHeaderPtr[i] != IntPtr.Zero) {
-				Marshal.FreeHGlobal(mWaveHeaderPtr[i]);
-				mWaveHeaderPtr[i] = IntPtr.Zero;
+			var hdr = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[i]);
+			if (hdr.lpData != IntPtr.Zero) {
+				Marshal.FreeHGlobal(hdr.lpData);
 			}
+			Marshal.FreeHGlobal(mpWaveHeader[i]);
+			mpWaveHeader[i] = IntPtr.Zero;
 		}
 	}
 }

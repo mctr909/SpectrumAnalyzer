@@ -32,7 +32,9 @@ namespace SpectrumAnalyzer {
 		public Form1() {
 			InitializeComponent();
 			mWaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
+			mWaveOut.Open();
 			mWaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			mWaveIn.Open();
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
@@ -320,19 +322,19 @@ namespace SpectrumAnalyzer {
 				idxA = idxB;
 			}
 			for (int y = 1; y < KEYBOARD_HEIGHT; y++) {
-				Array.Copy(
+				Buffer.BlockCopy(
 					mPix, offsetY0,
 					mPix, offsetY0 + data.Stride * y,
 					data.Stride
 				);
 			}
 			var offsetY1 = data.Stride * (top + KEYBOARD_HEIGHT);
-			Array.Copy(
+			Buffer.BlockCopy(
 				mPix, offsetY1,
 				mPix, offsetY1 + data.Stride * SCROLL_SPEED,
 				data.Stride * (height - SCROLL_SPEED)
 			);
-			Array.Copy(
+			Buffer.BlockCopy(
 				mPix, offsetY0,
 				mPix, offsetY1,
 				data.Stride * SCROLL_SPEED
