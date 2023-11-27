@@ -23,11 +23,12 @@ public class Spectrum {
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
-	const int AVG_WIDTH_NARROW = TONE_DIV * 1;
+	const int AVG_WIDTH_NARROW = TONE_DIV * 3 / 2;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
 	readonly double RESPONSE_SPEED_MAX;
+	readonly int SAMPLERATE;
 	readonly int MID_BEGIN;
 	readonly BANK[] mBanks;
 	double mMax;
@@ -42,7 +43,8 @@ public class Spectrum {
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
 		GAIN_ATTENUATION = 1.0 - 50 * FREQ_TO_OMEGA;
-		RESPONSE_SPEED_MAX = sampleRate / 8.0;
+		RESPONSE_SPEED_MAX = sampleRate / 2.0;
+		SAMPLERATE = sampleRate;
 		int octDiv = TONE_DIV * 12;
 		MID_BEGIN = (int)(octDiv * 4.0);
 		Count = TONE_DIV * notes;
@@ -75,14 +77,14 @@ public class Spectrum {
 		bank.b0 = alpha / a0;
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
-		var responseSpeed = 200.0 * freq / 1000.0;
+		var responseSpeed = freq * 2;
 		if (responseSpeed < 4.0) {
 			responseSpeed = 4.0;
 		}
 		if (RESPONSE_SPEED_MAX < responseSpeed) {
 			responseSpeed = RESPONSE_SPEED_MAX;
 		}
-		bank.attenuation = 1.0 - responseSpeed * FREQ_TO_OMEGA;
+		bank.attenuation = 1.0 - responseSpeed / SAMPLERATE;
 		bank.gain = 1.0 / bank.attenuation - 1.0;
 	}
 

@@ -12,12 +12,12 @@ public class OscBank {
 	const double AMP_MIN = 1.0 / 32768.0;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
-	const int TABLE_LENGTH = 192;
+	const int TABLE_LENGTH = 1024;
 	static readonly double[] TABLE;
 
 	static OscBank() {
-		TABLE = new double[TABLE_LENGTH];
-		for (int i = 0; i < TABLE_LENGTH; i++) {
+		TABLE = new double[TABLE_LENGTH + 1];
+		for (int i = 0; i < TABLE_LENGTH + 1; i++) {
 			TABLE[i] = Math.Sin(2 * Math.PI * i / TABLE_LENGTH);
 		}
 	}
@@ -34,14 +34,14 @@ public class OscBank {
 		var random = new Random();
 		for (var b = 0; b < banks; b++) {
 			var freq = baseFreq * Math.Pow(2.0, b / 12.0);
-			double declickSpeed;
+			double declickFreq;
 			if (freq < sampleRate * 0.25) {
-				declickSpeed = freq * 2;
+				declickFreq = freq * 2;
 			} else {
-				declickSpeed = sampleRate * 0.5;
+				declickFreq = sampleRate * 0.5;
 			}
 			var bank = new BANK() {
-				declickSpeed = declickSpeed / sampleRate,
+				declickSpeed = declickFreq / sampleRate,
 				time = random.NextDouble(),
 				delta = new double[TONE_DIV],
 			};
@@ -69,7 +69,7 @@ public class OscBank {
 			for (int d = 0; d < TONE_DIV; d++) {
 				var l = levelL[il + d];
 				var r = levelR[il + d];
-				var c = l + r;
+				var c = Math.Max(l, r);
 				if (peakL < l) {
 					peakL = l;
 				}
@@ -81,29 +81,35 @@ public class OscBank {
 					delta = bank.delta[d];
 				}
 			}
-			if (peakL < AMP_MIN && peakR < AMP_MIN &&
-				bank.ampL < AMP_MIN && bank.ampR < AMP_MIN) {
-				continue;
+			if (bank.ampL < AMP_MIN && bank.ampR < AMP_MIN) {
+				if (peakL < AMP_MIN && peakR < AMP_MIN) {
+					continue;
+				} else {
+					if (0 == b) {
+						bank.time = BANKS[b + 1].time;
+					} else if (b == BANKS.Length - 1) {
+						bank.time = BANKS[b - 1].time;
+					} else {
+						var lo = BANKS[b - 1];
+						var hi = BANKS[b + 1];
+						if (Math.Max(lo.ampL, lo.ampR) < Math.Max(hi.ampL, hi.ampR)) {
+							bank.time = hi.time;
+						} else {
+							bank.time = lo.time;
+						}
+					}
+				}
 			}
 			delta *= Pitch;
 			for (int t = 0; t < BUFFER_LENGTH; t++) {
 				var idxD = bank.time * TABLE_LENGTH;
+				var idx = (int)idxD;
+				var a2b = idxD - idx;
 				bank.time += delta;
-				if (1.0 <= bank.time) {
-					bank.time -= 1.0;
-				}
-				if (1.0 <= bank.time) {
-					bank.time -= 1.0;
-				}
-				var idxA = (int)idxD;
-				var a2b = idxD - idxA;
-				var idxB = idxA + 1;
-				if (idxB == TABLE_LENGTH) {
-					idxB = 0;
-				}
+				bank.time -= (int)bank.time;
 				bank.ampL += (peakL - bank.ampL) * bank.declickSpeed;
 				bank.ampR += (peakR - bank.ampR) * bank.declickSpeed;
-				var wave = TABLE[idxA] * (1.0 - a2b) + TABLE[idxB] * a2b;
+				var wave = TABLE[idx] * (1.0 - a2b) + TABLE[idx + 1] * a2b;
 				mBufferL[t] += wave * bank.ampL;
 				mBufferR[t] += wave * bank.ampR;
 			}
