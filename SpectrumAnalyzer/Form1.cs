@@ -98,6 +98,8 @@ namespace SpectrumAnalyzer {
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+			mWaveOut.FilterBankL.Transpose = -TrkSpeed.Value;
+			mWaveOut.FilterBankR.Transpose = -TrkSpeed.Value;
 			DrawBackground();
 		}
 
@@ -145,12 +147,12 @@ namespace SpectrumAnalyzer {
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (mWaveOut.Enabled) {
 				Drawer.Peak(g, mWaveOut.FilterBankL.Peak, width, gaugeHeight);
-				Drawer.Slope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.OrangeRed);
+				Drawer.Slope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, mWaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 			}
 			if (mWaveIn.Enabled) {
 				Drawer.Peak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
-				Drawer.Slope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.OrangeRed);
+				Drawer.Slope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, mWaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 			}
 			pictureBox1.Image = pictureBox1.Image;

@@ -23,7 +23,7 @@ public class Spectrum {
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
-	const int AVG_WIDTH_NARROW = TONE_DIV * 3 / 2;
+	const int AVG_WIDTH_NARROW = TONE_DIV * 1;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -39,6 +39,7 @@ public class Spectrum {
 	public double[] Peak { get; private set; }
 	public double[] Average { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
+	public int Transpose { get; set; }
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
@@ -77,9 +78,9 @@ public class Spectrum {
 		bank.b0 = alpha / a0;
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
-		var responseSpeed = freq * 2;
-		if (responseSpeed < 4.0) {
-			responseSpeed = 4.0;
+		var responseSpeed = freq * 0.5;
+		if (responseSpeed < 5.0) {
+			responseSpeed = 5.0;
 		}
 		if (RESPONSE_SPEED_MAX < responseSpeed) {
 			responseSpeed = RESPONSE_SPEED_MAX;
@@ -115,7 +116,7 @@ public class Spectrum {
 		var lastPeakIndex = -1;
 		for (int b = 0; b < Count; ++b) {
 			int avgWidth;
-			if (b < MID_BEGIN) {
+			if (b + Transpose < MID_BEGIN) {
 				avgWidth = AVG_WIDTH_WIDE;
 			} else {
 				avgWidth = AVG_WIDTH_NARROW;
@@ -127,13 +128,13 @@ public class Spectrum {
 			}
 			sum /= avgWidth * 2 + 1;
 			var average = Math.Sqrt(sum / mMax);
-			if (b < MID_BEGIN) {
+			if (b + Transpose < MID_BEGIN) {
 				average *= 1.01;
 			}
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
-			Peak[b] = 0.0;
 			Average[b] = average;
+			Peak[b] = 0.0;
 			if (slope < average) {
 				if (0 <= lastPeakIndex) {
 					Peak[lastPeakIndex] = lastPeak;
