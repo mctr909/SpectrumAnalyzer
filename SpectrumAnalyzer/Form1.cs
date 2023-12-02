@@ -8,7 +8,7 @@ namespace SpectrumAnalyzer {
 	public partial class Form1 : Form {
 		const int NOTE_COUNT = 124;
 		const int KEYBOARD_HEIGHT = 34;
-		readonly double BASE_FREQ = 13.75 * Math.Pow(2.0, 3 / 12.0);
+		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
 
 		Playback mWaveOut;
 		Record mWaveIn;
