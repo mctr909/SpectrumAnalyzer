@@ -23,7 +23,7 @@ public class Spectrum {
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
-	const int AVG_WIDTH_NARROW = TONE_DIV * 1;
+	const int AVG_WIDTH_NARROW = TONE_DIV;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -78,7 +78,7 @@ public class Spectrum {
 		bank.b0 = alpha / a0;
 		bank.b1 = 0.0;
 		bank.b2 = -alpha / a0;
-		var responseSpeed = freq * 0.5;
+		var responseSpeed = freq;
 		if (responseSpeed < 5.0) {
 			responseSpeed = 5.0;
 		}
