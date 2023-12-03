@@ -85,13 +85,14 @@
             // TrkKey
             // 
             this.TrkKey.AutoSize = false;
-            this.TrkKey.LargeChange = 1;
+            this.TrkKey.LargeChange = 10;
             this.TrkKey.Location = new System.Drawing.Point(93, 41);
-            this.TrkKey.Maximum = 12;
-            this.TrkKey.Minimum = -12;
+            this.TrkKey.Maximum = 120;
+            this.TrkKey.Minimum = -120;
             this.TrkKey.Name = "TrkKey";
             this.TrkKey.Size = new System.Drawing.Size(117, 30);
             this.TrkKey.TabIndex = 5;
+            this.TrkKey.TickFrequency = 10;
             this.TrkKey.Scroll += new System.EventHandler(this.TrkKey_Scroll);
             // 
             // pictureBox1

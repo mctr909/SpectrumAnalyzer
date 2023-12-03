@@ -91,13 +91,13 @@ namespace SpectrumAnalyzer {
 
 		private void TrkKey_Scroll(object sender, EventArgs e) {
 			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mWaveOut.Speed;
 			DrawBackground();
 		}
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 12.0) / mWaveOut.Speed;
+			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mWaveOut.Speed;
 			mWaveOut.FilterBankL.Transpose = -TrkSpeed.Value;
 			mWaveOut.FilterBankR.Transpose = -TrkSpeed.Value;
 			DrawBackground();
@@ -171,7 +171,7 @@ namespace SpectrumAnalyzer {
 			Drawer.Keyboard(g,
 				pictureBox1.Width, pictureBox1.Height,
 				gaugeHeight, KEYBOARD_HEIGHT,
-				TrkKey.Value - TrkSpeed.Value, NOTE_COUNT, BASE_FREQ
+				TrkKey.Value / 10 - TrkSpeed.Value, NOTE_COUNT, BASE_FREQ
 			);
 			Drawer.Gauge(g, pictureBox1.Width, gaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
