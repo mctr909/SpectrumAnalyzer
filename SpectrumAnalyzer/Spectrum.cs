@@ -19,7 +19,7 @@ public class Spectrum {
 		public double power;
 	}
 
-	const double GAIN_MIN = 1.0 / 1000000.0;
+	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
