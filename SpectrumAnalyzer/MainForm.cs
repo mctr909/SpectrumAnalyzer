@@ -5,20 +5,22 @@ using System.IO;
 using System.Drawing.Imaging;
 
 namespace SpectrumAnalyzer {
-	public partial class Form1 : Form {
+	public partial class MainForm : Form {
 		const int NOTE_COUNT = 124;
 		const int KEYBOARD_HEIGHT = 34;
 		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
 
-		Playback mWaveOut;
+		public Playback WaveOut;
 		Record mWaveIn;
-		
+
 		bool mIsScrol;
 		bool mSetLayout = true;
 
-		public Form1() {
+		public int KeyboardShift = 0;
+
+		public MainForm() {
 			InitializeComponent();
-			mWaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
+			WaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
 			mWaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
 		}
 
@@ -32,10 +34,9 @@ namespace SpectrumAnalyzer {
 			mSetLayout = true;
 		}
 
-		private void BtnFileOpen_Click(object sender, EventArgs e) {
-			mWaveOut.Close();
-			mWaveOut.Position = 0;
-			BtnPlayStop.Text = "再生";
+		private void TsbOpen_Click(object sender, EventArgs e) {
+			WaveOut.Close();
+			WaveOut.Position = 0;
 
 			openFileDialog1.FileName = "";
 			openFileDialog1.Filter = "PCMファイル(*.wav)|*.wav";
@@ -44,42 +45,42 @@ namespace SpectrumAnalyzer {
 			if (!File.Exists(filePath)) {
 				return;
 			}
-			mWaveOut.SetValue(filePath);
+			WaveOut.SetValue(filePath);
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = mWaveOut.Length / mWaveOut.SampleRate;
+			TrkSeek.Maximum = WaveOut.Length / WaveOut.SampleRate;
 			TrkSeek.Value = 0;
 		}
 
-		private void BtnSetting_Click(object sender, EventArgs e) {
-
-		}
-
-		private void BtnPlayStop_Click(object sender, EventArgs e) {
-			if (mWaveOut.Enabled) {
-				mWaveOut.Close();
-				BtnPlayStop.Text = "再生";
+		private void TsbPlay_Click(object sender, EventArgs e) {
+			if (WaveOut.Enabled) {
+				WaveOut.Close();
+				TsbPlay.Text = "再生";
 			} else {
 				mWaveIn.Close();
-				mWaveOut.Open();
-				BtnRec.Text = "録音";
-				BtnPlayStop.Text = "停止";
+				WaveOut.Open();
+				TsbRec.Text = "録音";
+				TsbPlay.Text = "停止";
 				TrkSeek.Enabled = true;
-				TrkSpeed.Enabled = true;
 			}
 		}
 
-		private void BtnRec_Click(object sender, EventArgs e) {
+		private void TsbRec_Click(object sender, EventArgs e) {
 			if (mWaveIn.Enabled) {
 				mWaveIn.Close();
-				BtnRec.Text = "録音";
+				TsbRec.Text = "録音";
 			} else {
-				mWaveOut.Close();
+				WaveOut.Close();
 				mWaveIn.Open();
-				BtnPlayStop.Text = "再生";
-				BtnRec.Text = "停止";
+				TsbPlay.Text = "再生";
+				TsbRec.Text = "停止";
 				TrkSeek.Enabled = false;
-				TrkSpeed.Enabled = false;
 			}
+		}
+
+		private void TsbSetting_Click(object sender, EventArgs e) {
+			var fm = new Settings(this);
+			fm.StartPosition = FormStartPosition.CenterParent;
+			fm.ShowDialog();
 		}
 
 		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
@@ -87,27 +88,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			mWaveOut.Position = TrkSeek.Value * mWaveOut.SampleRate;
+			WaveOut.Position = TrkSeek.Value * WaveOut.SampleRate;
 			mIsScrol = false;
-		}
-
-		private void TrkKey_Scroll(object sender, EventArgs e) {
-			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mWaveOut.Speed;
-			DrawBackground();
-		}
-
-		private void TrkSpeed_Scroll(object sender, EventArgs e) {
-			mWaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mWaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mWaveOut.Speed;
-			mWaveOut.FilterBankL.Transpose = -TrkSpeed.Value;
-			mWaveOut.FilterBankR.Transpose = -TrkSpeed.Value;
-			DrawBackground();
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
 			if (!mIsScrol) {
-				var temp = mWaveOut.Position / mWaveOut.SampleRate;
+				var temp = WaveOut.Position / WaveOut.SampleRate;
 				if (temp <= TrkSeek.Maximum) {
 					TrkSeek.Value = temp;
 				}
@@ -121,16 +108,12 @@ namespace SpectrumAnalyzer {
 
 		void SetLayout() {
 			TrkSeek.Top = 0;
+			TrkSeek.Left = TsbPlay.Bounds.Right;
 			TrkSeek.Width = Width - TrkSeek.Left - 16;
-			TrkKey.Top = TrkSeek.Bottom;
-			TrkKey.Width = TrkSeek.Width / 2;
-			TrkSpeed.Top = TrkKey.Top;
-			TrkSpeed.Left = TrkKey.Right;
-			TrkSpeed.Width = TrkSeek.Width / 2;
-			pictureBox1.Top = TrkKey.Bottom;
+			pictureBox1.Top = TrkSeek.Bottom;
 			pictureBox1.Left = 0;
 			pictureBox1.Width = Width - 16;
-			pictureBox1.Height = Height - TrkKey.Bottom - 39;
+			pictureBox1.Height = Height - TrkSeek.Bottom - 39;
 			if (null != pictureBox1.Image) {
 				pictureBox1.Image.Dispose();
 				pictureBox1.Image = null;
@@ -147,11 +130,11 @@ namespace SpectrumAnalyzer {
 			var width = pictureBox1.Width;
 			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
-			if (mWaveOut.Enabled) {
-				Drawer.Slope(g, mWaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
-				Drawer.Peak(g, mWaveOut.FilterBankL.Peak, width, gaugeHeight);
-				Drawer.Slope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, mWaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+			if (WaveOut.Enabled) {
+				Drawer.Slope(g, WaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
+				Drawer.Peak(g, WaveOut.FilterBankL.Peak, width, gaugeHeight);
+				Drawer.Slope(g, WaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
+				Drawer.Spectrum(bmp, WaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (mWaveIn.Enabled) {
@@ -164,7 +147,7 @@ namespace SpectrumAnalyzer {
 			g.Dispose();
 		}
 
-		void DrawBackground() {
+		public void DrawBackground() {
 			if (null != pictureBox1.BackgroundImage) {
 				pictureBox1.BackgroundImage.Dispose();
 				pictureBox1.BackgroundImage = null;
@@ -176,7 +159,7 @@ namespace SpectrumAnalyzer {
 			Drawer.Keyboard(g,
 				pictureBox1.Width, pictureBox1.Height,
 				gaugeHeight, KEYBOARD_HEIGHT,
-				TrkKey.Value / 10 - TrkSpeed.Value, NOTE_COUNT, BASE_FREQ
+				KeyboardShift, NOTE_COUNT, BASE_FREQ
 			);
 			Drawer.Gauge(g, pictureBox1.Width, gaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
