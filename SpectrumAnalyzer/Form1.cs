@@ -50,6 +50,10 @@ namespace SpectrumAnalyzer {
 			TrkSeek.Value = 0;
 		}
 
+		private void BtnSetting_Click(object sender, EventArgs e) {
+
+		}
+
 		private void BtnPlayStop_Click(object sender, EventArgs e) {
 			if (mWaveOut.Enabled) {
 				mWaveOut.Close();

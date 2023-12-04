@@ -37,6 +37,7 @@
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.TrkSpeed = new System.Windows.Forms.TrackBar();
 			this.BtnRec = new System.Windows.Forms.Button();
+			this.BtnSetting = new System.Windows.Forms.Button();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSeek)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.TrkKey)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -47,7 +48,7 @@
 			// 
 			this.BtnFileOpen.Location = new System.Drawing.Point(4, 4);
 			this.BtnFileOpen.Name = "BtnFileOpen";
-			this.BtnFileOpen.Size = new System.Drawing.Size(86, 23);
+			this.BtnFileOpen.Size = new System.Drawing.Size(40, 23);
 			this.BtnFileOpen.TabIndex = 0;
 			this.BtnFileOpen.Text = "開く";
 			this.BtnFileOpen.UseVisualStyleBackColor = true;
@@ -118,7 +119,7 @@
 			// 
 			// BtnRec
 			// 
-			this.BtnRec.Location = new System.Drawing.Point(50, 28);
+			this.BtnRec.Location = new System.Drawing.Point(47, 28);
 			this.BtnRec.Name = "BtnRec";
 			this.BtnRec.Size = new System.Drawing.Size(40, 23);
 			this.BtnRec.TabIndex = 8;
@@ -126,11 +127,22 @@
 			this.BtnRec.UseVisualStyleBackColor = true;
 			this.BtnRec.Click += new System.EventHandler(this.BtnRec_Click);
 			// 
+			// BtnSetting
+			// 
+			this.BtnSetting.Location = new System.Drawing.Point(47, 4);
+			this.BtnSetting.Name = "BtnSetting";
+			this.BtnSetting.Size = new System.Drawing.Size(40, 23);
+			this.BtnSetting.TabIndex = 9;
+			this.BtnSetting.Text = "設定";
+			this.BtnSetting.UseVisualStyleBackColor = true;
+			this.BtnSetting.Click += new System.EventHandler(this.BtnSetting_Click);
+			// 
 			// Form1
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(371, 375);
+			this.Controls.Add(this.BtnSetting);
 			this.Controls.Add(this.BtnRec);
 			this.Controls.Add(this.TrkSpeed);
 			this.Controls.Add(this.pictureBox1);
@@ -162,6 +174,7 @@
         private System.Windows.Forms.PictureBox pictureBox1;
         private System.Windows.Forms.TrackBar TrkSpeed;
 		private System.Windows.Forms.Button BtnRec;
+		private System.Windows.Forms.Button BtnSetting;
 	}
 }
 
