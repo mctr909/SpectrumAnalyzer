@@ -88,7 +88,7 @@ public class OscBank {
 				} else {
 					var hiBankAmp = 0.0;
 					var hiBankPhase = 0.0;
-					var hiBankEnd = Math.Min(b + 7, BANKS.Length);
+					var hiBankEnd = Math.Min(b + 6, BANKS.Length);
 					for (int h = b + 1; h < hiBankEnd; h++) {
 						var hiBank = BANKS[h];
 						hiBankAmp = Math.Max(hiBank.ampL, hiBank.ampR);
@@ -97,7 +97,7 @@ public class OscBank {
 							break;
 						}
 					}
-					if (7 < b - loBankIndex) {
+					if (6 < b - loBankIndex) {
 						loBankAmp = 0.0;
 					}
 					if (loBankAmp < hiBankAmp) {

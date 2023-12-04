@@ -18,7 +18,7 @@ namespace SpectrumAnalyzer {
 		static readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
-		static readonly Pen BAR = new Pen(Color.FromArgb(111, 0, 191, 191), 1.0f);
+		static readonly Pen BAR = new Pen(Color.FromArgb(111, 191, 191, 191), 1.0f);
 		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
 		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
@@ -40,14 +40,14 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		static int DbToY(double db, int height, int offset) {
+		static int DbToY(double db, int height) {
 			if (db < MinLevel) {
 				db = MinLevel;
 			}
-			return (int)(offset + db * height / MinLevel);
+			return (int)(db * height / MinLevel);
 		}
 
-		static int AmpToY(double amp, int height, int offset) {
+		static int AmpToY(double amp, int height) {
 			if (amp < 1 / 32768.0) {
 				amp = 1 / 32768.0;
 			}
@@ -55,7 +55,7 @@ namespace SpectrumAnalyzer {
 			if (db < MinLevel) {
 				db = MinLevel;
 			}
-			return (int)(offset + db * height / MinLevel);
+			return (int)(db * height / MinLevel);
 		}
 
 		static void SetHue(double amp, int pos, int width) {
@@ -161,7 +161,7 @@ namespace SpectrumAnalyzer {
 		public static void Gauge(Graphics g, int width, int height) {
 			var right = width - 1;
 			for (double db = 0; MinLevel <= db; db -= 1.0) {
-				var py = DbToY(db, height, 0);
+				var py = DbToY(db, height);
 				if (db % 10 == 0) {
 					g.DrawLine(GRID_MAJOR, 0, py, right, py);
 				} else if (height >= -MinLevel && db % 5 == 0) {
@@ -177,7 +177,7 @@ namespace SpectrumAnalyzer {
 				Alignment = StringAlignment.Near
 			};
 			for (double db = 0; MinLevel < db; db -= 10.0) {
-				var py = DbToY(db, height, 0) - 2;
+				var py = DbToY(db, height) - 2;
 				if (py < textBottom) {
 					g.TranslateTransform(0, py);
 					g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
@@ -193,7 +193,7 @@ namespace SpectrumAnalyzer {
 		public static void Peak(Graphics g, double[] arr, int width, int height) {
 			var count = arr.Length;
 			for (int i = 0; i < count; i++) {
-				var barY = AmpToY(arr[i], height, 0);
+				var barY = AmpToY(arr[i], height);
 				var barHeight = height - barY;
 				if (0 < barHeight) {
 					var barX = (i - 1) * width / count + 1;
@@ -206,12 +206,12 @@ namespace SpectrumAnalyzer {
 		public static void Slope(Graphics g, double[] arr, int width, int height, Pen color) {
 			var idxA = 0;
 			var preX = 0;
-			var preY = AmpToY(arr[idxA], height, 0);
+			var preY = AmpToY(arr[idxA], height);
 			for (int x = 0; x < width; x++) {
 				var idxB = x * arr.Length / width;
 				int y;
 				if (1 < idxB - idxA) {
-					y = AmpToY(arr[idxA], height, 0);
+					y = AmpToY(arr[idxA], height);
 					g.DrawLine(color, preX, preY, x, y);
 					var max = double.MinValue;
 					var min = double.MaxValue;
@@ -220,12 +220,12 @@ namespace SpectrumAnalyzer {
 						min = Math.Min(min, v);
 						max = Math.Max(max, v);
 					}
-					var minY = AmpToY(min, height, 0);
-					var maxY = AmpToY(max, height, 0);
+					var minY = AmpToY(min, height);
+					var maxY = AmpToY(max, height);
 					g.DrawLine(color, x, minY, x, maxY);
-					y = AmpToY(arr[idxB], height, 0);
+					y = AmpToY(arr[idxB], height);
 				} else {
-					y = AmpToY(arr[idxB], height, 0);
+					y = AmpToY(arr[idxB], height);
 					g.DrawLine(color, preX, preY, x, y);
 				}
 				preX = x;

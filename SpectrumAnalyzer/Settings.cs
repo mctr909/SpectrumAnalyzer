@@ -3,6 +3,8 @@ using System.Windows.Forms;
 
 namespace SpectrumAnalyzer {
 	public partial class Settings : Form {
+		public static Settings Instance;
+
 		MainForm mMain;
 
 		public Settings(MainForm fm) {
@@ -10,12 +12,17 @@ namespace SpectrumAnalyzer {
 			mMain = fm;
 		}
 
+		private void Settings_FormClosed(object sender, FormClosedEventArgs e) {
+			Instance = null;
+		}
+
 		private void Settings_Load(object sender, EventArgs e) {
 			TrkSpeed.Value = (int)(Math.Log(mMain.WaveOut.Speed, 2.0) * 12);
 			TrkKey.Value = (int)(Math.Log(mMain.WaveOut.Pitch * mMain.WaveOut.Speed, 2.0) * 120);
 			GrbSpeed.Enabled = mMain.WaveOut.Enabled;
 			TrkMinLevel.Value = Drawer.MinLevel;
-			ChkAutoGain.Checked = mMain.WaveIn.FilterBank.AutoGain;
+			RbAutoGain.Checked = mMain.WaveIn.FilterBank.AutoGain;
+			RbGainNone.Checked = !RbAutoGain.Checked;
 			setting();
 		}
 
@@ -34,10 +41,10 @@ namespace SpectrumAnalyzer {
 			setting();
 		}
 
-		private void ChkAutoGain_CheckedChanged(object sender, EventArgs e) {
-			mMain.WaveOut.FilterBankL.AutoGain = ChkAutoGain.Checked;
-			mMain.WaveOut.FilterBankR.AutoGain = ChkAutoGain.Checked;
-			mMain.WaveIn.FilterBank.AutoGain = ChkAutoGain.Checked;
+		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
+			mMain.WaveOut.FilterBankL.AutoGain = RbAutoGain.Checked;
+			mMain.WaveOut.FilterBankR.AutoGain = RbAutoGain.Checked;
+			mMain.WaveIn.FilterBank.AutoGain = RbAutoGain.Checked;
 		}
 
 		void setting() {

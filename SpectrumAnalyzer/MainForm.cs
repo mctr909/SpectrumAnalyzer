@@ -78,9 +78,12 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
-			var fm = new Settings(this);
-			fm.StartPosition = FormStartPosition.CenterParent;
-			fm.ShowDialog();
+			if (null == Settings.Instance) {
+				var fm = new Settings(this);
+				fm.Show();
+				fm.Location = Location;
+				Settings.Instance = fm;
+			}
 		}
 
 		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
