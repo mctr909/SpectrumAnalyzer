@@ -22,8 +22,7 @@ public class Spectrum {
 	const double GAIN_MIN = 1.0 / 10000.0;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
-	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
-	const int AVG_WIDTH_NARROW = TONE_DIV;
+	const int HALF_OCT = TONE_DIV * 7;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -48,23 +47,25 @@ public class Spectrum {
 		RESPONSE_SPEED_MAX = sampleRate / 2.0;
 		SAMPLERATE = sampleRate;
 		int octDiv = TONE_DIV * 12;
-		MID_BEGIN = (int)(octDiv * 4.0);
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
 		Average = new double[Count];
 		mMax = GAIN_MIN;
 		mBanks = new BANK[Count];
-		for (int b = 0, n = 0; b < Count; b += TONE_DIV, n++) {
+		for (int b = 0, n = 0; b < Count; b += TONE_DIV, ++n) {
 			var freqN = baseFreq * Math.Pow(2.0, n / 12.0);
 			for (var d = 0; d < TONE_DIV; ++d) {
-				var freqW = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / octDiv);
-				var width = Math.Log(2000.0 / freqW, 2.0);
+				var freq = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / octDiv);
+				if (freq < 200) {
+					MID_BEGIN = b + d;
+				}
+				var width = Math.Log(2000.0 / freq, 2.0);
 				if (width < 1.0) {
 					width = 1.0;
 				}
 				mBanks[b + d] = new BANK();
-				Bandpass(mBanks[b + d], freqW, width / 12.0);
+				Bandpass(mBanks[b + d], freq, width / 12.0);
 			}
 		}
 	}
@@ -119,25 +120,25 @@ public class Spectrum {
 		var lastPeak = 0.0;
 		var lastPeakIndex = -1;
 		for (int b = 0; b < Count; ++b) {
-			int avgWidth;
+			var average = 0.0;
+			for (int w = -HALF_OCT; w <= HALF_OCT; ++w) {
+				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
+				average += Math.Sqrt(mBanks[bw].power / mMax);
+			}
+			Average[b] = average / (HALF_OCT * 2 + 1);
+			int thresholdWidth;
 			if (b + Transpose < MID_BEGIN) {
-				avgWidth = AVG_WIDTH_WIDE;
+				thresholdWidth = HALF_OCT;
 			} else {
-				avgWidth = AVG_WIDTH_NARROW;
+				thresholdWidth = TONE_DIV;
 			}
-			var sum = 0.0;
-			for (int w = -avgWidth; w <= avgWidth; ++w) {
+			var threshold = 0.0;
+			for (int w = -thresholdWidth; w <= thresholdWidth; ++w) {
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				sum += mBanks[bw].power;
+				threshold += mBanks[bw].power;
 			}
-			sum /= avgWidth * 2 + 1;
-			var threshold = Math.Sqrt(sum / mMax) * 1.01;
-			sum = 0.0;
-			for (int w = -AVG_WIDTH_WIDE; w <= AVG_WIDTH_WIDE; ++w) {
-				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				sum += Math.Sqrt(mBanks[bw].power / mMax);
-			}
-			Average[b] = sum / (AVG_WIDTH_WIDE * 2 + 1);
+			threshold /= thresholdWidth * 2 + 1;
+			threshold = Math.Sqrt(threshold / mMax) * 1.01;
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
 			Peak[b] = 0.0;

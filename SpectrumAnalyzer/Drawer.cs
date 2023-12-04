@@ -7,6 +7,13 @@ namespace SpectrumAnalyzer {
 	static class Drawer {
 		const int SCROLL_SPEED = 3;
 
+		const int ALPHA_MAX = 167;
+		const int BLUE_RANGE = ALPHA_MAX + 1;
+		const int CYAN_RANGE = BLUE_RANGE + 256;
+		const int GREEN_RANGE = CYAN_RANGE + 256;
+		const int YELLOW_RANGE = GREEN_RANGE + 256;
+		const int RED_MAX = YELLOW_RANGE + 255;
+
 		static readonly Font FONT = new Font("Meiryo UI", 8.0f);
 		static readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
@@ -59,37 +66,33 @@ namespace SpectrumAnalyzer {
 			if (db < MinLevel) {
 				return;
 			}
-			var v = (int)((1.0 - db / MinLevel) * 1279);
+			var v = (int)((1.0 - db / MinLevel) * RED_MAX);
 			byte a, r, g, b;
-			if (v < 256) {
+			if (v < BLUE_RANGE) {
 				b = 255;
 				g = 0;
 				r = 0;
 				a = (byte)v;
-			} else if (v < 512) {
-				v -= 256;
+			} else if (v < CYAN_RANGE) {
 				b = 255;
-				g = (byte)v;
+				g = (byte)(v - BLUE_RANGE);
 				r = 0;
-				a = 167;
-			} else if (v < 768) {
-				v -= 512;
-				b = (byte)(255 - v);
+				a = ALPHA_MAX;
+			} else if (v < GREEN_RANGE) {
+				b = (byte)(255 - CYAN_RANGE - v);
 				g = 255;
 				r = 0;
-				a = 167;
-			} else if (v < 1024) {
-				v -= 768;
+				a = ALPHA_MAX;
+			} else if (v < YELLOW_RANGE) {
 				b = 0;
 				g = 255;
-				r = (byte)v;
-				a = 167;
+				r = (byte)(v - GREEN_RANGE);
+				a = ALPHA_MAX;
 			} else {
-				v -= 1024;
 				b = 0;
-				g = (byte)(255 - v);
+				g = (byte)(255 - YELLOW_RANGE - v);
 				r = 255;
-				a = 167;
+				a = ALPHA_MAX;
 			}
 			for (int x = 0, p = pos; x < width; x++, p += 4) {
 				ScrollCanvas[p + 0] = b;

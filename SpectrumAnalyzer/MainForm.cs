@@ -118,6 +118,9 @@ namespace SpectrumAnalyzer {
 				pictureBox1.Image.Dispose();
 				pictureBox1.Image = null;
 			}
+			if (pictureBox1.Height < MinimumSize.Height) {
+				pictureBox1.Height = MinimumSize.Height;
+			}
 			pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			Drawer.ScrollCanvas = new byte[4 * pictureBox1.Width * pictureBox1.Height];
 			DrawBackground();
@@ -131,15 +134,15 @@ namespace SpectrumAnalyzer {
 			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (WaveOut.Enabled) {
-				Drawer.Slope(g, WaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Peak(g, WaveOut.FilterBankL.Peak, width, gaugeHeight);
+				Drawer.Slope(g, WaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Slope(g, WaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, WaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (WaveIn.Enabled) {
-				Drawer.Slope(g, WaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Peak(g, WaveIn.FilterBank.Peak, width, gaugeHeight);
+				Drawer.Slope(g, WaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Slope(g, WaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, WaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
