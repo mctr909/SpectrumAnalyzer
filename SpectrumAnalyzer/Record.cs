@@ -1,4 +1,4 @@
-﻿class Record : WaveIn {
+﻿public class Record : WaveIn {
 	public Spectrum FilterBank;
 
 	public Record(int sampleRate, int bufferSize, int notes, double baseFreq) : base(sampleRate, 1, bufferSize) {

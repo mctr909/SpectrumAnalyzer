@@ -19,7 +19,7 @@ public class Spectrum {
 		public double power;
 	}
 
-	const double GAIN_MIN = 1.0 / 10000.0;
+	const double GAIN_MIN = 1.0 / 1000000.0;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int AVG_WIDTH_WIDE = TONE_DIV * 6;
@@ -40,6 +40,7 @@ public class Spectrum {
 	public double[] Average { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
 	public int Transpose { get; set; }
+	public bool AutoGain { get; set; } = true;
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
@@ -111,6 +112,9 @@ public class Spectrum {
 			}
 			bank.power = bank.sum * bank.gain;
 			mMax = Math.Max(mMax, bank.power);
+		}
+		if (!AutoGain) {
+			mMax = 1.0;
 		}
 		var lastPeak = 0.0;
 		var lastPeakIndex = -1;

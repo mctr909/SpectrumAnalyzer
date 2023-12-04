@@ -5,7 +5,6 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		const int RANGE_DB = -30;
 		const int SCROLL_SPEED = 3;
 
 		static readonly Font FONT = new Font("Meiryo UI", 8.0f);
@@ -18,6 +17,7 @@ namespace SpectrumAnalyzer {
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
 
 		public static byte[] ScrollCanvas;
+		public static int MinLevel = -30;
 
 		static string ToString(double value) {
 			if (10000 <= value) {
@@ -34,10 +34,10 @@ namespace SpectrumAnalyzer {
 		}
 
 		static int DbToY(double db, int height, int offset) {
-			if (db < RANGE_DB) {
-				db = RANGE_DB;
+			if (db < MinLevel) {
+				db = MinLevel;
 			}
-			return (int)(offset + db * height / RANGE_DB);
+			return (int)(offset + db * height / MinLevel);
 		}
 
 		static int AmpToY(double amp, int height, int offset) {
@@ -45,10 +45,10 @@ namespace SpectrumAnalyzer {
 				amp = 1 / 32768.0;
 			}
 			var db = 20 * Math.Log10(amp);
-			if (db < RANGE_DB) {
-				db = RANGE_DB;
+			if (db < MinLevel) {
+				db = MinLevel;
 			}
-			return (int)(offset + db * height / RANGE_DB);
+			return (int)(offset + db * height / MinLevel);
 		}
 
 		static void SetHue(double amp, int pos, int width) {
@@ -56,10 +56,10 @@ namespace SpectrumAnalyzer {
 				amp = 1 / 32768.0;
 			}
 			var db = 20 * Math.Log10(amp);
-			if (db < RANGE_DB) {
+			if (db < MinLevel) {
 				return;
 			}
-			var v = (int)((1.0 - db / RANGE_DB) * 1279);
+			var v = (int)((1.0 - db / MinLevel) * 1279);
 			byte a, r, g, b;
 			if (v < 256) {
 				b = 255;
@@ -157,13 +157,13 @@ namespace SpectrumAnalyzer {
 
 		public static void Gauge(Graphics g, int width, int height) {
 			var right = width - 1;
-			for (double db = 0; RANGE_DB <= db; db -= 1.0) {
+			for (double db = 0; MinLevel <= db; db -= 1.0) {
 				var py = DbToY(db, height, 0);
 				if (db % 10 == 0) {
 					g.DrawLine(GRID_MAJOR, 0, py, right, py);
-				} else if (height >= -RANGE_DB && db % 5 == 0) {
+				} else if (height >= -MinLevel && db % 5 == 0) {
 					g.DrawLine(GRID_MINOR1, 0, py, right, py);
-				} else if (height >= -4 * RANGE_DB) {
+				} else if (height >= -4 * MinLevel) {
 					g.DrawLine(GRID_MINOR2, 0, py, right, py);
 				}
 			}
@@ -173,7 +173,7 @@ namespace SpectrumAnalyzer {
 			var stringFormat = new StringFormat() {
 				Alignment = StringAlignment.Near
 			};
-			for (double db = 0; RANGE_DB < db; db -= 10.0) {
+			for (double db = 0; MinLevel < db; db -= 10.0) {
 				var py = DbToY(db, height, 0) - 2;
 				if (py < textBottom) {
 					g.TranslateTransform(0, py);

@@ -11,7 +11,7 @@ namespace SpectrumAnalyzer {
 		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
 
 		public Playback WaveOut;
-		Record mWaveIn;
+		public Record WaveIn;
 
 		bool mIsScrol;
 		bool mSetLayout = true;
@@ -21,7 +21,7 @@ namespace SpectrumAnalyzer {
 		public MainForm() {
 			InitializeComponent();
 			WaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
-			mWaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			WaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
@@ -56,7 +56,7 @@ namespace SpectrumAnalyzer {
 				WaveOut.Close();
 				TsbPlay.Text = "再生";
 			} else {
-				mWaveIn.Close();
+				WaveIn.Close();
 				WaveOut.Open();
 				TsbRec.Text = "録音";
 				TsbPlay.Text = "停止";
@@ -65,12 +65,12 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
-			if (mWaveIn.Enabled) {
-				mWaveIn.Close();
+			if (WaveIn.Enabled) {
+				WaveIn.Close();
 				TsbRec.Text = "録音";
 			} else {
 				WaveOut.Close();
-				mWaveIn.Open();
+				WaveIn.Open();
 				TsbPlay.Text = "再生";
 				TsbRec.Text = "停止";
 				TrkSeek.Enabled = false;
@@ -137,11 +137,11 @@ namespace SpectrumAnalyzer {
 				Drawer.Spectrum(bmp, WaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
-			if (mWaveIn.Enabled) {
-				Drawer.Slope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
-				Drawer.Peak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
-				Drawer.Slope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, mWaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+			if (WaveIn.Enabled) {
+				Drawer.Slope(g, WaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
+				Drawer.Peak(g, WaveIn.FilterBank.Peak, width, gaugeHeight);
+				Drawer.Slope(g, WaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
+				Drawer.Spectrum(bmp, WaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			g.Dispose();

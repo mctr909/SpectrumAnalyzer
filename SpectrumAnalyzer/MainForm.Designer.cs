@@ -34,11 +34,11 @@
 			this.timer1 = new System.Windows.Forms.Timer(this.components);
 			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
-			this.TsbOpen = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.TsbSetting = new System.Windows.Forms.ToolStripButton();
-			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
 			this.TsbRec = new System.Windows.Forms.ToolStripButton();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.TsbOpen = new System.Windows.Forms.ToolStripButton();
 			this.TsbPlay = new System.Windows.Forms.ToolStripButton();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSeek)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
@@ -87,23 +87,9 @@
 			this.toolStrip1.TabIndex = 10;
 			this.toolStrip1.Text = "toolStrip1";
 			// 
-			// TsbOpen
-			// 
-			this.TsbOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.TsbOpen.Image = ((System.Drawing.Image)(resources.GetObject("TsbOpen.Image")));
-			this.TsbOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
-			this.TsbOpen.Name = "TsbOpen";
-			this.TsbOpen.Size = new System.Drawing.Size(23, 22);
-			this.TsbOpen.Text = "ファイルを開く";
-			this.TsbOpen.Click += new System.EventHandler(this.TsbOpen_Click);
-			// 
-			// toolStripSeparator2
-			// 
-			this.toolStripSeparator2.Name = "toolStripSeparator2";
-			this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
-			// 
 			// TsbSetting
 			// 
+			this.TsbSetting.AutoSize = false;
 			this.TsbSetting.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
 			this.TsbSetting.Image = ((System.Drawing.Image)(resources.GetObject("TsbSetting.Image")));
 			this.TsbSetting.ImageTransparentColor = System.Drawing.Color.Magenta;
@@ -112,10 +98,10 @@
 			this.TsbSetting.Text = "設定";
 			this.TsbSetting.Click += new System.EventHandler(this.TsbSetting_Click);
 			// 
-			// toolStripSeparator1
+			// toolStripSeparator2
 			// 
-			this.toolStripSeparator1.Name = "toolStripSeparator1";
-			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+			this.toolStripSeparator2.Name = "toolStripSeparator2";
+			this.toolStripSeparator2.Size = new System.Drawing.Size(6, 25);
 			// 
 			// TsbRec
 			// 
@@ -126,6 +112,21 @@
 			this.TsbRec.Size = new System.Drawing.Size(23, 22);
 			this.TsbRec.Text = "録音";
 			this.TsbRec.Click += new System.EventHandler(this.TsbRec_Click);
+			// 
+			// toolStripSeparator1
+			// 
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(6, 25);
+			// 
+			// TsbOpen
+			// 
+			this.TsbOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
+			this.TsbOpen.Image = ((System.Drawing.Image)(resources.GetObject("TsbOpen.Image")));
+			this.TsbOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
+			this.TsbOpen.Name = "TsbOpen";
+			this.TsbOpen.Size = new System.Drawing.Size(23, 22);
+			this.TsbOpen.Text = "ファイルを開く";
+			this.TsbOpen.Click += new System.EventHandler(this.TsbOpen_Click);
 			// 
 			// TsbPlay
 			// 
