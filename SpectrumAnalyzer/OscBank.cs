@@ -58,6 +58,7 @@ public class OscBank {
 		double[] peaksL, double[] peaksR,
 		short[] output
 	) {
+		var loBankIndex = 0;
 		var loBankAmp = 0.0;
 		var loBankPhase = 0.0;
 		for (int b = 0, p = 0; b < BANKS.Length; b++, p += TONE_DIV) {
@@ -96,6 +97,9 @@ public class OscBank {
 							break;
 						}
 					}
+					if (7 < b - loBankIndex) {
+						loBankAmp = 0.0;
+					}
 					if (loBankAmp < hiBankAmp) {
 						bank.phase = hiBankPhase;
 					} else {
@@ -103,6 +107,7 @@ public class OscBank {
 					}
 				}
 			} else {
+				loBankIndex = b;
 				loBankAmp = Math.Max(bank.ampL, bank.ampR);
 				loBankPhase = bank.phase;
 			}

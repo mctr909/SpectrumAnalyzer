@@ -142,6 +142,49 @@ public class RiffWAV
 		fs.Close();
 	}
 
+	public void read32(ref short left, ref short right) {
+		var fL = br.ReadSingle();
+		var fR = br.ReadSingle();
+		if (fL < -1.0) {
+			fL = -1.0f;
+		}
+		if (1.0 < fL) {
+			fL = 1.0f;
+		}
+		if (fR < -1.0) {
+			fR = -1.0f;
+		}
+		if (1.0 < fR) {
+			fR = 1.0f;
+		}
+		left = (short)(fL * 32767);
+		right = (short)(fR * 32767);
+	}
+
+	public void read32(ref short mono) {
+		var f = br.ReadSingle();
+		if (f < -1.0) {
+			f = -1.0f;
+		}
+		if (1.0 < f) {
+			f = 1.0f;
+		}
+		mono = (short)(f * 32767);
+	}
+
+
+	public void read24(ref short left, ref short right) {
+		br.ReadByte();
+		left = br.ReadInt16();
+		br.ReadByte();
+		right = br.ReadInt16();
+	}
+
+	public void read24(ref short mono) {
+		br.ReadByte();
+		mono = br.ReadInt16();
+	}
+
 	public void read16(ref short left, ref short right)
 	{
 		left = br.ReadInt16();
@@ -155,13 +198,13 @@ public class RiffWAV
 
 	public void read8(ref short left, ref short right)
 	{
-		left = (short)(br.ReadByte() - 128);
-		right = (short)(br.ReadByte() - 128);
+		left = (short)((br.ReadByte() - 128) << 8);
+		right = (short)((br.ReadByte() - 128) << 8);
 	}
 
 	public void read8(ref short mono)
 	{
-		mono = (short)(br.ReadByte() - 128);
+		mono = (short)((br.ReadByte() - 128) << 8);
 	}
 
 	public void write16(short left, short right)

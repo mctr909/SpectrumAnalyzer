@@ -51,33 +51,58 @@
 		case 1:
 			mWaveL = new short[file.data.DataSize / 2];
 			mWaveR = new short[file.data.DataSize / 2];
-			if (8 == file.fmt.BitPerSample) {
+			switch (file.fmt.BitPerSample) {
+			case 8:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read8(ref mWaveL[i]);
-					mWaveL[i] = (short)(256 * mWaveL[i]);
-					mWaveR[i] = (short)(256 * mWaveL[i]);
+					mWaveR[i] = mWaveL[i];
 				}
-			} else {
+				break;
+			case 16:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read16(ref mWaveL[i]);
 					mWaveR[i] = mWaveL[i];
 				}
+				break;
+			case 24:
+				for (var i = 0; i < mWaveL.Length; ++i) {
+					file.read24(ref mWaveL[i]);
+					mWaveR[i] = mWaveL[i];
+				}
+				break;
+			case 32:
+				for (var i = 0; i < mWaveL.Length; ++i) {
+					file.read32(ref mWaveL[i]);
+					mWaveR[i] = mWaveL[i];
+				}
+				break;
 			}
 			break;
 
 		case 2:
 			mWaveL = new short[file.data.DataSize / 4];
 			mWaveR = new short[file.data.DataSize / 4];
-			if (8 == file.fmt.BitPerSample) {
+			switch (file.fmt.BitPerSample) {
+			case 8:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read8(ref mWaveL[i], ref mWaveR[i]);
-					mWaveL[i] = (short)(256 * mWaveL[i]);
-					mWaveR[i] = (short)(256 * mWaveR[i]);
 				}
-			} else {
+				break;
+			case 16:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read16(ref mWaveL[i], ref mWaveR[i]);
 				}
+				break;
+			case 24:
+				for (var i = 0; i < mWaveL.Length; ++i) {
+					file.read24(ref mWaveL[i], ref mWaveR[i]);
+				}
+				break;
+			case 32:
+				for (var i = 0; i < mWaveL.Length; ++i) {
+					file.read32(ref mWaveL[i], ref mWaveR[i]);
+				}
+				break;
 			}
 			break;
 
