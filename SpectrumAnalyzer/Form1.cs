@@ -19,9 +19,7 @@ namespace SpectrumAnalyzer {
 		public Form1() {
 			InitializeComponent();
 			mWaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
-			mWaveOut.Open();
 			mWaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
-			mWaveIn.Open();
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
@@ -35,7 +33,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void BtnFileOpen_Click(object sender, EventArgs e) {
-			mWaveOut.Enabled = false;
+			mWaveOut.Close();
 			mWaveOut.Position = 0;
 			BtnPlayStop.Text = "再生";
 
@@ -53,30 +51,30 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void BtnPlayStop_Click(object sender, EventArgs e) {
-			if ("再生" == BtnPlayStop.Text) {
-				mWaveIn.Enabled = false;
+			if (mWaveOut.Enabled) {
+				mWaveOut.Close();
+				BtnPlayStop.Text = "再生";
+			} else {
+				mWaveIn.Close();
+				mWaveOut.Open();
 				BtnRec.Text = "録音";
-				mWaveOut.Enabled = true;
 				BtnPlayStop.Text = "停止";
 				TrkSeek.Enabled = true;
 				TrkSpeed.Enabled = true;
-			} else {
-				mWaveOut.Enabled = false;
-				BtnPlayStop.Text = "再生";
 			}
 		}
 
 		private void BtnRec_Click(object sender, EventArgs e) {
-			if ("録音" == BtnRec.Text) {
-				mWaveOut.Enabled = false;
+			if (mWaveIn.Enabled) {
+				mWaveIn.Close();
+				BtnRec.Text = "録音";
+			} else {
+				mWaveOut.Close();
+				mWaveIn.Open();
 				BtnPlayStop.Text = "再生";
-				mWaveIn.Enabled = true;
 				BtnRec.Text = "停止";
 				TrkSeek.Enabled = false;
 				TrkSpeed.Enabled = false;
-			} else {
-				mWaveIn.Enabled = false;
-				BtnRec.Text = "録音";
 			}
 		}
 
@@ -146,16 +144,19 @@ namespace SpectrumAnalyzer {
 			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (mWaveOut.Enabled) {
+				Drawer.Slope(g, mWaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Peak(g, mWaveOut.FilterBankL.Peak, width, gaugeHeight);
 				Drawer.Slope(g, mWaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, mWaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (mWaveIn.Enabled) {
+				Drawer.Slope(g, mWaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
 				Drawer.Peak(g, mWaveIn.FilterBank.Peak, width, gaugeHeight);
 				Drawer.Slope(g, mWaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, mWaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				pictureBox1.Image = pictureBox1.Image;
 			}
-			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
 		}
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 public abstract class WaveIn : WaveLib, IDisposable {
 	enum WaveInMessage {
@@ -84,12 +85,16 @@ public abstract class WaveIn : WaveLib, IDisposable {
 		if (IntPtr.Zero == mHandle) {
 			return;
 		}
-		var mr = waveInReset(mHandle);
-		if (MMRESULT.MMSYSERR_NOERROR != mr) {
-			throw new Exception(mr.ToString());
+		mDoStop = true;
+		while (!mStopped) {
+			Thread.Sleep(100);
 		}
 		for (int i = 0; i < BufferCount; ++i) {
 			waveInUnprepareHeader(mpWaveHeader[i], mHandle, Marshal.SizeOf<WAVEHDR>());
+		}
+		var mr = waveInReset(mHandle);
+		if (MMRESULT.MMSYSERR_NOERROR != mr) {
+			throw new Exception(mr.ToString());
 		}
 		mr = waveInClose(mHandle);
 		if (MMRESULT.MMSYSERR_NOERROR != mr) {
@@ -102,10 +107,18 @@ public abstract class WaveIn : WaveLib, IDisposable {
 	void Callback(IntPtr hdrvr, WaveInMessage uMsg, int dwUser, IntPtr waveHdr, int dwParam2) {
 		switch (uMsg) {
 		case WaveInMessage.Open:
+			mStopped = false;
+			Enabled = true;
 			break;
 		case WaveInMessage.Close:
+			mDoStop = false;
+			Enabled = false;
 			break;
 		case WaveInMessage.Data:
+			if (mDoStop) {
+				mStopped = true;
+				break;
+			}
 			var hdr = (WAVEHDR)Marshal.PtrToStructure(waveHdr, typeof(WAVEHDR));
 			Marshal.Copy(hdr.lpData, mBuffer, 0, BufferSize);
 			SetData();

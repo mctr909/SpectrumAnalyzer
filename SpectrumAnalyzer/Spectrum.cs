@@ -127,15 +127,17 @@ public class Spectrum {
 				sum += mBanks[bw].power;
 			}
 			sum /= avgWidth * 2 + 1;
-			var average = Math.Sqrt(sum / mMax);
-			if (b + Transpose < MID_BEGIN) {
-				average *= 1.01;
+			var threshold = Math.Sqrt(sum / mMax) * 1.01;
+			sum = 0.0;
+			for (int w = -AVG_WIDTH_WIDE; w <= AVG_WIDTH_WIDE; ++w) {
+				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
+				sum += Math.Sqrt(mBanks[bw].power / mMax);
 			}
+			Average[b] = sum / (AVG_WIDTH_WIDE * 2 + 1);
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
-			Average[b] = average;
 			Peak[b] = 0.0;
-			if (slope < average) {
+			if (slope < threshold) {
 				if (0 <= lastPeakIndex) {
 					Peak[lastPeakIndex] = lastPeak;
 				}

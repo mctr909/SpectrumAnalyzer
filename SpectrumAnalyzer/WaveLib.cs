@@ -89,7 +89,10 @@ public abstract class WaveLib {
 	protected IntPtr[] mpWaveHeader;
 	protected int mBufferIndex;
 	protected short[] mBuffer;
+	protected bool mDoStop = false;
+	protected bool mStopped = true;
 
+	public bool Enabled { get; protected set; }
 	public int SampleRate { get; private set; }
 	public int Channels { get; private set; }
 	public int BufferSize { get; private set; }

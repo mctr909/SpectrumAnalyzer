@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 public abstract class WaveOut : WaveLib, IDisposable {
 	enum WaveOutMessage {
@@ -82,6 +83,10 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		if (IntPtr.Zero == mHandle) {
 			return;
 		}
+		mDoStop = true;
+		while (!mStopped) {
+			Thread.Sleep(100);
+		}
 		for (int i = 0; i < BufferCount; ++i) {
 			waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
@@ -100,10 +105,18 @@ public abstract class WaveOut : WaveLib, IDisposable {
 	void Callback(IntPtr hdrvr, WaveOutMessage uMsg, int dwUser, IntPtr waveHdr, int dwParam2) {
 		switch (uMsg) {
 		case WaveOutMessage.Open:
+			mStopped = false;
+			Enabled = true;
 			break;
 		case WaveOutMessage.Close:
+			mDoStop = false;
+			Enabled = false;
 			break;
 		case WaveOutMessage.Done: {
+			if (mDoStop) {
+				mStopped = true;
+				break;
+			}
 			waveOutWrite(mHandle, waveHdr, Marshal.SizeOf(typeof(WAVEHDR)));
 			for (mBufferIndex = 0; mBufferIndex < BufferCount; ++mBufferIndex) {
 				if (mpWaveHeader[mBufferIndex] == waveHdr) {

@@ -12,7 +12,6 @@
 	public Spectrum FilterBankL;
 	public Spectrum FilterBankR;
 
-	public bool Enabled { get; set; }
 	public int Position {
 		get { return (int)mTime; }
 		set { mTime = value; }
@@ -130,13 +129,13 @@
 			}
 			var waveL = 0.0;
 			var waveR = 0.0;
-			if (Enabled && mTime < mWaveL.Length) {
+			if (mTime < mWaveL.Length) {
 				waveL = mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
 				waveR = mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
 			}
 			mDataL[j] = (short)waveL;
 			mDataR[j] = (short)waveR;
-			mTime += Enabled ? (mDelta * Speed) : 0.0;
+			mTime += mDelta * Speed;
 			if (mLoopEnd <= mTime) {
 				mTime = mLoopBegin + mTime - mLoopEnd;
 			}
