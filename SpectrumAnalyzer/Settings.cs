@@ -23,6 +23,14 @@ namespace SpectrumAnalyzer {
 			TrkMinLevel.Value = Drawer.MinLevel;
 			RbAutoGain.Checked = mMain.WaveIn.FilterBank.AutoGain;
 			RbGainNone.Checked = !RbAutoGain.Checked;
+			var outDevices = WaveOut.GetDeviceList();
+			foreach(var dev in outDevices) {
+				CmbOutput.Items.Add(dev);
+			}
+			var inDevices = WaveIn.GetDeviceList();
+			foreach (var dev in inDevices) {
+				CmbInput.Items.Add(dev);
+			}
 			setting();
 		}
 
@@ -45,6 +53,14 @@ namespace SpectrumAnalyzer {
 			mMain.WaveOut.FilterBankL.AutoGain = RbAutoGain.Checked;
 			mMain.WaveOut.FilterBankR.AutoGain = RbAutoGain.Checked;
 			mMain.WaveIn.FilterBank.AutoGain = RbAutoGain.Checked;
+		}
+
+		private void CmbOutput_SelectedIndexChanged(object sender, EventArgs e) {
+			mMain.WaveOut.SetDevice((uint)CmbOutput.SelectedIndex);
+		}
+
+		private void CmbInput_SelectedIndexChanged(object sender, EventArgs e) {
+			mMain.WaveIn.SetDevice((uint)CmbInput.SelectedIndex);
 		}
 
 		void setting() {

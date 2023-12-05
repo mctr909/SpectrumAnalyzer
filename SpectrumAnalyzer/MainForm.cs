@@ -3,6 +3,8 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
 using System.Drawing.Imaging;
+using System.Reflection;
+using SpectrumAnalyzer.Properties;
 
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
@@ -55,11 +57,14 @@ namespace SpectrumAnalyzer {
 			if (WaveOut.Enabled) {
 				WaveOut.Close();
 				TsbPlay.Text = "再生";
+				TsbPlay.Image = Resources.play;
 			} else {
 				WaveIn.Close();
 				WaveOut.Open();
 				TsbRec.Text = "録音";
+				TsbRec.Image = Resources.rec;
 				TsbPlay.Text = "停止";
+				TsbPlay.Image = Resources.play_stop;
 				TrkSeek.Enabled = true;
 			}
 		}
@@ -68,11 +73,14 @@ namespace SpectrumAnalyzer {
 			if (WaveIn.Enabled) {
 				WaveIn.Close();
 				TsbRec.Text = "録音";
+				TsbRec.Image = Resources.rec;
 			} else {
 				WaveOut.Close();
 				WaveIn.Open();
 				TsbPlay.Text = "再生";
+				TsbPlay.Image = Resources.play;
 				TsbRec.Text = "停止";
+				TsbRec.Image = Resources.rec_stop;
 				TrkSeek.Enabled = false;
 			}
 		}

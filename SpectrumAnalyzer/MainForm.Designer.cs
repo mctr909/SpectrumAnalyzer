@@ -28,11 +28,9 @@
 		private void InitializeComponent()
 		{
 			this.components = new System.ComponentModel.Container();
-			System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(MainForm));
 			this.openFileDialog1 = new System.Windows.Forms.OpenFileDialog();
 			this.TrkSeek = new System.Windows.Forms.TrackBar();
 			this.timer1 = new System.Windows.Forms.Timer(this.components);
-			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			this.toolStrip1 = new System.Windows.Forms.ToolStrip();
 			this.TsbSetting = new System.Windows.Forms.ToolStripButton();
 			this.toolStripSeparator2 = new System.Windows.Forms.ToolStripSeparator();
@@ -40,9 +38,10 @@
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.TsbOpen = new System.Windows.Forms.ToolStripButton();
 			this.TsbPlay = new System.Windows.Forms.ToolStripButton();
+			this.pictureBox1 = new System.Windows.Forms.PictureBox();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSeek)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.toolStrip1.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// openFileDialog1
@@ -54,7 +53,7 @@
 			this.TrkSeek.AutoSize = false;
 			this.TrkSeek.Location = new System.Drawing.Point(106, 28);
 			this.TrkSeek.Name = "TrkSeek";
-			this.TrkSeek.Size = new System.Drawing.Size(265, 26);
+			this.TrkSeek.Size = new System.Drawing.Size(265, 24);
 			this.TrkSeek.TabIndex = 2;
 			this.TrkSeek.TickFrequency = 15;
 			this.TrkSeek.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrkSeek_MouseDown);
@@ -63,14 +62,6 @@
 			// timer1
 			// 
 			this.timer1.Tick += new System.EventHandler(this.timer1_Tick);
-			// 
-			// pictureBox1
-			// 
-			this.pictureBox1.Location = new System.Drawing.Point(13, 60);
-			this.pictureBox1.Name = "pictureBox1";
-			this.pictureBox1.Size = new System.Drawing.Size(346, 264);
-			this.pictureBox1.TabIndex = 6;
-			this.pictureBox1.TabStop = false;
 			// 
 			// toolStrip1
 			// 
@@ -91,7 +82,7 @@
 			// 
 			this.TsbSetting.AutoSize = false;
 			this.TsbSetting.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.TsbSetting.Image = ((System.Drawing.Image)(resources.GetObject("TsbSetting.Image")));
+			this.TsbSetting.Image = global::SpectrumAnalyzer.Properties.Resources.setting;
 			this.TsbSetting.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.TsbSetting.Name = "TsbSetting";
 			this.TsbSetting.Size = new System.Drawing.Size(23, 22);
@@ -106,7 +97,7 @@
 			// TsbRec
 			// 
 			this.TsbRec.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.TsbRec.Image = ((System.Drawing.Image)(resources.GetObject("TsbRec.Image")));
+			this.TsbRec.Image = global::SpectrumAnalyzer.Properties.Resources.rec;
 			this.TsbRec.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.TsbRec.Name = "TsbRec";
 			this.TsbRec.Size = new System.Drawing.Size(23, 22);
@@ -121,22 +112,30 @@
 			// TsbOpen
 			// 
 			this.TsbOpen.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.TsbOpen.Image = ((System.Drawing.Image)(resources.GetObject("TsbOpen.Image")));
+			this.TsbOpen.Image = global::SpectrumAnalyzer.Properties.Resources.file;
 			this.TsbOpen.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.TsbOpen.Name = "TsbOpen";
 			this.TsbOpen.Size = new System.Drawing.Size(23, 22);
-			this.TsbOpen.Text = "ファイルを開く";
+			this.TsbOpen.Text = "再生ファイルを開く";
 			this.TsbOpen.Click += new System.EventHandler(this.TsbOpen_Click);
 			// 
 			// TsbPlay
 			// 
 			this.TsbPlay.DisplayStyle = System.Windows.Forms.ToolStripItemDisplayStyle.Image;
-			this.TsbPlay.Image = ((System.Drawing.Image)(resources.GetObject("TsbPlay.Image")));
+			this.TsbPlay.Image = global::SpectrumAnalyzer.Properties.Resources.play;
 			this.TsbPlay.ImageTransparentColor = System.Drawing.Color.Magenta;
 			this.TsbPlay.Name = "TsbPlay";
 			this.TsbPlay.Size = new System.Drawing.Size(23, 22);
 			this.TsbPlay.Text = "再生";
 			this.TsbPlay.Click += new System.EventHandler(this.TsbPlay_Click);
+			// 
+			// pictureBox1
+			// 
+			this.pictureBox1.Location = new System.Drawing.Point(13, 60);
+			this.pictureBox1.Name = "pictureBox1";
+			this.pictureBox1.Size = new System.Drawing.Size(346, 264);
+			this.pictureBox1.TabIndex = 6;
+			this.pictureBox1.TabStop = false;
 			// 
 			// MainForm
 			// 
@@ -152,9 +151,9 @@
 			this.Load += new System.EventHandler(this.Form1_Load);
 			this.Resize += new System.EventHandler(this.Form1_Resize);
 			((System.ComponentModel.ISupportInitialize)(this.TrkSeek)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.toolStrip1.ResumeLayout(false);
 			this.toolStrip1.PerformLayout();
+			((System.ComponentModel.ISupportInitialize)(this.pictureBox1)).EndInit();
 			this.ResumeLayout(false);
 			this.PerformLayout();
 

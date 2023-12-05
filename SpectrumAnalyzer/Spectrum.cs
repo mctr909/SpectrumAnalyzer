@@ -19,7 +19,7 @@ public class Spectrum {
 		public double power;
 	}
 
-	const double GAIN_MIN = 1.0 / 10000.0;
+	const double GAIN_MIN = 1e-5;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int HALF_OCT = TONE_DIV * 7;
@@ -74,7 +74,7 @@ public class Spectrum {
 	void Bandpass(BANK bank, double freq, double width) {
 		var omega = freq * FREQ_TO_OMEGA;
 		var x = Math.Log(2.0) / 4.0 * width * omega / Math.Sin(omega);
-		var alpha = Math.Sin(omega) * (Math.Exp(x) - Math.Exp(-x)) / 2.0;
+		var alpha = Math.Sin(omega) * Math.Sinh(x);
 		var a0 = 1.0 + alpha;
 		bank.a1 = -2.0 * Math.Cos(omega) / a0;
 		bank.a2 = (1.0 - alpha) / a0;
@@ -124,7 +124,7 @@ public class Spectrum {
 			var average = 0.0;
 			for (int w = -HALF_OCT; w <= HALF_OCT; ++w) {
 				var wt = (double)w / OCT_DIV;
-				var window = Math.Pow(Math.E, -Math.E * wt * wt);
+				var window = Math.Exp(-Math.E * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
 				average += Math.Sqrt(mBanks[bw].power / mMax) * window;
 			}
@@ -138,7 +138,7 @@ public class Spectrum {
 			var threshold = 0.0;
 			for (int w = -thresholdWidth; w <= thresholdWidth; ++w) {
 				var wt = (double)w / OCT_DIV;
-				var window = Math.Pow(Math.E, -Math.E * wt * wt);
+				var window = Math.Exp(-Math.E * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
 				threshold += mBanks[bw].power * window;
 			}

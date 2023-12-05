@@ -127,18 +127,14 @@
 			if (mWaveL.Length == idxB) {
 				idxB = idxA;
 			}
-			var waveL = 0.0;
-			var waveR = 0.0;
-			if (mTime < mWaveL.Length) {
-				waveL = mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
-				waveR = mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
-			}
-			mDataL[j] = (short)waveL;
-			mDataR[j] = (short)waveR;
 			mTime += mDelta * Speed;
 			if (mLoopEnd <= mTime) {
 				mTime = mLoopBegin + mTime - mLoopEnd;
 			}
+			var waveL = mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
+			var waveR = mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
+			mDataL[j] = (short)waveL;
+			mDataR[j] = (short)waveR;
 		}
 		FilterBankL.SetLevel(mDataL);
 		FilterBankR.SetLevel(mDataR);
