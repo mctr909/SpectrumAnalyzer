@@ -23,6 +23,7 @@ public class Spectrum {
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int HALF_OCT = TONE_DIV * 7;
+	const int OCT_DIV = TONE_DIV * 12;
 
 	readonly double FREQ_TO_OMEGA;
 	readonly double GAIN_ATTENUATION;
@@ -30,6 +31,7 @@ public class Spectrum {
 	readonly int SAMPLERATE;
 	readonly int MID_BEGIN;
 	readonly BANK[] mBanks;
+
 	double mMax;
 
 	public readonly int Count;
@@ -46,7 +48,6 @@ public class Spectrum {
 		GAIN_ATTENUATION = 1.0 - 50 * FREQ_TO_OMEGA;
 		RESPONSE_SPEED_MAX = sampleRate / 2.0;
 		SAMPLERATE = sampleRate;
-		int octDiv = TONE_DIV * 12;
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
@@ -56,7 +57,7 @@ public class Spectrum {
 		for (int b = 0, n = 0; b < Count; b += TONE_DIV, ++n) {
 			var freqN = baseFreq * Math.Pow(2.0, n / 12.0);
 			for (var d = 0; d < TONE_DIV; ++d) {
-				var freq = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / octDiv);
+				var freq = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / OCT_DIV);
 				if (freq < 200) {
 					MID_BEGIN = b + d;
 				}
@@ -122,10 +123,12 @@ public class Spectrum {
 		for (int b = 0; b < Count; ++b) {
 			var average = 0.0;
 			for (int w = -HALF_OCT; w <= HALF_OCT; ++w) {
+				var wt = (double)w / OCT_DIV;
+				var window = Math.Pow(Math.E, -Math.E * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				average += Math.Sqrt(mBanks[bw].power / mMax);
+				average += Math.Sqrt(mBanks[bw].power / mMax) * window;
 			}
-			Average[b] = average / (HALF_OCT * 2 + 1);
+			Average[b] = average / OCT_DIV;
 			int thresholdWidth;
 			if (b + Transpose < MID_BEGIN) {
 				thresholdWidth = HALF_OCT;
@@ -134,11 +137,13 @@ public class Spectrum {
 			}
 			var threshold = 0.0;
 			for (int w = -thresholdWidth; w <= thresholdWidth; ++w) {
+				var wt = (double)w / OCT_DIV;
+				var window = Math.Pow(Math.E, -Math.E * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				threshold += mBanks[bw].power;
+				threshold += mBanks[bw].power * window;
 			}
-			threshold /= thresholdWidth * 2 + 1;
-			threshold = Math.Sqrt(threshold / mMax) * 1.01;
+			threshold /= thresholdWidth * 2;
+			threshold = Math.Sqrt(threshold / mMax);
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
 			Peak[b] = 0.0;
