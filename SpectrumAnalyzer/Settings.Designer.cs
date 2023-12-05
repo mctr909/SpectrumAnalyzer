@@ -35,6 +35,7 @@
 			this.CmbOutput = new System.Windows.Forms.ComboBox();
 			this.GrbInput = new System.Windows.Forms.GroupBox();
 			this.CmbInput = new System.Windows.Forms.ComboBox();
+			this.RbGain15 = new System.Windows.Forms.RadioButton();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSpeed)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.TrkKey)).BeginInit();
 			this.GrbKey.SuspendLayout();
@@ -95,6 +96,7 @@
 			// 
 			// GrbMinLevel
 			// 
+			this.GrbMinLevel.Controls.Add(this.RbGain15);
 			this.GrbMinLevel.Controls.Add(this.RbGainNone);
 			this.GrbMinLevel.Controls.Add(this.RbAutoGain);
 			this.GrbMinLevel.Controls.Add(this.TrkMinLevel);
@@ -120,7 +122,7 @@
 			// RbAutoGain
 			// 
 			this.RbAutoGain.AutoSize = true;
-			this.RbAutoGain.Location = new System.Drawing.Point(87, 45);
+			this.RbAutoGain.Location = new System.Drawing.Point(156, 45);
 			this.RbAutoGain.Name = "RbAutoGain";
 			this.RbAutoGain.Size = new System.Drawing.Size(73, 19);
 			this.RbAutoGain.TabIndex = 12;
@@ -135,7 +137,7 @@
 			this.TrkMinLevel.LargeChange = 6;
 			this.TrkMinLevel.Location = new System.Drawing.Point(6, 15);
 			this.TrkMinLevel.Maximum = -20;
-			this.TrkMinLevel.Minimum = -90;
+			this.TrkMinLevel.Minimum = -100;
 			this.TrkMinLevel.Name = "TrkMinLevel";
 			this.TrkMinLevel.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
 			this.TrkMinLevel.Size = new System.Drawing.Size(276, 26);
@@ -186,6 +188,18 @@
 			this.CmbInput.TabIndex = 0;
 			this.CmbInput.SelectedIndexChanged += new System.EventHandler(this.CmbInput_SelectedIndexChanged);
 			// 
+			// RbGain15
+			// 
+			this.RbGain15.AutoSize = true;
+			this.RbGain15.Location = new System.Drawing.Point(87, 45);
+			this.RbGain15.Name = "RbGain15";
+			this.RbGain15.Size = new System.Drawing.Size(63, 19);
+			this.RbGain15.TabIndex = 15;
+			this.RbGain15.TabStop = true;
+			this.RbGain15.Text = "+15db";
+			this.RbGain15.UseVisualStyleBackColor = true;
+			this.RbGain15.CheckedChanged += new System.EventHandler(this.RbGain15_CheckedChanged);
+			// 
 			// Settings
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
@@ -230,5 +244,6 @@
 		private System.Windows.Forms.ComboBox CmbOutput;
 		private System.Windows.Forms.GroupBox GrbInput;
 		private System.Windows.Forms.ComboBox CmbInput;
+		private System.Windows.Forms.RadioButton RbGain15;
 	}
 }

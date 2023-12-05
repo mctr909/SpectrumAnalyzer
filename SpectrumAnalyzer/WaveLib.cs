@@ -92,6 +92,7 @@ public abstract class WaveLib {
 	protected bool mDoStop = false;
 	protected bool mStopped = true;
 
+	public uint DeviceId { get; protected set; } = WAVE_MAPPER;
 	public bool Enabled { get; protected set; }
 	public int SampleRate { get; private set; }
 	public int Channels { get; private set; }

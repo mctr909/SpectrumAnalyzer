@@ -25,8 +25,6 @@ public abstract class WaveOut : WaveLib, IDisposable {
 	delegate void DCallback(IntPtr hdrvr, WaveOutMessage uMsg, int dwUser, IntPtr wavhdr, int dwParam2);
 	DCallback mCallback;
 
-	uint mDeviceId = WAVE_MAPPER;
-
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 	static extern uint waveOutGetNumDevs();
 	[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -71,7 +69,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 	public void Open() {
 		Close();
 		AllocHeader();
-		var ret = waveOutOpen(ref mHandle, mDeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+		var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 		if (MMRESULT.MMSYSERR_NOERROR != ret) {
 			//throw new Exception(mr.ToString());
 		}
@@ -107,7 +105,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 	public void SetDevice(uint deviceId) {
 		var enable = Enabled;
 		Close();
-		mDeviceId = deviceId;
+		DeviceId = deviceId;
 		if (enable) {
 			Open();
 		}

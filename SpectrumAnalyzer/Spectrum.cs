@@ -19,7 +19,7 @@ public class Spectrum {
 		public double power;
 	}
 
-	const double GAIN_MIN = 1e-5;
+	const double GAIN_MIN = 1e-4;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int HALF_OCT = TONE_DIV * 7;
@@ -45,7 +45,7 @@ public class Spectrum {
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
-		GAIN_ATTENUATION = 1.0 - 50 * FREQ_TO_OMEGA;
+		GAIN_ATTENUATION = 1.0 - 100 * FREQ_TO_OMEGA;
 		RESPONSE_SPEED_MAX = sampleRate / 2.0;
 		SAMPLERATE = sampleRate;
 		Count = TONE_DIV * notes;

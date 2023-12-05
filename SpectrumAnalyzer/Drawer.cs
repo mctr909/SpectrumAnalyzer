@@ -25,6 +25,7 @@ namespace SpectrumAnalyzer {
 
 		public static byte[] ScrollCanvas;
 		public static int MinLevel = -30;
+		public static int ShiftGain = 0;
 
 		static string ToString(double value) {
 			if (10000 <= value) {
@@ -48,10 +49,10 @@ namespace SpectrumAnalyzer {
 		}
 
 		static int AmpToY(double amp, int height) {
-			if (amp < 1 / 32768.0) {
-				amp = 1 / 32768.0;
+			if (amp < 1e-6) {
+				amp = 1e-6;
 			}
-			var db = 20 * Math.Log10(amp);
+			var db = 20 * Math.Log10(amp) + ShiftGain;
 			if (db < MinLevel) {
 				db = MinLevel;
 			}
@@ -59,10 +60,10 @@ namespace SpectrumAnalyzer {
 		}
 
 		static void SetHue(double amp, int pos, int width) {
-			if (amp < 1 / 32768.0) {
-				amp = 1 / 32768.0;
+			if (amp < 1e-6) {
+				amp = 1e-6;
 			}
-			var db = 20 * Math.Log10(amp);
+			var db = 20 * Math.Log10(amp) + ShiftGain;
 			if (db < MinLevel) {
 				return;
 			}
@@ -106,11 +107,11 @@ namespace SpectrumAnalyzer {
 			Graphics g,
 			int width, int height,
 			int gaugeHeight, int keyboardHeight,
-			int transepose, int noteCount, double baseFreq
+			int transpose, int noteCount, double baseFreq
 		) {
 			var barBottom = height - 1;
 			for (int n = 0; n < noteCount; n++) {
-				var note = n + transepose;
+				var note = n + transpose;
 				var px = (n + 0.0f) * width / noteCount;
 				var barWidth = (n + 1.0f) * width / noteCount - px + 1;
 				switch ((note + 24) % 12) {
@@ -144,7 +145,7 @@ namespace SpectrumAnalyzer {
 				LineAlignment = StringAlignment.Center
 			};
 			for (int n = -3; n < noteCount + 12; n += 12) {
-				var note = n - transepose;
+				var note = n - transpose;
 				var px = width * (note + 0.5f) / noteCount - textOfsX;
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);

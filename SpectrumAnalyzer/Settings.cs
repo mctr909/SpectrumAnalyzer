@@ -22,14 +22,27 @@ namespace SpectrumAnalyzer {
 			GrbSpeed.Enabled = mMain.WaveOut.Enabled;
 			TrkMinLevel.Value = Drawer.MinLevel;
 			RbAutoGain.Checked = mMain.WaveIn.FilterBank.AutoGain;
-			RbGainNone.Checked = !RbAutoGain.Checked;
+			RbGain15.Checked = Drawer.ShiftGain != 0;
+			RbGainNone.Checked = !RbAutoGain.Checked && !RbGain15.Checked;
 			var outDevices = WaveOut.GetDeviceList();
+			if (0 < outDevices.Count) {
+				CmbOutput.Items.Add("既定のデバイス");
+			}
 			foreach(var dev in outDevices) {
 				CmbOutput.Items.Add(dev);
 			}
+			if (0 < outDevices.Count) {
+				CmbOutput.SelectedIndex = (int)mMain.WaveOut.DeviceId + 1;
+			}
 			var inDevices = WaveIn.GetDeviceList();
+			if (0 < inDevices.Count) {
+				CmbInput.Items.Add("既定のデバイス");
+			}
 			foreach (var dev in inDevices) {
 				CmbInput.Items.Add(dev);
+			}
+			if (0 < inDevices.Count) {
+				CmbInput.SelectedIndex = (int)mMain.WaveIn.DeviceId + 1;
 			}
 			setting();
 		}
@@ -55,12 +68,16 @@ namespace SpectrumAnalyzer {
 			mMain.WaveIn.FilterBank.AutoGain = RbAutoGain.Checked;
 		}
 
+		private void RbGain15_CheckedChanged(object sender, EventArgs e) {
+			Drawer.ShiftGain = RbGain15.Checked ? 15 : 0;
+		}
+
 		private void CmbOutput_SelectedIndexChanged(object sender, EventArgs e) {
-			mMain.WaveOut.SetDevice((uint)CmbOutput.SelectedIndex);
+			mMain.WaveOut.SetDevice((uint)(CmbOutput.SelectedIndex - 1));
 		}
 
 		private void CmbInput_SelectedIndexChanged(object sender, EventArgs e) {
-			mMain.WaveIn.SetDevice((uint)CmbInput.SelectedIndex);
+			mMain.WaveIn.SetDevice((uint)(CmbInput.SelectedIndex - 1));
 		}
 
 		void setting() {
