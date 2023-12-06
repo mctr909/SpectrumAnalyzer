@@ -18,11 +18,12 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void Settings_Load(object sender, EventArgs e) {
-			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			TrkKey.Value = (int)(Math.Log(mMain.Playback.Pitch * mMain.Playback.Speed, 2.0) * 120);
+			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
+			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / 3;
 			TrkMinLevel.Value = Drawer.MinLevel;
-			RbAutoGain.Checked = mMain.Record.FilterBank.AutoGain;
+			RbAutoGain.Checked = Spectrum.AutoGain;
 			RbGain15.Checked = Drawer.ShiftGain != 0;
 			RbGainNone.Checked = !RbAutoGain.Checked && !RbGain15.Checked;
 			var outDevices = WaveOut.GetDeviceList();
@@ -54,8 +55,12 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			setting();
-			mMain.Playback.FilterBankL.Transpose = -TrkSpeed.Value;
-			mMain.Playback.FilterBankR.Transpose = -TrkSpeed.Value;
+			Spectrum.Transpose = -TrkSpeed.Value;
+		}
+
+		private void TrkThresholdHigh_Scroll(object sender, EventArgs e) {
+			Spectrum.ThresholdHigh = TrkThresholdHigh.Value * 3;
+			setting();
 		}
 
 		private void TrkMinLevel_Scroll(object sender, EventArgs e) {
@@ -64,9 +69,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			mMain.Playback.FilterBankL.AutoGain = RbAutoGain.Checked;
-			mMain.Playback.FilterBankR.AutoGain = RbAutoGain.Checked;
-			mMain.Record.FilterBank.AutoGain = RbAutoGain.Checked;
+			Spectrum.AutoGain = RbAutoGain.Checked;
 		}
 
 		private void RbGain15_CheckedChanged(object sender, EventArgs e) {
@@ -87,8 +90,9 @@ namespace SpectrumAnalyzer {
 			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			mMain.Playback.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();
-			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0");
+			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0半音");
 			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
+			GrbThresholdHigh.Text = "閾値平均幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
 			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";
 		}
 	}

@@ -40,79 +40,21 @@
 	}
 
 	public void LoadFile(string filePath) {
-		var file = new RiffWAV(filePath, false);
-		if (8 != file.Fmt.BitPerSample && 16 != file.Fmt.BitPerSample) {
-			mWaveL = new short[1];
-			mWaveR = new short[1];
-		}
-
+		var file = new WavReader(filePath);
+		mWaveL = new short[file.Data.Size / file.Fmt.BlockSize];
+		mWaveR = new short[file.Data.Size / file.Fmt.BlockSize];
 		switch (file.Fmt.Channel) {
 		case 1:
-			mWaveL = new short[file.Data.Size / 2];
-			mWaveR = new short[file.Data.Size / 2];
-			switch (file.Fmt.BitPerSample) {
-			case 8:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read8(ref mWaveL[i]);
-					mWaveR[i] = mWaveL[i];
-				}
-				break;
-			case 16:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read16(ref mWaveL[i]);
-					mWaveR[i] = mWaveL[i];
-				}
-				break;
-			case 24:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read24(ref mWaveL[i]);
-					mWaveR[i] = mWaveL[i];
-				}
-				break;
-			case 32:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read32(ref mWaveL[i]);
-					mWaveR[i] = mWaveL[i];
-				}
-				break;
-			default:
-				mWaveL = new short[1];
-				mWaveR = new short[1];
-				break;
+			for (var i = 0; i < mWaveL.Length; ++i) {
+				file.ReadMono(ref mWaveL[i]);
+				mWaveR[i] = mWaveL[i];
 			}
 			break;
-
 		case 2:
-			mWaveL = new short[file.Data.Size / 4];
-			mWaveR = new short[file.Data.Size / 4];
-			switch (file.Fmt.BitPerSample) {
-			case 8:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read8(ref mWaveL[i], ref mWaveR[i]);
-				}
-				break;
-			case 16:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read16(ref mWaveL[i], ref mWaveR[i]);
-				}
-				break;
-			case 24:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read24(ref mWaveL[i], ref mWaveR[i]);
-				}
-				break;
-			case 32:
-				for (var i = 0; i < mWaveL.Length; ++i) {
-					file.read32(ref mWaveL[i], ref mWaveR[i]);
-				}
-				break;
-			default:
-				mWaveL = new short[1];
-				mWaveR = new short[1];
-				break;
+			for (var i = 0; i < mWaveL.Length; ++i) {
+				file.Read(ref mWaveL[i], ref mWaveR[i]);
 			}
 			break;
-
 		default:
 			mWaveL = new short[1];
 			mWaveR = new short[1];
@@ -123,8 +65,6 @@
 		mLoopEnd = (uint)mWaveL.Length;
 		mDelta = (double)file.Fmt.SamplingFrequency / SampleRate;
 		mTime = 0.0;
-
-		file.close();
 	}
 
 	protected override void SetData() {

@@ -22,7 +22,6 @@ public class Spectrum {
 	const double GAIN_MIN = 1e-4;
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
-	const int HALF_OCT = TONE_DIV * 7;
 	const int OCT_DIV = TONE_DIV * 12;
 
 	readonly double FREQ_TO_OMEGA;
@@ -36,12 +35,15 @@ public class Spectrum {
 
 	public readonly int Count;
 
+	public static int ThresholdHigh { get; set; } = TONE_DIV * 3 / 2;
+	public static int ThresholdLow { get; set; } = TONE_DIV * 7;
+	public static int Transpose { get; set; } = 0;
+	public static bool AutoGain { get; set; } = true;
+
 	public double[] Slope { get; private set; }
 	public double[] Peak { get; private set; }
 	public double[] Threshold { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
-	public int Transpose { get; set; }
-	public bool AutoGain { get; set; } = true;
 
 	public Spectrum(int sampleRate, double baseFreq, int notes) {
 		FREQ_TO_OMEGA = 8.0 * Math.Atan(1.0) / sampleRate;
@@ -123,18 +125,16 @@ public class Spectrum {
 		for (int b = 0; b < Count; ++b) {
 			int thresholdWidth;
 			if (b + Transpose < MID_BEGIN) {
-				thresholdWidth = HALF_OCT;
+				thresholdWidth = ThresholdLow;
 			} else {
-				thresholdWidth = TONE_DIV;
+				thresholdWidth = ThresholdHigh;
 			}
 			var threshold = 0.0;
 			for (int w = -thresholdWidth; w <= thresholdWidth; ++w) {
-				var wt = (double)w / OCT_DIV;
-				var window = Math.Exp(-2 * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				threshold += mBanks[bw].power * window;
+				threshold += mBanks[bw].power;
 			}
-			threshold /= thresholdWidth * 2;
+			threshold /= thresholdWidth * 2 + 1;
 			threshold = Math.Sqrt(threshold / mMax);
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
