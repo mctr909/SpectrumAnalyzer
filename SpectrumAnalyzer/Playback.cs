@@ -41,16 +41,16 @@
 
 	public void LoadFile(string filePath) {
 		var file = new RiffWAV(filePath, false);
-		if (8 != file.fmt.BitPerSample && 16 != file.fmt.BitPerSample) {
+		if (8 != file.Fmt.BitPerSample && 16 != file.Fmt.BitPerSample) {
 			mWaveL = new short[1];
 			mWaveR = new short[1];
 		}
 
-		switch (file.fmt.Channel) {
+		switch (file.Fmt.Channel) {
 		case 1:
-			mWaveL = new short[file.data.DataSize / 2];
-			mWaveR = new short[file.data.DataSize / 2];
-			switch (file.fmt.BitPerSample) {
+			mWaveL = new short[file.Data.Size / 2];
+			mWaveR = new short[file.Data.Size / 2];
+			switch (file.Fmt.BitPerSample) {
 			case 8:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read8(ref mWaveL[i]);
@@ -83,9 +83,9 @@
 			break;
 
 		case 2:
-			mWaveL = new short[file.data.DataSize / 4];
-			mWaveR = new short[file.data.DataSize / 4];
-			switch (file.fmt.BitPerSample) {
+			mWaveL = new short[file.Data.Size / 4];
+			mWaveR = new short[file.Data.Size / 4];
+			switch (file.Fmt.BitPerSample) {
 			case 8:
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read8(ref mWaveL[i], ref mWaveR[i]);
@@ -121,7 +121,7 @@
 
 		mLoopBegin = 0;
 		mLoopEnd = (uint)mWaveL.Length;
-		mDelta = (double)file.fmt.SamplingFrequency / SampleRate;
+		mDelta = (double)file.Fmt.SamplingFrequency / SampleRate;
 		mTime = 0.0;
 
 		file.close();

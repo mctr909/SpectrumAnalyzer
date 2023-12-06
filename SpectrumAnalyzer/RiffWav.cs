@@ -1,150 +1,139 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.Runtime.InteropServices;
 
-public class RiffWAV
-{
-	public struct RiffChunk
-	{
-		public uint RIFF;
-		public uint FileSize;
-		public uint WaveSign;
+public class RiffWAV {
+	public struct RIFF {
+		public uint Sign;
+		public uint Size;
+		public uint Type;
+		public const uint SIGN = 0x46464952;
+		public const uint TYPE_WAVE = 0x45564157;
+		public void Write(BinaryWriter bw) {
+			bw.Write(SIGN);
+			bw.Write(Size);
+			bw.Write(Type);
+		}
 	}
 
-	public struct fmtChunk
-	{
-		public uint fmtSign;
-		public uint fmtSize;
+	public struct FMT {
+		public uint Sign;
+		public uint Size;
 		public ushort FormatID;
 		public ushort Channel;
 		public uint SamplingFrequency;
 		public uint BytePerSecond;
 		public ushort BlockSize;
 		public ushort BitPerSample;
+		public const uint SIGN = 0x20746d66;
+		public const ushort TYPE_PCM = 1;
+		public const ushort TYPE_PCM_FLOAT = 3;
+		public void Write(BinaryWriter bw) {
+			bw.Write(SIGN);
+			bw.Write((uint)16);
+			bw.Write(FormatID);
+			bw.Write(Channel);
+			bw.Write(SamplingFrequency);
+			bw.Write(BytePerSecond);
+			bw.Write(BlockSize);
+			bw.Write(BitPerSample);
+		}
 	}
 
-	public struct DataChunk
-	{
-		public uint DataSign;
-		public uint DataSize;
+	public struct DATA {
+		public uint Sign;
+		public uint Size;
+		public const uint SIGN = 0x61746164;
+		public void Write(BinaryWriter bw) {
+			bw.Write(SIGN);
+			bw.Write(Size);
+		}
 	}
 
-	public struct ChunkSign
-	{
-		public const uint RIFF = 0x46464952;
-		public const uint WAVE = 0x45564157;
-		public const uint FMT = 0x20746d66;
-		public const ushort PCM = 1;
-		public const uint DATA = 0x61746164;
-	}
+	FileStream mFs;
+	BinaryReader mBr;
+	BinaryWriter mBw;
+	uint mSamples;
 
-	public struct ChunkSize
-	{
-		public const int ALL = 44;
-		public const int RIFF = 12;
-		public const int FMT = 24;
-		public const int DATA = 8;
-	}
+	public RIFF Riff;
+	public FMT Fmt;
+	public DATA Data;
 
-	private FileStream fs;
-	BinaryReader br;
-	BinaryWriter bw;
-	private uint samples;
-
-	public RiffChunk riff;
-	public fmtChunk fmt;
-	public DataChunk data;
-
-	public RiffWAV(string strFileName, bool WriteFlag)
-	{
+	public RiffWAV(string strFileName, bool WriteFlag) {
 		if (WriteFlag) {
-			fs = new FileStream(strFileName, FileMode.OpenOrCreate);
-			bw = new BinaryWriter(fs);
+			mFs = new FileStream(strFileName, FileMode.OpenOrCreate);
+			mBw = new BinaryWriter(mFs);
+			mBw.Write(new byte[
+				Marshal.SizeOf<RIFF>() +
+				Marshal.SizeOf<FMT>() +
+				Marshal.SizeOf<DATA>()
+			]);
+			mSamples = 0;
+		} else {
+			mFs = new FileStream(strFileName, FileMode.Open);
+			mBr = new BinaryReader(mFs);
 
-			bw.Write(new byte[ChunkSize.ALL]);
-			samples = 0;
-		}
-		else {
-			fs = new FileStream(strFileName, FileMode.Open);
-			br = new BinaryReader(fs);
+			Riff.Sign = mBr.ReadUInt32();
+			Riff.Size = mBr.ReadUInt32();
+			Riff.Type = mBr.ReadUInt32();
 
-			riff.RIFF = br.ReadUInt32();
-			riff.FileSize = br.ReadUInt32();
-			riff.WaveSign = br.ReadUInt32();
-
-			if (riff.RIFF != ChunkSign.RIFF)
+			if (Riff.Sign != RIFF.SIGN)
 				return;
-			if (riff.WaveSign != ChunkSign.WAVE)
-				return;
-
-			fmt.fmtSign = br.ReadUInt32();
-			fmt.fmtSize = br.ReadUInt32();
-			fmt.FormatID = br.ReadUInt16();
-			fmt.Channel = br.ReadUInt16();
-			fmt.SamplingFrequency = br.ReadUInt32();
-			fmt.BytePerSecond = br.ReadUInt32();
-			fmt.BlockSize = br.ReadUInt16();
-			fmt.BitPerSample = br.ReadUInt16();
-
-			if (fmt.fmtSign != ChunkSign.FMT)
-				return;
-			if (fmt.FormatID != ChunkSign.PCM)
+			if (Riff.Type != RIFF.TYPE_WAVE)
 				return;
 
-			if (fmt.fmtSize > 16)
-				fs.Seek(fmt.fmtSize - 16, SeekOrigin.Current);
-			else if (fmt.fmtSize < 16)
+			Fmt.Sign = mBr.ReadUInt32();
+			Fmt.Size = mBr.ReadUInt32();
+			Fmt.FormatID = mBr.ReadUInt16();
+			Fmt.Channel = mBr.ReadUInt16();
+			Fmt.SamplingFrequency = mBr.ReadUInt32();
+			Fmt.BytePerSecond = mBr.ReadUInt32();
+			Fmt.BlockSize = mBr.ReadUInt16();
+			Fmt.BitPerSample = mBr.ReadUInt16();
+
+			if (Fmt.Sign != FMT.SIGN)
+				return;
+			if (Fmt.FormatID != FMT.TYPE_PCM && Fmt.FormatID != FMT.TYPE_PCM_FLOAT)
 				return;
 
-			data.DataSign = br.ReadUInt32();
-			data.DataSize = br.ReadUInt32();
+			if (Fmt.Size > 16)
+				mFs.Seek(Fmt.Size - 16, SeekOrigin.Current);
+			else if (Fmt.Size < 16)
+				return;
 
-			if (data.DataSign != ChunkSign.DATA)
+			Data.Sign = mBr.ReadUInt32();
+			Data.Size = mBr.ReadUInt32();
+
+			if (Data.Sign != DATA.SIGN)
 				return;
 		}
 	}
 
-	public void Save(uint samplerate, ushort ch, ushort bits)
-	{
-		fs.Seek(0, SeekOrigin.Begin);
+	public void Save(uint sampleRate, ushort ch, bool enableFloat) {
+		mFs.Seek(0, SeekOrigin.Begin);
 
-		riff.RIFF = ChunkSign.RIFF;
-		riff.FileSize = (uint)(ch * bits * samples / 8 + 36);
-		riff.WaveSign = ChunkSign.WAVE;
+		var bits = enableFloat ? 32 : 16;
 
-		fmt.fmtSign = ChunkSign.FMT;
-		fmt.fmtSize = 16;
-		fmt.FormatID = ChunkSign.PCM;
-		fmt.Channel = ch;
-		fmt.SamplingFrequency = samplerate;
-		fmt.BytePerSecond = (uint)(ch * bits * samplerate / 8);
-		fmt.BlockSize = (ushort)(ch * bits / 8);
-		fmt.BitPerSample = bits;
+		Riff.Size = (uint)(ch * bits * mSamples / 8 + 36);
+		Riff.Type = RIFF.TYPE_WAVE;
+		Riff.Write(mBw);
 
-		data.DataSign = ChunkSign.DATA;
-		data.DataSize = (uint)(ch * bits * samples / 8);
+		Fmt.FormatID = enableFloat ? FMT.TYPE_PCM_FLOAT : FMT.TYPE_PCM;
+		Fmt.Channel = ch;
+		Fmt.SamplingFrequency = sampleRate;
+		Fmt.BytePerSecond = (uint)(ch * bits * sampleRate / 8);
+		Fmt.BlockSize = (ushort)(ch * bits / 8);
+		Fmt.BitPerSample = (ushort)bits;
+		Fmt.Write(mBw);
 
-		bw.Write(riff.RIFF);
-		bw.Write(riff.FileSize);
-		bw.Write(riff.WaveSign);
+		Data.Size = (uint)(ch * bits * mSamples / 8);
+		Data.Write(mBw);
 
-		bw.Write(fmt.fmtSign);
-		bw.Write(fmt.fmtSize);
-		bw.Write(fmt.FormatID);
-		bw.Write(fmt.Channel);
-		bw.Write(fmt.SamplingFrequency);
-		bw.Write(fmt.BytePerSecond);
-		bw.Write(fmt.BlockSize);
-		bw.Write(fmt.BitPerSample);
-
-		bw.Write(data.DataSign);
-		bw.Write(data.DataSize);
-
-		fs.Close();
+		mFs.Close();
 	}
 
 	public void read32(ref short left, ref short right) {
-		var fL = br.ReadSingle();
-		var fR = br.ReadSingle();
+		var fL = mBr.ReadSingle();
+		var fR = mBr.ReadSingle();
 		if (fL < -1.0) {
 			fL = -1.0f;
 		}
@@ -162,7 +151,7 @@ public class RiffWAV
 	}
 
 	public void read32(ref short mono) {
-		var f = br.ReadSingle();
+		var f = mBr.ReadSingle();
 		if (f < -1.0) {
 			f = -1.0f;
 		}
@@ -172,57 +161,60 @@ public class RiffWAV
 		mono = (short)(f * 32767);
 	}
 
-
 	public void read24(ref short left, ref short right) {
-		br.ReadByte();
-		left = br.ReadInt16();
-		br.ReadByte();
-		right = br.ReadInt16();
+		mBr.ReadByte();
+		left = mBr.ReadInt16();
+		mBr.ReadByte();
+		right = mBr.ReadInt16();
 	}
 
 	public void read24(ref short mono) {
-		br.ReadByte();
-		mono = br.ReadInt16();
+		mBr.ReadByte();
+		mono = mBr.ReadInt16();
 	}
 
-	public void read16(ref short left, ref short right)
-	{
-		left = br.ReadInt16();
-		right = br.ReadInt16();
+	public void read16(ref short left, ref short right) {
+		left = mBr.ReadInt16();
+		right = mBr.ReadInt16();
 	}
 
-	public void read16(ref short mono)
-	{
-		mono = br.ReadInt16();
+	public void read16(ref short mono) {
+		mono = mBr.ReadInt16();
 	}
 
-	public void read8(ref short left, ref short right)
-	{
-		left = (short)((br.ReadByte() - 128) << 8);
-		right = (short)((br.ReadByte() - 128) << 8);
+	public void read8(ref short left, ref short right) {
+		left = (short)((mBr.ReadByte() - 128) << 8);
+		right = (short)((mBr.ReadByte() - 128) << 8);
 	}
 
-	public void read8(ref short mono)
-	{
-		mono = (short)((br.ReadByte() - 128) << 8);
+	public void read8(ref short mono) {
+		mono = (short)((mBr.ReadByte() - 128) << 8);
 	}
 
-	public void write16(short left, short right)
-	{
-		bw.Write(left);
-		bw.Write(right);
-		samples++;
+	public void write(double left, double right) {
+		mBw.Write((float)left);
+		mBw.Write((float)right);
+		mSamples++;
 	}
 
-	public void write16(short mono)
-	{
-		bw.Write(mono);
-		samples++;
+	public void write(double mono) {
+		mBw.Write((float)mono);
+		mSamples++;
 	}
 
-	public void close()
-	{
-		fs.Close();
-		fs.Dispose();
+	public void write(short left, short right) {
+		mBw.Write(left);
+		mBw.Write(right);
+		mSamples++;
+	}
+
+	public void write(short mono) {
+		mBw.Write(mono);
+		mSamples++;
+	}
+
+	public void close() {
+		mFs.Close();
+		mFs.Dispose();
 	}
 }
