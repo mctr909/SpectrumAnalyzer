@@ -145,14 +145,16 @@ namespace SpectrumAnalyzer {
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (Playback.Enabled) {
 				Drawer.Peak(g, Playback.FilterBankL.Peak, width, gaugeHeight);
-				Drawer.Slope(g, Playback.FilterBankL.Threshold, width, gaugeHeight, Pens.Cyan);
+				if (Drawer.DisplayThreshold)
+					Drawer.Slope(g, Playback.FilterBankL.Threshold, width, gaugeHeight, Pens.Cyan);
 				Drawer.Slope(g, Playback.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, Playback.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (Record.Enabled) {
 				Drawer.Peak(g, Record.FilterBank.Peak, width, gaugeHeight);
-				Drawer.Slope(g, Record.FilterBank.Threshold, width, gaugeHeight, Pens.Cyan);
+				if (Drawer.DisplayThreshold)
+					Drawer.Slope(g, Record.FilterBank.Threshold, width, gaugeHeight, Pens.Cyan);
 				Drawer.Slope(g, Record.FilterBank.Slope, width, gaugeHeight, Pens.Red);
 				Drawer.Spectrum(bmp, Record.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;

@@ -22,6 +22,7 @@ namespace SpectrumAnalyzer {
 			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
 			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / 3;
+			ChkThreshold.Checked = Drawer.DisplayThreshold;
 			TrkMinLevel.Value = Drawer.MinLevel;
 			RbAutoGain.Checked = Spectrum.AutoGain;
 			RbGain15.Checked = Drawer.ShiftGain != 0;
@@ -30,7 +31,7 @@ namespace SpectrumAnalyzer {
 			if (0 < outDevices.Count) {
 				CmbOutput.Items.Add("既定のデバイス");
 			}
-			foreach(var dev in outDevices) {
+			foreach (var dev in outDevices) {
 				CmbOutput.Items.Add(dev);
 			}
 			if (0 < outDevices.Count) {
@@ -63,6 +64,10 @@ namespace SpectrumAnalyzer {
 			setting();
 		}
 
+		private void ChkThreshold_CheckedChanged(object sender, EventArgs e) {
+			Drawer.DisplayThreshold = ChkThreshold.Checked;
+		}
+
 		private void TrkMinLevel_Scroll(object sender, EventArgs e) {
 			Drawer.MinLevel = TrkMinLevel.Value;
 			setting();
@@ -92,7 +97,7 @@ namespace SpectrumAnalyzer {
 			mMain.DrawBackground();
 			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0半音");
 			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
-			GrbThresholdHigh.Text = "閾値平均幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
+			GrbThresholdHigh.Text = "閾値幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
 			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";
 		}
 	}

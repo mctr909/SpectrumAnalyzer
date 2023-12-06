@@ -35,8 +35,8 @@ public class Spectrum {
 
 	public readonly int Count;
 
-	public static int ThresholdHigh { get; set; } = TONE_DIV * 3 / 2;
-	public static int ThresholdLow { get; set; } = TONE_DIV * 7;
+	public static int ThresholdHigh { get; set; } = TONE_DIV * 2;
+	public static int ThresholdLow { get; set; } = TONE_DIV * 5;
 	public static int Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
 
@@ -60,10 +60,10 @@ public class Spectrum {
 			var freqN = baseFreq * Math.Pow(2.0, n / 12.0);
 			for (var d = 0; d < TONE_DIV; ++d) {
 				var freq = freqN * Math.Pow(2.0, (double)(d - TONE_DIV_CENTER) / OCT_DIV);
-				if (freq < 200) {
+				if (freq < 220) {
 					MID_BEGIN = b + d;
 				}
-				var width = Math.Log(2000.0 / freq, 2.0);
+				var width = Math.Log(1500.0 / freq, 2.0);
 				if (width < 1.0) {
 					width = 1.0;
 				}
