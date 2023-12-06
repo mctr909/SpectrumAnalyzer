@@ -3,7 +3,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
 using System.Drawing.Imaging;
-using System.Reflection;
 using SpectrumAnalyzer.Properties;
 
 namespace SpectrumAnalyzer {
@@ -12,18 +11,17 @@ namespace SpectrumAnalyzer {
 		const int KEYBOARD_HEIGHT = 34;
 		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
 
-		public Playback WaveOut;
-		public Record WaveIn;
+		public Playback Playback;
+		public Record Record;
 
-		bool mIsScrol;
+		bool mGripSeekBar = false;
 		bool mSetLayout = true;
-
-		public int KeyboardShift = 0;
 
 		public MainForm() {
 			InitializeComponent();
-			WaveOut = new Playback(NOTE_COUNT, BASE_FREQ);
-			WaveIn = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			Settings.Instance = new Settings(this);
+			Playback = new Playback(NOTE_COUNT, BASE_FREQ);
+			Record = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
@@ -37,30 +35,33 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbOpen_Click(object sender, EventArgs e) {
-			WaveOut.Close();
-			WaveOut.Position = 0;
-
 			openFileDialog1.FileName = "";
-			openFileDialog1.Filter = "PCMファイル(*.wav)|*.wav";
+			openFileDialog1.Filter = "WAVファイル(*.wav)|*.wav";
 			openFileDialog1.ShowDialog();
 			var filePath = openFileDialog1.FileName;
 			if (!File.Exists(filePath)) {
 				return;
 			}
-			WaveOut.SetValue(filePath);
+			var enable = Playback.Enabled;
+			Playback.Close();
+			Playback.Position = 0;
+			Playback.LoadFile(filePath);
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = WaveOut.Length / WaveOut.SampleRate;
+			TrkSeek.Maximum = Playback.Length / Playback.SampleRate;
 			TrkSeek.Value = 0;
+			if (enable) {
+				Playback.Open();
+			}
 		}
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
-			if (WaveOut.Enabled) {
-				WaveOut.Close();
+			if (Playback.Enabled) {
+				Playback.Close();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 			} else {
-				WaveIn.Close();
-				WaveOut.Open();
+				Record.Close();
+				Playback.Open();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 				TsbPlay.Text = "停止";
@@ -70,13 +71,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
-			if (WaveIn.Enabled) {
-				WaveIn.Close();
+			if (Record.Enabled) {
+				Record.Close();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 			} else {
-				WaveOut.Close();
-				WaveIn.Open();
+				Playback.Close();
+				Record.Open();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 				TsbRec.Text = "停止";
@@ -86,26 +87,24 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
-			if (null == Settings.Instance) {
-				var fm = new Settings(this);
-				fm.Show();
-				fm.Location = Location;
-				Settings.Instance = fm;
+			if (!Settings.Instance.Visible) {
+				Settings.Instance.Visible = true;
+				Settings.Instance.Location = Location;
 			}
 		}
 
 		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
-			mIsScrol = true;
+			mGripSeekBar = true;
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			WaveOut.Position = TrkSeek.Value * WaveOut.SampleRate;
-			mIsScrol = false;
+			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			mGripSeekBar = false;
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
-			if (!mIsScrol) {
-				var temp = WaveOut.Position / WaveOut.SampleRate;
+			if (!mGripSeekBar) {
+				var temp = Playback.Position / Playback.SampleRate;
 				if (temp <= TrkSeek.Maximum) {
 					TrkSeek.Value = temp;
 				}
@@ -144,18 +143,18 @@ namespace SpectrumAnalyzer {
 			var width = pictureBox1.Width;
 			var gaugeHeight = pictureBox1.Height / 2;
 			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
-			if (WaveOut.Enabled) {
-				Drawer.Peak(g, WaveOut.FilterBankL.Peak, width, gaugeHeight);
-				Drawer.Slope(g, WaveOut.FilterBankL.Average, width, gaugeHeight, Pens.Cyan);
-				Drawer.Slope(g, WaveOut.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, WaveOut.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+			if (Playback.Enabled) {
+				Drawer.Peak(g, Playback.FilterBankL.Peak, width, gaugeHeight);
+				Drawer.Slope(g, Playback.FilterBankL.Threshold, width, gaugeHeight, Pens.Cyan);
+				Drawer.Slope(g, Playback.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
+				Drawer.Spectrum(bmp, Playback.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
-			if (WaveIn.Enabled) {
-				Drawer.Peak(g, WaveIn.FilterBank.Peak, width, gaugeHeight);
-				Drawer.Slope(g, WaveIn.FilterBank.Average, width, gaugeHeight, Pens.Cyan);
-				Drawer.Slope(g, WaveIn.FilterBank.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, WaveIn.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+			if (Record.Enabled) {
+				Drawer.Peak(g, Record.FilterBank.Peak, width, gaugeHeight);
+				Drawer.Slope(g, Record.FilterBank.Threshold, width, gaugeHeight, Pens.Cyan);
+				Drawer.Slope(g, Record.FilterBank.Slope, width, gaugeHeight, Pens.Red);
+				Drawer.Spectrum(bmp, Record.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			g.Dispose();
@@ -173,7 +172,7 @@ namespace SpectrumAnalyzer {
 			Drawer.Keyboard(g,
 				pictureBox1.Width, pictureBox1.Height,
 				gaugeHeight, KEYBOARD_HEIGHT,
-				KeyboardShift, NOTE_COUNT, BASE_FREQ
+				NOTE_COUNT, BASE_FREQ
 			);
 			Drawer.Gauge(g, pictureBox1.Width, gaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;

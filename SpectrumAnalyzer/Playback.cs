@@ -39,7 +39,7 @@
 		FilterBankR = new Spectrum(SampleRate, baseFreq, notes);
 	}
 
-	public void SetValue(string filePath) {
+	public void LoadFile(string filePath) {
 		var file = new RiffWAV(filePath, false);
 		if (8 != file.fmt.BitPerSample && 16 != file.fmt.BitPerSample) {
 			mWaveL = new short[1];
@@ -75,6 +75,10 @@
 					mWaveR[i] = mWaveL[i];
 				}
 				break;
+			default:
+				mWaveL = new short[1];
+				mWaveR = new short[1];
+				break;
 			}
 			break;
 
@@ -101,6 +105,10 @@
 				for (var i = 0; i < mWaveL.Length; ++i) {
 					file.read32(ref mWaveL[i], ref mWaveR[i]);
 				}
+				break;
+			default:
+				mWaveL = new short[1];
+				mWaveR = new short[1];
 				break;
 			}
 			break;

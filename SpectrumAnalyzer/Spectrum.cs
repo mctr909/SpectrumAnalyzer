@@ -38,7 +38,7 @@ public class Spectrum {
 
 	public double[] Slope { get; private set; }
 	public double[] Peak { get; private set; }
-	public double[] Average { get; private set; }
+	public double[] Threshold { get; private set; }
 	public double Gain { get { return Math.Sqrt(mMax); } }
 	public int Transpose { get; set; }
 	public bool AutoGain { get; set; } = true;
@@ -51,7 +51,7 @@ public class Spectrum {
 		Count = TONE_DIV * notes;
 		Slope = new double[Count];
 		Peak = new double[Count];
-		Average = new double[Count];
+		Threshold = new double[Count];
 		mMax = GAIN_MIN;
 		mBanks = new BANK[Count];
 		for (int b = 0, n = 0; b < Count; b += TONE_DIV, ++n) {
@@ -121,14 +121,6 @@ public class Spectrum {
 		var lastPeak = 0.0;
 		var lastPeakIndex = -1;
 		for (int b = 0; b < Count; ++b) {
-			var average = 0.0;
-			for (int w = -HALF_OCT; w <= HALF_OCT; ++w) {
-				var wt = (double)w / OCT_DIV;
-				var window = Math.Exp(-Math.E * wt * wt);
-				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
-				average += Math.Sqrt(mBanks[bw].power / mMax) * window;
-			}
-			Average[b] = average / OCT_DIV;
 			int thresholdWidth;
 			if (b + Transpose < MID_BEGIN) {
 				thresholdWidth = HALF_OCT;
@@ -138,7 +130,7 @@ public class Spectrum {
 			var threshold = 0.0;
 			for (int w = -thresholdWidth; w <= thresholdWidth; ++w) {
 				var wt = (double)w / OCT_DIV;
-				var window = Math.Exp(-Math.E * wt * wt);
+				var window = Math.Exp(-2 * wt * wt);
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
 				threshold += mBanks[bw].power * window;
 			}
@@ -146,6 +138,7 @@ public class Spectrum {
 			threshold = Math.Sqrt(threshold / mMax);
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
+			Threshold[b] = threshold;
 			Peak[b] = 0.0;
 			if (slope < threshold) {
 				if (0 <= lastPeakIndex) {

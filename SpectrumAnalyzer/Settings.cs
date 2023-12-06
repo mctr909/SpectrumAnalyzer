@@ -12,16 +12,17 @@ namespace SpectrumAnalyzer {
 			mMain = fm;
 		}
 
-		private void Settings_FormClosed(object sender, FormClosedEventArgs e) {
-			Instance = null;
+		private void Settings_FormClosing(object sender, FormClosingEventArgs e) {
+			e.Cancel = true;
+			Visible = false;
 		}
 
 		private void Settings_Load(object sender, EventArgs e) {
-			TrkSpeed.Value = (int)(Math.Log(mMain.WaveOut.Speed, 2.0) * 12);
-			TrkKey.Value = (int)(Math.Log(mMain.WaveOut.Pitch * mMain.WaveOut.Speed, 2.0) * 120);
-			GrbSpeed.Enabled = mMain.WaveOut.Enabled;
+			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
+			TrkKey.Value = (int)(Math.Log(mMain.Playback.Pitch * mMain.Playback.Speed, 2.0) * 120);
+			GrbSpeed.Enabled = mMain.Playback.Enabled;
 			TrkMinLevel.Value = Drawer.MinLevel;
-			RbAutoGain.Checked = mMain.WaveIn.FilterBank.AutoGain;
+			RbAutoGain.Checked = mMain.Record.FilterBank.AutoGain;
 			RbGain15.Checked = Drawer.ShiftGain != 0;
 			RbGainNone.Checked = !RbAutoGain.Checked && !RbGain15.Checked;
 			var outDevices = WaveOut.GetDeviceList();
@@ -32,7 +33,7 @@ namespace SpectrumAnalyzer {
 				CmbOutput.Items.Add(dev);
 			}
 			if (0 < outDevices.Count) {
-				CmbOutput.SelectedIndex = (int)mMain.WaveOut.DeviceId + 1;
+				CmbOutput.SelectedIndex = (int)mMain.Playback.DeviceId + 1;
 			}
 			var inDevices = WaveIn.GetDeviceList();
 			if (0 < inDevices.Count) {
@@ -42,7 +43,7 @@ namespace SpectrumAnalyzer {
 				CmbInput.Items.Add(dev);
 			}
 			if (0 < inDevices.Count) {
-				CmbInput.SelectedIndex = (int)mMain.WaveIn.DeviceId + 1;
+				CmbInput.SelectedIndex = (int)mMain.Record.DeviceId + 1;
 			}
 			setting();
 		}
@@ -53,8 +54,8 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			setting();
-			mMain.WaveOut.FilterBankL.Transpose = -TrkSpeed.Value;
-			mMain.WaveOut.FilterBankR.Transpose = -TrkSpeed.Value;
+			mMain.Playback.FilterBankL.Transpose = -TrkSpeed.Value;
+			mMain.Playback.FilterBankR.Transpose = -TrkSpeed.Value;
 		}
 
 		private void TrkMinLevel_Scroll(object sender, EventArgs e) {
@@ -63,9 +64,9 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			mMain.WaveOut.FilterBankL.AutoGain = RbAutoGain.Checked;
-			mMain.WaveOut.FilterBankR.AutoGain = RbAutoGain.Checked;
-			mMain.WaveIn.FilterBank.AutoGain = RbAutoGain.Checked;
+			mMain.Playback.FilterBankL.AutoGain = RbAutoGain.Checked;
+			mMain.Playback.FilterBankR.AutoGain = RbAutoGain.Checked;
+			mMain.Record.FilterBank.AutoGain = RbAutoGain.Checked;
 		}
 
 		private void RbGain15_CheckedChanged(object sender, EventArgs e) {
@@ -73,21 +74,21 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void CmbOutput_SelectedIndexChanged(object sender, EventArgs e) {
-			mMain.WaveOut.SetDevice((uint)(CmbOutput.SelectedIndex - 1));
+			mMain.Playback.SetDevice((uint)(CmbOutput.SelectedIndex - 1));
 		}
 
 		private void CmbInput_SelectedIndexChanged(object sender, EventArgs e) {
-			mMain.WaveIn.SetDevice((uint)(CmbInput.SelectedIndex - 1));
+			mMain.Record.SetDevice((uint)(CmbInput.SelectedIndex - 1));
 		}
 
 		void setting() {
-			mMain.WaveOut.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mMain.WaveOut.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.WaveOut.Speed;
 			var shift = TrkKey.Value / 10.0 - TrkSpeed.Value;
-			mMain.KeyboardShift = (int)(shift + 0.5 * Math.Sign(shift));
+			Drawer.KeyboardShift = (int)(shift + 0.5 * Math.Sign(shift));
+			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
+			mMain.Playback.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();
 			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0");
-			GrbSpeed.Text = "速さ:" + mMain.WaveOut.Speed.ToString("0%");
+			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
 			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";
 		}
 	}
