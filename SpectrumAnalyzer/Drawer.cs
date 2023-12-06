@@ -27,7 +27,7 @@ namespace SpectrumAnalyzer {
 		public static int MinLevel = -30;
 		public static int ShiftGain = 0;
 		public static int KeyboardShift = 0;
-		public static bool DisplayThreshold = true;
+		public static bool DisplayThreshold = false;
 
 		static string ToString(double value) {
 			if (10000 <= value) {

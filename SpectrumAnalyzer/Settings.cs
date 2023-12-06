@@ -18,7 +18,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void Settings_Load(object sender, EventArgs e) {
-			TrkKey.Value = (int)(Math.Log(mMain.Playback.Pitch * mMain.Playback.Speed, 2.0) * 120);
+			TrkKey.Value = (int)(Math.Log(OscBank.Pitch * mMain.Playback.Speed, 2.0) * 120);
 			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
 			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / 3;
@@ -51,6 +51,10 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkKey_Scroll(object sender, EventArgs e) {
+			setting();
+		}
+
+		private void TrkFormant_Scroll(object sender, EventArgs e) {
 			setting();
 		}
 
@@ -93,9 +97,10 @@ namespace SpectrumAnalyzer {
 			var shift = TrkKey.Value / 10.0 - TrkSpeed.Value;
 			Drawer.KeyboardShift = (int)(shift + 0.5 * Math.Sign(shift));
 			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
-			mMain.Playback.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
+			OscBank.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();
 			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0半音");
+			GrbFormant.Text = "フォルマント:" + TrkFormant.Value + "半音";
 			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
 			GrbThresholdHigh.Text = "閾値幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
 			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";

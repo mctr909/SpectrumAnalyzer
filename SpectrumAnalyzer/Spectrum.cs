@@ -63,7 +63,7 @@ public class Spectrum {
 				if (freq < 220) {
 					MID_BEGIN = b + d;
 				}
-				var width = Math.Log(1500.0 / freq, 2.0);
+				var width = Math.Log(2000.0 / freq, 2.0);
 				if (width < 1.0) {
 					width = 1.0;
 				}
@@ -136,9 +136,9 @@ public class Spectrum {
 			}
 			threshold /= thresholdWidth * 2 + 1;
 			threshold = Math.Sqrt(threshold / mMax);
+			Threshold[b] = threshold;
 			var slope = Math.Sqrt(mBanks[b].power / mMax);
 			Slope[b] = slope;
-			Threshold[b] = threshold;
 			Peak[b] = 0.0;
 			if (slope < threshold) {
 				if (0 <= lastPeakIndex) {

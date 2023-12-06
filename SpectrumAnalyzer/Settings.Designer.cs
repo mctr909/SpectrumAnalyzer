@@ -39,6 +39,8 @@
             this.GrbThresholdHigh = new System.Windows.Forms.GroupBox();
             this.ChkThreshold = new System.Windows.Forms.CheckBox();
             this.TrkThresholdHigh = new System.Windows.Forms.TrackBar();
+            this.GrbFormant = new System.Windows.Forms.GroupBox();
+            this.TrkFormant = new System.Windows.Forms.TrackBar();
             ((System.ComponentModel.ISupportInitialize)(this.TrkSpeed)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.TrkKey)).BeginInit();
             this.GrbKey.SuspendLayout();
@@ -49,6 +51,8 @@
             this.GrbInput.SuspendLayout();
             this.GrbThresholdHigh.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TrkThresholdHigh)).BeginInit();
+            this.GrbFormant.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.TrkFormant)).BeginInit();
             this.SuspendLayout();
             // 
             // TrkSpeed
@@ -60,7 +64,7 @@
             this.TrkSpeed.Minimum = -12;
             this.TrkSpeed.Name = "TrkSpeed";
             this.TrkSpeed.Size = new System.Drawing.Size(276, 24);
-            this.TrkSpeed.TabIndex = 9;
+            this.TrkSpeed.TabIndex = 3;
             this.TrkSpeed.TickFrequency = 3;
             this.TrkSpeed.Scroll += new System.EventHandler(this.TrkSpeed_Scroll);
             // 
@@ -73,7 +77,7 @@
             this.TrkKey.Minimum = -120;
             this.TrkKey.Name = "TrkKey";
             this.TrkKey.Size = new System.Drawing.Size(276, 24);
-            this.TrkKey.TabIndex = 8;
+            this.TrkKey.TabIndex = 1;
             this.TrkKey.TickFrequency = 10;
             this.TrkKey.Scroll += new System.EventHandler(this.TrkKey_Scroll);
             // 
@@ -92,7 +96,7 @@
             // 
             this.GrbSpeed.Controls.Add(this.TrkSpeed);
             this.GrbSpeed.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.GrbSpeed.Location = new System.Drawing.Point(6, 55);
+            this.GrbSpeed.Location = new System.Drawing.Point(6, 108);
             this.GrbSpeed.Name = "GrbSpeed";
             this.GrbSpeed.Size = new System.Drawing.Size(288, 47);
             this.GrbSpeed.TabIndex = 11;
@@ -106,7 +110,7 @@
             this.GrbMinLevel.Controls.Add(this.RbAutoGain);
             this.GrbMinLevel.Controls.Add(this.TrkMinLevel);
             this.GrbMinLevel.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.GrbMinLevel.Location = new System.Drawing.Point(6, 182);
+            this.GrbMinLevel.Location = new System.Drawing.Point(6, 235);
             this.GrbMinLevel.Name = "GrbMinLevel";
             this.GrbMinLevel.Size = new System.Drawing.Size(288, 68);
             this.GrbMinLevel.TabIndex = 12;
@@ -142,7 +146,7 @@
             this.RbAutoGain.Location = new System.Drawing.Point(154, 45);
             this.RbAutoGain.Name = "RbAutoGain";
             this.RbAutoGain.Size = new System.Drawing.Size(73, 19);
-            this.RbAutoGain.TabIndex = 12;
+            this.RbAutoGain.TabIndex = 6;
             this.RbAutoGain.TabStop = true;
             this.RbAutoGain.Text = "自動調整";
             this.RbAutoGain.UseVisualStyleBackColor = true;
@@ -167,7 +171,7 @@
             // 
             this.GrbOutput.Controls.Add(this.CmbOutput);
             this.GrbOutput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.GrbOutput.Location = new System.Drawing.Point(6, 256);
+            this.GrbOutput.Location = new System.Drawing.Point(6, 309);
             this.GrbOutput.Name = "GrbOutput";
             this.GrbOutput.Size = new System.Drawing.Size(288, 47);
             this.GrbOutput.TabIndex = 13;
@@ -188,7 +192,7 @@
             // 
             this.GrbInput.Controls.Add(this.CmbInput);
             this.GrbInput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.GrbInput.Location = new System.Drawing.Point(6, 309);
+            this.GrbInput.Location = new System.Drawing.Point(6, 362);
             this.GrbInput.Name = "GrbInput";
             this.GrbInput.Size = new System.Drawing.Size(288, 47);
             this.GrbInput.TabIndex = 14;
@@ -210,7 +214,7 @@
             this.GrbThresholdHigh.Controls.Add(this.ChkThreshold);
             this.GrbThresholdHigh.Controls.Add(this.TrkThresholdHigh);
             this.GrbThresholdHigh.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-            this.GrbThresholdHigh.Location = new System.Drawing.Point(6, 108);
+            this.GrbThresholdHigh.Location = new System.Drawing.Point(6, 161);
             this.GrbThresholdHigh.Name = "GrbThresholdHigh";
             this.GrbThresholdHigh.Size = new System.Drawing.Size(288, 68);
             this.GrbThresholdHigh.TabIndex = 15;
@@ -223,7 +227,7 @@
             this.ChkThreshold.Location = new System.Drawing.Point(11, 43);
             this.ChkThreshold.Name = "ChkThreshold";
             this.ChkThreshold.Size = new System.Drawing.Size(102, 19);
-            this.ChkThreshold.TabIndex = 10;
+            this.ChkThreshold.TabIndex = 5;
             this.ChkThreshold.Text = "閾値を表示する";
             this.ChkThreshold.UseVisualStyleBackColor = true;
             this.ChkThreshold.CheckedChanged += new System.EventHandler(this.ChkThreshold_CheckedChanged);
@@ -237,15 +241,39 @@
             this.TrkThresholdHigh.Minimum = 2;
             this.TrkThresholdHigh.Name = "TrkThresholdHigh";
             this.TrkThresholdHigh.Size = new System.Drawing.Size(276, 24);
-            this.TrkThresholdHigh.TabIndex = 9;
+            this.TrkThresholdHigh.TabIndex = 4;
             this.TrkThresholdHigh.Value = 2;
             this.TrkThresholdHigh.Scroll += new System.EventHandler(this.TrkThresholdHigh_Scroll);
+            // 
+            // GrbFormant
+            // 
+            this.GrbFormant.Controls.Add(this.TrkFormant);
+            this.GrbFormant.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
+            this.GrbFormant.Location = new System.Drawing.Point(6, 55);
+            this.GrbFormant.Name = "GrbFormant";
+            this.GrbFormant.Size = new System.Drawing.Size(288, 47);
+            this.GrbFormant.TabIndex = 16;
+            this.GrbFormant.TabStop = false;
+            this.GrbFormant.Text = "フォルマント";
+            // 
+            // TrkFormant
+            // 
+            this.TrkFormant.AutoSize = false;
+            this.TrkFormant.LargeChange = 10;
+            this.TrkFormant.Location = new System.Drawing.Point(6, 15);
+            this.TrkFormant.Maximum = 12;
+            this.TrkFormant.Minimum = -12;
+            this.TrkFormant.Name = "TrkFormant";
+            this.TrkFormant.Size = new System.Drawing.Size(276, 24);
+            this.TrkFormant.TabIndex = 2;
+            this.TrkFormant.Scroll += new System.EventHandler(this.TrkFormant_Scroll);
             // 
             // Settings
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(301, 362);
+            this.ClientSize = new System.Drawing.Size(300, 414);
+            this.Controls.Add(this.GrbFormant);
             this.Controls.Add(this.GrbThresholdHigh);
             this.Controls.Add(this.GrbInput);
             this.Controls.Add(this.GrbOutput);
@@ -271,6 +299,8 @@
             this.GrbThresholdHigh.ResumeLayout(false);
             this.GrbThresholdHigh.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)(this.TrkThresholdHigh)).EndInit();
+            this.GrbFormant.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.TrkFormant)).EndInit();
             this.ResumeLayout(false);
 
 		}
@@ -293,5 +323,7 @@
 		private System.Windows.Forms.GroupBox GrbThresholdHigh;
 		private System.Windows.Forms.TrackBar TrkThresholdHigh;
         private System.Windows.Forms.CheckBox ChkThreshold;
+        private System.Windows.Forms.GroupBox GrbFormant;
+        private System.Windows.Forms.TrackBar TrkFormant;
     }
 }

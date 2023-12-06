@@ -19,10 +19,6 @@
 	public int Length {
 		get { return mWaveL.Length; }
 	}
-	public double Pitch {
-		get { return mOscBank.Pitch; }
-		set { mOscBank.Pitch = value; }
-	}
 	public double Speed { get; set; } = 1.0;
 
 	public Playback(int notes, double baseFreq) {

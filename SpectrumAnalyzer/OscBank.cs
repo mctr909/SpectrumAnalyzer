@@ -27,7 +27,7 @@ public class OscBank {
 	double[] mBufferL;
 	double[] mBufferR;
 
-	public double Pitch { get; set; } = 1.0;
+	public static double Pitch { get; set; } = 1.0;
 
 	public OscBank(int sampleRate, int bufferLength, int banks, double baseFreq) {
 		BANKS = new BANK[banks];
@@ -67,9 +67,9 @@ public class OscBank {
 			var peakL = 0.0;
 			var peakR = 0.0;
 			var peakC = 0.0;
-			for (int d = 0; d < TONE_DIV; d++) {
-				var divPeakL = peaksL[p + d];
-				var divPeakR = peaksR[p + d];
+			for (int d = 0, pd = p; d < TONE_DIV; d++, pd++) {
+				var divPeakL = peaksL[pd];
+				var divPeakR = peaksR[pd];
 				var divPeakC = Math.Max(divPeakL, divPeakR);
 				if (peakL < divPeakL) {
 					peakL = divPeakL;
