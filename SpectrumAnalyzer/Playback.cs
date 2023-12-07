@@ -65,20 +65,24 @@
 
 	protected override void SetData() {
 		for (int i = 0, j = 0; i < BufferSize; i += 2, j++) {
-			var idxA = (int)mTime;
-			var a2b = mTime - idxA;
-			var idxB = idxA + 1;
-			if (mWaveL.Length == idxB) {
-				idxB = idxA;
+			var waveL = 0.0;
+			var waveR = 0.0;
+			for (int o = 0; o < 4; o++) {
+				var idxA = (int)mTime;
+				var a2b = mTime - idxA;
+				var idxB = idxA + 1;
+				if (mWaveL.Length == idxB) {
+					idxB = idxA;
+				}
+				mTime += mDelta * Speed * 0.25;
+				if (mLoopEnd <= mTime) {
+					mTime = mLoopBegin + mTime - mLoopEnd;
+				}
+				waveL += mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
+				waveR += mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
 			}
-			mTime += mDelta * Speed;
-			if (mLoopEnd <= mTime) {
-				mTime = mLoopBegin + mTime - mLoopEnd;
-			}
-			var waveL = mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
-			var waveR = mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
-			mDataL[j] = (short)waveL;
-			mDataR[j] = (short)waveR;
+			mDataL[j] = (short)(waveL * 0.25);
+			mDataR[j] = (short)(waveR * 0.25);
 		}
 		FilterBankL.SetLevel(mDataL);
 		FilterBankR.SetLevel(mDataR);

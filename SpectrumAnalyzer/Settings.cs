@@ -22,6 +22,7 @@ namespace SpectrumAnalyzer {
 			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
 			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / 3;
+			TrkThresholdOffset.Value = (int)(200 * Math.Log10(Spectrum.ThresholdOffset));
 			ChkThreshold.Checked = Drawer.DisplayThreshold;
 			TrkMinLevel.Value = Drawer.MinLevel;
 			RbAutoGain.Checked = Spectrum.AutoGain;
@@ -58,11 +59,17 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			Spectrum.Transpose = -TrkSpeed.Value;
+			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			setting();
 		}
 
 		private void TrkThresholdHigh_Scroll(object sender, EventArgs e) {
 			Spectrum.ThresholdHigh = TrkThresholdHigh.Value * 3;
+			setting();
+		}
+
+		private void TrkThresholdOffset_Scroll(object sender, EventArgs e) {
+			Spectrum.ThresholdOffset = Math.Pow(10, TrkThresholdOffset.Value / 200.0);
 			setting();
 		}
 
@@ -94,13 +101,15 @@ namespace SpectrumAnalyzer {
 		void setting() {
 			var shift = TrkKey.Value / 10.0 - TrkSpeed.Value;
 			Drawer.KeyboardShift = (int)(shift + 0.5 * Math.Sign(shift));
-			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
 			OscBank.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();
-			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0半音");
-			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
-			GrbThresholdHigh.Text = "閾値幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
-			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";
+			GrbKey.Text = string.Format("キー:{0}半音", (TrkKey.Value * 0.1).ToString("0.0"));
+			GrbSpeed.Text = string.Format("速さ:{0}", mMain.Playback.Speed.ToString("0%"));
+			GrbThresholdHigh.Text = string.Format("閾値　幅:{0}半音　オフセット:{1}db",
+				TrkThresholdHigh.Value * 2 + 1,
+				(TrkThresholdOffset.Value * 0.1).ToString("0.0")
+			);
+			GrbMinLevel.Text = string.Format("表示範囲:{0}db", TrkMinLevel.Value);
 		}
 	}
 }
