@@ -34,9 +34,9 @@ public class OscBank {
 		var random = new Random();
 		for (var b = 0; b < banks; b++) {
 			var frequency = baseFrequency * Math.Pow(2.0, b / 12.0);
-			var declickFrequency = frequency * 16;
-			if (sampleRate / 8.0 < declickFrequency) {
-				declickFrequency = sampleRate / 8.0;
+			var declickFrequency = frequency * 4;
+			if (sampleRate / 20.0 < declickFrequency) {
+				declickFrequency = sampleRate / 20.0;
 			}
 			var bank = new BANK() {
 				declickSpeed = declickFrequency / sampleRate,

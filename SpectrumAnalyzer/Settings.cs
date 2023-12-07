@@ -82,12 +82,16 @@ namespace SpectrumAnalyzer {
 			setting();
 		}
 
-		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			Spectrum.AutoGain = RbAutoGain.Checked;
-		}
-
 		private void RbGain15_CheckedChanged(object sender, EventArgs e) {
 			Drawer.ShiftGain = RbGain15.Checked ? 15 : 0;
+		}
+
+		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
+			Spectrum.NormGain = RbNormGain.Checked;
+		}
+
+		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
+			Spectrum.AutoGain = RbAutoGain.Checked;
 		}
 
 		private void CmbOutput_SelectedIndexChanged(object sender, EventArgs e) {

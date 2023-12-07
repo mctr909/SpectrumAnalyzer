@@ -18,7 +18,7 @@ namespace SpectrumAnalyzer {
 		static readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
-		static readonly Pen BAR = new Pen(Color.FromArgb(111, 191, 191, 191), 1.0f);
+		static readonly Pen BAR = new Pen(Color.FromArgb(95, 255, 255, 255), 1.0f);
 		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
 		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);

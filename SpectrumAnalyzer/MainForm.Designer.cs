@@ -56,6 +56,8 @@
 			this.TrkSeek.Size = new System.Drawing.Size(265, 24);
 			this.TrkSeek.TabIndex = 2;
 			this.TrkSeek.TickFrequency = 15;
+			this.TrkSeek.KeyDown += new System.Windows.Forms.KeyEventHandler(this.TrkSeek_KeyDown);
+			this.TrkSeek.KeyUp += new System.Windows.Forms.KeyEventHandler(this.TrkSeek_KeyUp);
 			this.TrkSeek.MouseDown += new System.Windows.Forms.MouseEventHandler(this.TrkSeek_MouseDown);
 			this.TrkSeek.MouseUp += new System.Windows.Forms.MouseEventHandler(this.TrkSeek_MouseUp);
 			// 

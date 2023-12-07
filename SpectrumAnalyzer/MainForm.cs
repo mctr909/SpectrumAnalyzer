@@ -102,6 +102,15 @@ namespace SpectrumAnalyzer {
 			mGripSeekBar = false;
 		}
 
+		private void TrkSeek_KeyDown(object sender, KeyEventArgs e) {
+			mGripSeekBar = true;
+		}
+
+		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
+			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			mGripSeekBar = false;
+		}
+
 		private void timer1_Tick(object sender, EventArgs e) {
 			if (!mGripSeekBar) {
 				var temp = Playback.Position / Playback.SampleRate;

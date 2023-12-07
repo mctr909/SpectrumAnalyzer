@@ -56,11 +56,12 @@ public class Spectrum {
 
 	public readonly int Count;
 
-	public static int ThresholdHigh { get; set; } = TONE_DIV;
+	public static int ThresholdHigh { get; set; } = TONE_DIV * 2;
 	public static int ThresholdLow { get; set; } = TONE_DIV * 5;
 	public static double ThresholdOffset { get; set; } = 1.0;
 	public static int Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
+	public static bool NormGain { get; set; } = false;
 
 	public double[] Slope { get; private set; }
 	public double[] Peak { get; private set; }
@@ -85,8 +86,8 @@ public class Spectrum {
 					MID_BEGIN = bd;
 				}
 				var width = Math.Log(2000.0 / frequency, 2.0);
-				if (width < 1.0 / TONE_DIV) {
-					width = 1.0 / TONE_DIV;
+				if (width < 1.0) {
+					width = 1.0;
 				}
 				mBanks[bd] = BANK.Bandpass(sampleRate, frequency, width / 12.0);
 			}
@@ -94,7 +95,11 @@ public class Spectrum {
 	}
 
 	public void SetLevel(short[] inputWave) {
-		mMaxPower = Math.Max(mMaxPower * GAIN_ATTENUATION, GAIN_MIN);
+		if (NormGain) {
+			mMaxPower = GAIN_MIN;
+		} else {
+			mMaxPower = Math.Max(mMaxPower * GAIN_ATTENUATION, GAIN_MIN);
+		}
 		for (int b = 0; b < Count; ++b) {
 			var bank = mBanks[b];
 			for (int t = 0; t < inputWave.Length; ++t) {
@@ -116,7 +121,7 @@ public class Spectrum {
 			bank.power = bank.sum * bank.gain;
 			mMaxPower = Math.Max(mMaxPower, bank.power);
 		}
-		if (!AutoGain) {
+		if (!AutoGain && !NormGain) {
 			mMaxPower = 1.0;
 		}
 		var lastPeak = 0.0;
