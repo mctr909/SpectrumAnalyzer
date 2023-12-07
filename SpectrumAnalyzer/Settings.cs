@@ -28,23 +28,25 @@ namespace SpectrumAnalyzer {
 			RbGain15.Checked = Drawer.ShiftGain != 0;
 			RbGainNone.Checked = !RbAutoGain.Checked && !RbGain15.Checked;
 			var outDevices = WaveOut.GetDeviceList();
-			if (0 < outDevices.Count) {
+			if (0 == outDevices.Count) {
+				CmbOutput.Enabled = false;
+			} else {
+				CmbOutput.Enabled = true;
 				CmbOutput.Items.Add("既定のデバイス");
-			}
-			foreach (var dev in outDevices) {
-				CmbOutput.Items.Add(dev);
-			}
-			if (0 < outDevices.Count) {
+				foreach (var dev in outDevices) {
+					CmbOutput.Items.Add(dev);
+				}
 				CmbOutput.SelectedIndex = (int)mMain.Playback.DeviceId + 1;
 			}
 			var inDevices = WaveIn.GetDeviceList();
-			if (0 < inDevices.Count) {
+			if (0 == inDevices.Count) {
+				CmbInput.Enabled = false;
+			} else {
+				CmbInput.Enabled = true;
 				CmbInput.Items.Add("既定のデバイス");
-			}
-			foreach (var dev in inDevices) {
-				CmbInput.Items.Add(dev);
-			}
-			if (0 < inDevices.Count) {
+				foreach (var dev in inDevices) {
+					CmbInput.Items.Add(dev);
+				}
 				CmbInput.SelectedIndex = (int)mMain.Record.DeviceId + 1;
 			}
 			setting();
@@ -54,13 +56,9 @@ namespace SpectrumAnalyzer {
 			setting();
 		}
 
-		private void TrkFormant_Scroll(object sender, EventArgs e) {
-			setting();
-		}
-
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
-			setting();
 			Spectrum.Transpose = -TrkSpeed.Value;
+			setting();
 		}
 
 		private void TrkThresholdHigh_Scroll(object sender, EventArgs e) {
@@ -100,7 +98,6 @@ namespace SpectrumAnalyzer {
 			OscBank.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();
 			GrbKey.Text = "キー:" + (TrkKey.Value * 0.1).ToString("0.0半音");
-			GrbFormant.Text = "フォルマント:" + TrkFormant.Value + "半音";
 			GrbSpeed.Text = "速さ:" + mMain.Playback.Speed.ToString("0%");
 			GrbThresholdHigh.Text = "閾値幅:" + (TrkThresholdHigh.Value * 2 + 1) + "半音";
 			GrbMinLevel.Text = "表示範囲:" + TrkMinLevel.Value + "db";

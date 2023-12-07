@@ -13,8 +13,8 @@ public class OscBank {
 	const int TONE_DIV = 3;
 	const int TONE_DIV_CENTER = 1;
 	const int TABLE_LENGTH = 96;
-	static readonly double[] TABLE;
 
+	static readonly double[] TABLE;
 	static OscBank() {
 		TABLE = new double[TABLE_LENGTH + 1];
 		for (int i = 0; i < TABLE_LENGTH + 1; i++) {
@@ -29,22 +29,23 @@ public class OscBank {
 
 	public static double Pitch { get; set; } = 1.0;
 
-	public OscBank(int sampleRate, int bufferLength, int banks, double baseFreq) {
+	public OscBank(int sampleRate, int bufferLength, int banks, double baseFrequency) {
 		BANKS = new BANK[banks];
 		var random = new Random();
 		for (var b = 0; b < banks; b++) {
-			var freq = baseFreq * Math.Pow(2.0, b / 12.0);
-			var declickFreq = freq * 16;
-			if (sampleRate / 8.0 < declickFreq) {
-				declickFreq = sampleRate / 8.0;
+			var frequency = baseFrequency * Math.Pow(2.0, b / 12.0);
+			var declickFrequency = frequency * 16;
+			if (sampleRate / 8.0 < declickFrequency) {
+				declickFrequency = sampleRate / 8.0;
 			}
 			var bank = new BANK() {
-				declickSpeed = declickFreq / sampleRate,
+				declickSpeed = declickFrequency / sampleRate,
 				phase = random.NextDouble(),
 				delta = new double[TONE_DIV],
 			};
 			for (int d = 0; d < TONE_DIV; d++) {
-				bank.delta[d] = freq * Math.Pow(2.0, (d - TONE_DIV_CENTER) / (TONE_DIV * 12.0)) / sampleRate;
+				var oct = (d - TONE_DIV_CENTER) / (TONE_DIV * 12.0);
+				bank.delta[d] = frequency * Math.Pow(2.0, oct) / sampleRate;
 			}
 			BANKS[b] = bank;
 		}
