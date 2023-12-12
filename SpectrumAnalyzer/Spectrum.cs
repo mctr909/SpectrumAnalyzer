@@ -56,8 +56,8 @@ public class Spectrum {
 
 	public readonly int Count;
 
-	public static int ThresholdHigh { get; set; } = TONE_DIV * 2;
-	public static int ThresholdLow { get; set; } = TONE_DIV * 5;
+	public static int ThresholdHigh { get; set; } = TONE_DIV * 1;
+	public static int ThresholdLow { get; set; } = TONE_DIV * 7;
 	public static double ThresholdOffset { get; set; } = 1.0;
 	public static int Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
@@ -141,7 +141,7 @@ public class Spectrum {
 				var bw = Math.Min(Count - 1, Math.Max(0, b + w));
 				threshold += mBanks[bw].power;
 			}
-			threshold /= thresholdWidth * 2 + 1;
+			threshold /= thresholdWidth * 2;
 			threshold = Math.Sqrt(threshold / mMaxPower) * thresholdOffset;
 			Threshold[b] = threshold;
 			var slope = Math.Sqrt(mBanks[b].power / mMaxPower);

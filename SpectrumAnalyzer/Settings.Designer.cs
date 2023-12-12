@@ -239,8 +239,7 @@
             this.TrkThresholdOffset.AutoSize = false;
             this.TrkThresholdOffset.LargeChange = 6;
             this.TrkThresholdOffset.Location = new System.Drawing.Point(6, 45);
-            this.TrkThresholdOffset.Maximum = 30;
-            this.TrkThresholdOffset.Minimum = -30;
+            this.TrkThresholdOffset.Maximum = 60;
             this.TrkThresholdOffset.Name = "TrkThresholdOffset";
             this.TrkThresholdOffset.RightToLeft = System.Windows.Forms.RightToLeft.No;
             this.TrkThresholdOffset.Size = new System.Drawing.Size(276, 24);
@@ -264,8 +263,8 @@
             this.TrkThresholdHigh.AutoSize = false;
             this.TrkThresholdHigh.LargeChange = 1;
             this.TrkThresholdHigh.Location = new System.Drawing.Point(6, 15);
-            this.TrkThresholdHigh.Maximum = 12;
-            this.TrkThresholdHigh.Minimum = 2;
+            this.TrkThresholdHigh.Maximum = 9;
+            this.TrkThresholdHigh.Minimum = 1;
             this.TrkThresholdHigh.Name = "TrkThresholdHigh";
             this.TrkThresholdHigh.Size = new System.Drawing.Size(276, 24);
             this.TrkThresholdHigh.TabIndex = 1;

@@ -21,7 +21,7 @@ namespace SpectrumAnalyzer {
 			InitializeComponent();
 			Settings.Instance = new Settings(this);
 			Playback = new Playback(NOTE_COUNT, BASE_FREQ);
-			Record = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			Record = new Record(44100, 128, NOTE_COUNT, BASE_FREQ);
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
