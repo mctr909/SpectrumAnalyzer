@@ -64,7 +64,6 @@
             this.TrkSpeed.Name = "TrkSpeed";
             this.TrkSpeed.Size = new System.Drawing.Size(276, 24);
             this.TrkSpeed.TabIndex = 1;
-            this.TrkSpeed.TickFrequency = 3;
             this.TrkSpeed.Scroll += new System.EventHandler(this.TrkSpeed_Scroll);
             // 
             // TrkKey
@@ -263,7 +262,7 @@
             this.TrkThresholdHigh.AutoSize = false;
             this.TrkThresholdHigh.LargeChange = 1;
             this.TrkThresholdHigh.Location = new System.Drawing.Point(6, 15);
-            this.TrkThresholdHigh.Maximum = 9;
+            this.TrkThresholdHigh.Maximum = 11;
             this.TrkThresholdHigh.Minimum = 1;
             this.TrkThresholdHigh.Name = "TrkThresholdHigh";
             this.TrkThresholdHigh.Size = new System.Drawing.Size(276, 24);

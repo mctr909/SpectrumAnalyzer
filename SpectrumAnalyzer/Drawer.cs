@@ -199,8 +199,8 @@ namespace SpectrumAnalyzer {
 				var barY = AmpToY(arr[i], height);
 				var barHeight = height - barY;
 				if (0 < barHeight) {
-					var barX = (i - 1) * width / count + 1;
-					var barWidth = (i + 2) * width / count - barX + 1;
+					var barX = (i - 2) * width / count + 1;
+					var barWidth = (i + 3) * width / count - barX + 1;
 					g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
 				}
 			}
@@ -255,8 +255,8 @@ namespace SpectrumAnalyzer {
 				} else {
 					amp = arr[idxB];
 				}
-				var barX = (idxB - 1) * width / count + 1;
-				var barWidth = (idxB + 2) * width / count - barX + 1;
+				var barX = (idxB - 2) * width / count + 1;
+				var barWidth = (idxB + 3) * width / count - barX + 1;
 				SetHue(amp, offsetY0 + barX * 4, barWidth);
 				idxA = idxB;
 			}

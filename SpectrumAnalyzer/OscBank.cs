@@ -10,8 +10,8 @@ public class OscBank {
 	}
 
 	const double AMP_MIN = 1.0 / 32768.0;
-	const int TONE_DIV = 3;
-	const int TONE_DIV_CENTER = 1;
+	const int TONE_DIV = 5;
+	const int TONE_DIV_CENTER = 2;
 	const int TABLE_LENGTH = 96;
 
 	static readonly double[] TABLE;

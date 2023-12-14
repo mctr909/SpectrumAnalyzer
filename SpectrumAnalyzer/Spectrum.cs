@@ -43,10 +43,11 @@ public class Spectrum {
 		}
 	}
 
-	const double GAIN_MIN = 1e-5;
-	const int TONE_DIV = 3;
-	const int TONE_DIV_CENTER = 1;
+	public const int TONE_DIV = 5;
+
+	const int TONE_DIV_CENTER = 2;
 	const int OCT_DIV = TONE_DIV * 12;
+	const double GAIN_MIN = 1e-5;
 
 	readonly double GAIN_ATTENUATION;
 	readonly int MID_BEGIN;
@@ -57,7 +58,7 @@ public class Spectrum {
 	public readonly int Count;
 
 	public static int ThresholdHigh { get; set; } = TONE_DIV * 1;
-	public static int ThresholdLow { get; set; } = TONE_DIV * 7;
+	public static int ThresholdLow { get; set; } = TONE_DIV * 2;
 	public static double ThresholdOffset { get; set; } = 1.0;
 	public static int Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
@@ -82,7 +83,7 @@ public class Spectrum {
 		for (int b = 0; b < Count; b += TONE_DIV) {
 			for (int d = 0, bd = b; d < TONE_DIV; ++d, ++bd) {
 				var frequency = baseFrequency * Math.Pow(2.0, (double)(bd - TONE_DIV_CENTER) / OCT_DIV);
-				if (frequency < 220) {
+				if (frequency < 160) {
 					MID_BEGIN = bd;
 				}
 				var width = Math.Log(2000.0 / frequency, 2.0);

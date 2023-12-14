@@ -21,7 +21,7 @@ namespace SpectrumAnalyzer {
 			TrkKey.Value = (int)(Math.Log(OscBank.Pitch * mMain.Playback.Speed, 2.0) * 120);
 			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
-			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / 3;
+			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / Spectrum.TONE_DIV;
 			TrkThresholdOffset.Value = (int)(200 * Math.Log10(Spectrum.ThresholdOffset));
 			ChkThreshold.Checked = Drawer.DisplayThreshold;
 			TrkMinLevel.Value = Drawer.MinLevel;
@@ -64,7 +64,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkThresholdHigh_Scroll(object sender, EventArgs e) {
-			Spectrum.ThresholdHigh = TrkThresholdHigh.Value * 3;
+			Spectrum.ThresholdHigh = TrkThresholdHigh.Value * Spectrum.TONE_DIV;
 			setting();
 		}
 
