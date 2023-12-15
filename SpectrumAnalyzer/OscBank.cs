@@ -10,8 +10,6 @@ public class OscBank {
 	}
 
 	const double AMP_MIN = 1.0 / 32768.0;
-	const int TONE_DIV = 5;
-	const int TONE_DIV_CENTER = 2;
 	const int TABLE_LENGTH = 96;
 
 	static readonly double[] TABLE;
@@ -41,10 +39,10 @@ public class OscBank {
 			var bank = new BANK() {
 				declickSpeed = declickFrequency / sampleRate,
 				phase = random.NextDouble(),
-				delta = new double[TONE_DIV],
+				delta = new double[Spectrum.TONE_DIV],
 			};
-			for (int d = 0; d < TONE_DIV; d++) {
-				var oct = (d - TONE_DIV_CENTER) / (TONE_DIV * 12.0);
+			for (int d = 0; d < Spectrum.TONE_DIV; d++) {
+				var oct = (d - Spectrum.TONE_DIV_CENTER) / (Spectrum.TONE_DIV * 12.0);
 				bank.delta[d] = frequency * Math.Pow(2.0, oct) / sampleRate;
 			}
 			BANKS[b] = bank;
@@ -62,24 +60,24 @@ public class OscBank {
 		var loBankIndex = 0;
 		var loBankAmp = 0.0;
 		var loBankPhase = 0.0;
-		for (int b = 0, p = 0; b < BANKS.Length; b++, p += TONE_DIV) {
+		for (int b = 0, p = 0; b < BANKS.Length; b++, p += Spectrum.TONE_DIV) {
 			var bank = BANKS[b];
-			var delta = bank.delta[TONE_DIV_CENTER];
+			var delta = bank.delta[Spectrum.TONE_DIV_CENTER];
 			var peakL = 0.0;
 			var peakR = 0.0;
 			var peakC = 0.0;
-			for (int d = 0, pd = p; d < TONE_DIV; d++, pd++) {
-				var divPeakL = peaksL[pd];
-				var divPeakR = peaksR[pd];
-				var divPeakC = Math.Max(divPeakL, divPeakR);
-				if (peakL < divPeakL) {
-					peakL = divPeakL;
+			for (int d = 0, pd = p; d < Spectrum.TONE_DIV; d++, pd++) {
+				var peakDivL = peaksL[pd];
+				var peakDivR = peaksR[pd];
+				var peakDivC = Math.Max(peakDivL, peakDivR);
+				if (peakL < peakDivL) {
+					peakL = peakDivL;
 				}
-				if (peakR < divPeakR) {
-					peakR = divPeakR;
+				if (peakR < peakDivR) {
+					peakR = peakDivR;
 				}
-				if (peakC < divPeakC) {
-					peakC = divPeakC;
+				if (peakC < peakDivC) {
+					peakC = peakDivC;
 					delta = bank.delta[d];
 				}
 			}

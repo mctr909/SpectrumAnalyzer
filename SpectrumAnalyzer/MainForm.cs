@@ -158,7 +158,7 @@ namespace SpectrumAnalyzer {
 					Drawer.Slope(g, Playback.FilterBankL.Threshold, width, gaugeHeight, Pens.Cyan);
 				}
 				Drawer.Slope(g, Playback.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, Playback.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				Drawer.Scroll(bmp, Playback.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (Record.Enabled) {
@@ -167,7 +167,7 @@ namespace SpectrumAnalyzer {
 					Drawer.Slope(g, Record.FilterBank.Threshold, width, gaugeHeight, Pens.Cyan);
 				}
 				Drawer.Slope(g, Record.FilterBank.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Spectrum(bmp, Record.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				Drawer.Scroll(bmp, Record.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			g.Dispose();

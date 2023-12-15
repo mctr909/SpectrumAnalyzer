@@ -61,7 +61,7 @@ namespace SpectrumAnalyzer {
 			return (int)(db * height / MinLevel);
 		}
 
-		static void SetHue(double amp, int pos, int width) {
+		static void SetHue(double amp, int offset, int width) {
 			if (amp < 1e-6) {
 				amp = 1e-6;
 			}
@@ -97,7 +97,7 @@ namespace SpectrumAnalyzer {
 				r = 255;
 				a = ALPHA_MAX;
 			}
-			for (int x = 0, p = pos; x < width; x++, p += 4) {
+			for (int x = 0, p = offset; x < width; x++, p += 4) {
 				ScrollCanvas[p + 0] = b;
 				ScrollCanvas[p + 1] = g;
 				ScrollCanvas[p + 2] = r;
@@ -199,8 +199,8 @@ namespace SpectrumAnalyzer {
 				var barY = AmpToY(arr[i], height);
 				var barHeight = height - barY;
 				if (0 < barHeight) {
-					var barX = (i - 2) * width / count + 1;
-					var barWidth = (i + 3) * width / count - barX + 1;
+					var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count + 1;
+					var barWidth = (i + Spectrum.TONE_DIV_CENTER + 1) * width / count - barX + 1;
 					g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
 				}
 			}
@@ -237,53 +237,41 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		public static void Spectrum(Bitmap bmp, double[] arr, int top, int keyboardHeight, int scrollHeight) {
+		public static void Scroll(Bitmap bmp, double[] arr, int top, int keyboardHeight, int scrollHeight) {
 			var width = bmp.Width;
 			var count = arr.Length;
-			var data = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
-			var offsetY0 = data.Stride * top;
-			Array.Clear(ScrollCanvas, offsetY0, data.Stride);
-			var idxA = 0;
-			for (int x = 0; x < width; x++) {
-				var idxB = x * count / width;
-				double amp;
-				if (1 < idxB - idxA) {
-					amp = double.MinValue;
-					for (var i = idxA; i <= idxB; i++) {
-						amp = Math.Max(amp, arr[i]);
-					}
-				} else {
-					amp = arr[idxB];
-				}
-				var barX = (idxB - 2) * width / count + 1;
-				var barWidth = (idxB + 3) * width / count - barX + 1;
-				SetHue(amp, offsetY0 + barX * 4, barWidth);
-				idxA = idxB;
+			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
+			var offsetY0 = pix.Stride * top;
+			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
+			for (int i = 0; i < count; i++) {
+				var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count + 1;
+				var barWidth = (i + Spectrum.TONE_DIV_CENTER + 1) * width / count - barX + 1;
+				SetHue(arr[i], offsetY0 + barX * 4, barWidth);
 			}
 			for (int y = 1; y < keyboardHeight; y++) {
 				Buffer.BlockCopy(
 					ScrollCanvas, offsetY0,
-					ScrollCanvas, offsetY0 + data.Stride * y,
-					data.Stride
+					ScrollCanvas, offsetY0 + pix.Stride * y,
+					pix.Stride
 				);
 			}
-			var offsetY1 = data.Stride * (top + keyboardHeight);
+			var offsetY1 = pix.Stride * (top + keyboardHeight);
 			Buffer.BlockCopy(
 				ScrollCanvas, offsetY1,
-				ScrollCanvas, offsetY1 + data.Stride * SCROLL_SPEED,
-				data.Stride * (scrollHeight - SCROLL_SPEED)
+				ScrollCanvas, offsetY1 + pix.Stride * SCROLL_SPEED,
+				pix.Stride * (scrollHeight - SCROLL_SPEED)
 			);
 			Buffer.BlockCopy(
 				ScrollCanvas, offsetY0,
 				ScrollCanvas, offsetY1,
-				data.Stride * SCROLL_SPEED
+				pix.Stride * SCROLL_SPEED
 			);
 			Marshal.Copy(
 				ScrollCanvas, offsetY0,
-				data.Scan0 + offsetY0,
-				data.Stride * (keyboardHeight + scrollHeight)
+				pix.Scan0 + offsetY0,
+				pix.Stride * (keyboardHeight + scrollHeight)
 			);
-			bmp.UnlockBits(data);
+			bmp.UnlockBits(pix);
 		}
 	}
 }
