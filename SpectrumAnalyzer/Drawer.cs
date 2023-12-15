@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		const int SCROLL_SPEED = 3;
+		const int SCROLL_SPEED = 2;
 
 		const int ALPHA_MAX = 167;
 		const int BLUE_RANGE = ALPHA_MAX + 1;
@@ -14,7 +14,7 @@ namespace SpectrumAnalyzer {
 		const int YELLOW_RANGE = GREEN_RANGE + 256;
 		const int RED_MAX = YELLOW_RANGE + 255;
 
-		static readonly Font FONT = new Font("Meiryo UI", 8.0f);
+		static readonly Font FONT = new Font("Meiryo UI", 8f);
 		static readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
@@ -23,6 +23,7 @@ namespace SpectrumAnalyzer {
 		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
 
+		public const int KEYBOARD_HEIGHT = 34;
 		public static byte[] ScrollCanvas;
 		public static int MinLevel = -30;
 		public static int ShiftGain = 0;
@@ -107,8 +108,7 @@ namespace SpectrumAnalyzer {
 
 		public static void Keyboard(
 			Graphics g,
-			int width, int height,
-			int gaugeHeight, int keyboardHeight,
+			int width, int height, int gaugeHeight,
 			int noteCount, double baseFreq
 		) {
 			var barBottom = height - 1;
@@ -137,11 +137,11 @@ namespace SpectrumAnalyzer {
 				}
 			}
 			var right = width - 1;
-			var keyboardBottom = gaugeHeight + keyboardHeight - 1;
+			var keyboardBottom = gaugeHeight + KEYBOARD_HEIGHT - 1;
 			var textBottom = keyboardBottom + 1;
 			var textHeight = g.MeasureString("9", FONT).Height;
 			var textOfsX = textHeight * 0.5f;
-			var textArea = new RectangleF(0f, 0f, keyboardHeight, textHeight);
+			var textArea = new RectangleF(0f, 0f, KEYBOARD_HEIGHT, textHeight);
 			var stringFormat = new StringFormat() {
 				Alignment = StringAlignment.Far,
 				LineAlignment = StringAlignment.Center
@@ -237,7 +237,7 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		public static void Scroll(Bitmap bmp, double[] arr, int top, int keyboardHeight, int scrollHeight) {
+		public static void Scroll(Bitmap bmp, double[] arr, int top, int scrollHeight) {
 			var width = bmp.Width;
 			var count = arr.Length;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -248,28 +248,30 @@ namespace SpectrumAnalyzer {
 				var barWidth = (i + Spectrum.TONE_DIV_CENTER + 1) * width / count - barX + 1;
 				SetHue(arr[i], offsetY0 + barX * 4, barWidth);
 			}
-			for (int y = 1; y < keyboardHeight; y++) {
+			for (int y = 1; y < KEYBOARD_HEIGHT; y++) {
 				Buffer.BlockCopy(
 					ScrollCanvas, offsetY0,
 					ScrollCanvas, offsetY0 + pix.Stride * y,
 					pix.Stride
 				);
 			}
-			var offsetY1 = pix.Stride * (top + keyboardHeight);
-			Buffer.BlockCopy(
-				ScrollCanvas, offsetY1,
-				ScrollCanvas, offsetY1 + pix.Stride * SCROLL_SPEED,
-				pix.Stride * (scrollHeight - SCROLL_SPEED)
-			);
-			Buffer.BlockCopy(
-				ScrollCanvas, offsetY0,
-				ScrollCanvas, offsetY1,
-				pix.Stride * SCROLL_SPEED
-			);
+			if (SCROLL_SPEED < scrollHeight) {
+				var offsetY1 = pix.Stride * (top + KEYBOARD_HEIGHT);
+				Buffer.BlockCopy(
+					ScrollCanvas, offsetY1,
+					ScrollCanvas, offsetY1 + pix.Stride * SCROLL_SPEED,
+					pix.Stride * (scrollHeight - SCROLL_SPEED)
+				);
+				Buffer.BlockCopy(
+					ScrollCanvas, offsetY0,
+					ScrollCanvas, offsetY1,
+					pix.Stride * SCROLL_SPEED
+				);
+			}
 			Marshal.Copy(
 				ScrollCanvas, offsetY0,
 				pix.Scan0 + offsetY0,
-				pix.Stride * (keyboardHeight + scrollHeight)
+				pix.Stride * (KEYBOARD_HEIGHT + scrollHeight)
 			);
 			bmp.UnlockBits(pix);
 		}

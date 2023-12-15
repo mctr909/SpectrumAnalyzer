@@ -8,14 +8,17 @@ using SpectrumAnalyzer.Properties;
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
 		const int NOTE_COUNT = 124;
-		const int KEYBOARD_HEIGHT = 34;
 		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
 
 		public Playback Playback;
 		public Record Record;
 
+		public bool DoSetLayout { get; set; } = true;
+		public bool DrawScroll { get; set; } = false;
+
 		bool mGripSeekBar = false;
-		bool mSetLayout = true;
+		int mGaugeHeight;
+		int mScrollHeight;
 
 		public MainForm() {
 			InitializeComponent();
@@ -31,7 +34,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void Form1_Resize(object sender, EventArgs e) {
-			mSetLayout = true;
+			DoSetLayout = true;
 		}
 
 		private void TsbOpen_Click(object sender, EventArgs e) {
@@ -118,9 +121,9 @@ namespace SpectrumAnalyzer {
 					TrkSeek.Value = temp;
 				}
 			}
-			if (mSetLayout) {
+			if (DoSetLayout) {
 				SetLayout();
-				mSetLayout = false;
+				DoSetLayout = false;
 			}
 			Draw();
 		}
@@ -137,11 +140,21 @@ namespace SpectrumAnalyzer {
 				pictureBox1.Image.Dispose();
 				pictureBox1.Image = null;
 			}
-			if (pictureBox1.Height < MinimumSize.Height) {
-				pictureBox1.Height = MinimumSize.Height;
+			if (pictureBox1.Width < MinimumSize.Width - 16) {
+				pictureBox1.Width = MinimumSize.Width - 16;
+			}
+			if (pictureBox1.Height < MinimumSize.Height - TrkSeek.Bottom - 39) {
+				pictureBox1.Height = MinimumSize.Height - TrkSeek.Bottom - 39;
 			}
 			pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			Drawer.ScrollCanvas = new byte[4 * pictureBox1.Width * pictureBox1.Height];
+			if (DrawScroll) {
+				mGaugeHeight = pictureBox1.Height / 2;
+				mScrollHeight = pictureBox1.Height - mGaugeHeight - Drawer.KEYBOARD_HEIGHT;
+			} else {
+				mGaugeHeight = pictureBox1.Height - Drawer.KEYBOARD_HEIGHT;
+				mScrollHeight = 0;
+			}
 			DrawBackground();
 		}
 
@@ -150,24 +163,22 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
-			var gaugeHeight = pictureBox1.Height / 2;
-			var scrollHeight = pictureBox1.Height - gaugeHeight - KEYBOARD_HEIGHT;
 			if (Playback.Enabled) {
-				Drawer.Peak(g, Playback.FilterBankL.Peak, width, gaugeHeight);
+				Drawer.Peak(g, Playback.FilterBankL.Peak, width, mGaugeHeight);
 				if (Drawer.DisplayThreshold) {
-					Drawer.Slope(g, Playback.FilterBankL.Threshold, width, gaugeHeight, Pens.Cyan);
+					Drawer.Slope(g, Playback.FilterBankL.Threshold, width, mGaugeHeight, Pens.Cyan);
 				}
-				Drawer.Slope(g, Playback.FilterBankL.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Scroll(bmp, Playback.FilterBankL.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				Drawer.Slope(g, Playback.FilterBankL.Slope, width, mGaugeHeight, Pens.Red);
+				Drawer.Scroll(bmp, Playback.FilterBankL.Peak, mGaugeHeight, mScrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			if (Record.Enabled) {
-				Drawer.Peak(g, Record.FilterBank.Peak, width, gaugeHeight);
+				Drawer.Peak(g, Record.FilterBank.Peak, width, mGaugeHeight);
 				if (Drawer.DisplayThreshold) {
-					Drawer.Slope(g, Record.FilterBank.Threshold, width, gaugeHeight, Pens.Cyan);
+					Drawer.Slope(g, Record.FilterBank.Threshold, width, mGaugeHeight, Pens.Cyan);
 				}
-				Drawer.Slope(g, Record.FilterBank.Slope, width, gaugeHeight, Pens.Red);
-				Drawer.Scroll(bmp, Record.FilterBank.Peak, gaugeHeight, KEYBOARD_HEIGHT, scrollHeight);
+				Drawer.Slope(g, Record.FilterBank.Slope, width, mGaugeHeight, Pens.Red);
+				Drawer.Scroll(bmp, Record.FilterBank.Peak, mGaugeHeight, mScrollHeight);
 				pictureBox1.Image = pictureBox1.Image;
 			}
 			g.Dispose();
@@ -181,13 +192,11 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			var gaugeHeight = pictureBox1.Height / 2;
 			Drawer.Keyboard(g,
-				pictureBox1.Width, pictureBox1.Height,
-				gaugeHeight, KEYBOARD_HEIGHT,
+				pictureBox1.Width, pictureBox1.Height, mGaugeHeight,
 				NOTE_COUNT, BASE_FREQ
 			);
-			Drawer.Gauge(g, pictureBox1.Width, gaugeHeight);
+			Drawer.Gauge(g, pictureBox1.Width, mGaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();
 		}
