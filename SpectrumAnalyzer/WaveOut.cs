@@ -57,7 +57,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		return list;
 	}
 
-	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 64) :
+	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 64, int bufferCount = 128) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = new DCallback(Callback);
 	}

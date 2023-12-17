@@ -58,7 +58,7 @@ public class Spectrum {
 	public readonly int Count;
 
 	public static int ThresholdHigh { get; set; } = TONE_DIV * 1;
-	public static int ThresholdLow { get; set; } = TONE_DIV * 2;
+	public static int ThresholdLow { get; set; } = TONE_DIV * 3;
 	public static double ThresholdOffset { get; set; } = 1.0;
 	public static int Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
