@@ -18,7 +18,7 @@ namespace SpectrumAnalyzer {
 		static readonly Pen KEYBOARD_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
-		static readonly Pen BAR = new Pen(Color.FromArgb(95, 255, 255, 255), 1.0f);
+		static readonly Pen BAR = new Pen(Color.FromArgb(95, 0, 255, 255), 1.0f);
 		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(95, 95, 0), 1.0f);
 		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
@@ -199,7 +199,7 @@ namespace SpectrumAnalyzer {
 				var barY = AmpToY(arr[i], height);
 				var barHeight = height - barY;
 				if (0 < barHeight) {
-					var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count + 1;
+					var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count;
 					var barWidth = (i + Spectrum.TONE_DIV_CENTER + 1) * width / count - barX + 1;
 					g.FillRectangle(BAR.Brush, barX, barY, barWidth, barHeight);
 				}
@@ -244,7 +244,7 @@ namespace SpectrumAnalyzer {
 			var offsetY0 = pix.Stride * top;
 			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
 			for (int i = 0; i < count; i++) {
-				var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count + 1;
+				var barX = (i - Spectrum.TONE_DIV_CENTER) * width / count;
 				var barWidth = (i + Spectrum.TONE_DIV_CENTER + 1) * width / count - barX + 1;
 				SetHue(arr[i], offsetY0 + barX * 4, barWidth);
 			}

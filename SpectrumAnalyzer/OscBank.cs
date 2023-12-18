@@ -4,7 +4,6 @@ public class OscBank {
 	class BANK {
 		public double ampL;
 		public double ampR;
-		public double declickSpeed;
 		public double phase;
 		public double[] delta;
 	}
@@ -32,12 +31,7 @@ public class OscBank {
 		var random = new Random();
 		for (var b = 0; b < banks; b++) {
 			var frequency = baseFrequency * Math.Pow(2.0, b / 12.0);
-			var declickFrequency = frequency * 4;
-			if (sampleRate / 20.0 < declickFrequency) {
-				declickFrequency = sampleRate / 20.0;
-			}
 			var bank = new BANK() {
-				declickSpeed = declickFrequency / sampleRate,
 				phase = random.NextDouble(),
 				delta = new double[Spectrum.TONE_DIV],
 			};
@@ -113,7 +107,7 @@ public class OscBank {
 			peakL *= gainL;
 			peakR *= gainR;
 			delta *= Pitch;
-			var declickSpeed = bank.declickSpeed * Pitch;
+			const double declickSpeed = 0.05;
 			for (int t = 0; t < BUFFER_LENGTH; t++) {
 				var indexD = bank.phase * TABLE_LENGTH;
 				var index = (int)indexD;

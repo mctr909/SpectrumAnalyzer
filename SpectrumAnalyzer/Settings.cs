@@ -19,10 +19,13 @@ namespace SpectrumAnalyzer {
 
 		private void Settings_Load(object sender, EventArgs e) {
 			TrkKey.Value = (int)(Math.Log(OscBank.Pitch * mMain.Playback.Speed, 2.0) * 120);
-			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12);
+			TrkSpeed.Minimum = -12 * Spectrum.TONE_DIV;
+			TrkSpeed.Maximum = 12 * Spectrum.TONE_DIV;
+			TrkSpeed.TickFrequency = Spectrum.TONE_DIV;
+			TrkSpeed.Value = (int)(Math.Log(mMain.Playback.Speed, 2.0) * 12 * Spectrum.TONE_DIV);
 			GrbSpeed.Enabled = mMain.Playback.Enabled;
 			TrkThresholdHigh.Value = Spectrum.ThresholdHigh / Spectrum.TONE_DIV;
-			TrkThresholdOffset.Value = (int)(200 * Math.Log10(Spectrum.ThresholdOffset));
+			TrkThresholdOffset.Value = (int)(200 * Math.Log10(Spectrum.ThresholdOffsetHigh));
 			ChkThreshold.Checked = Drawer.DisplayThreshold;
 			TrkMinLevel.Value = Drawer.MinLevel;
 			RbAutoGain.Checked = Spectrum.AutoGain;
@@ -58,8 +61,8 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
-			Spectrum.Transpose = -TrkSpeed.Value;
-			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / 12.0);
+			Spectrum.Transpose = -TrkSpeed.Value / Spectrum.TONE_DIV;
+			mMain.Playback.Speed = Math.Pow(2.0, TrkSpeed.Value / (12.0 * Spectrum.TONE_DIV));
 			setting();
 		}
 
@@ -69,7 +72,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkThresholdOffset_Scroll(object sender, EventArgs e) {
-			Spectrum.ThresholdOffset = Math.Pow(10, TrkThresholdOffset.Value / 200.0);
+			Spectrum.ThresholdOffsetHigh = Math.Pow(10, TrkThresholdOffset.Value / 200.0);
 			setting();
 		}
 
@@ -103,7 +106,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		void setting() {
-			var shift = TrkKey.Value / 10.0 - TrkSpeed.Value;
+			var shift = TrkKey.Value / 10.0 - TrkSpeed.Value / Spectrum.TONE_DIV;
 			Drawer.KeyboardShift = (int)(shift + 0.5 * Math.Sign(shift));
 			OscBank.Pitch = Math.Pow(2.0, TrkKey.Value / 120.0) / mMain.Playback.Speed;
 			mMain.DrawBackground();

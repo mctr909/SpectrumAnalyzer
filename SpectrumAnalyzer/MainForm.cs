@@ -8,7 +8,7 @@ using SpectrumAnalyzer.Properties;
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
 		const int NOTE_COUNT = 124;
-		readonly double BASE_FREQ = 442 * Math.Pow(2.0, 3 / 12.0 - 5);
+		readonly double BASE_FREQ = 440 * Math.Pow(2.0, 3 / 12.0 - 5);
 
 		public Playback Playback;
 		public Record Record;
