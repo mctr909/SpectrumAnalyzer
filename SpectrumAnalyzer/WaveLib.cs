@@ -158,10 +158,13 @@ public abstract class WaveLib {
 	protected IntPtr mHandle;
 	protected WAVEFORMATEX mWaveFormatEx;
 	protected IntPtr[] mpWaveHeader;
-	protected int mBufferIndex;
+	protected int mWriteCount;
+	protected int mWriteIndex;
+	protected int mReadIndex;
 	protected short[] mBuffer;
 	protected bool mDoStop = false;
 	protected bool mStopped = true;
+	protected object mLockBuffer = new object();
 
 	public uint DeviceId { get; protected set; } = WAVE_MAPPER;
 	public bool Enabled { get; protected set; }
@@ -175,7 +178,7 @@ public abstract class WaveLib {
 		Channels = channels;
 		BufferSize = bufferSize;
 		BufferCount = bufferCount;
-		mBufferIndex = 0;
+		mWriteIndex = 0;
 		mBuffer = new short[bufferSize];
 		mWaveFormatEx = new WAVEFORMATEX();
 		mWaveFormatEx.wFormatTag = 1;
@@ -317,6 +320,7 @@ public abstract class WaveIn : WaveLib, IDisposable {
 
 public abstract class WaveOut : WaveLib, IDisposable {
 	DOutCallback mCallback;
+	Thread mBufferThread;
 
 	public static List<string> GetDeviceList() {
 		var list = new List<string>();
@@ -333,7 +337,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		return list;
 	}
 
-	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 48) :
+	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 128) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = new DOutCallback(Callback);
 	}
@@ -353,6 +357,32 @@ public abstract class WaveOut : WaveLib, IDisposable {
 			waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 			waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
+		mBufferThread = new Thread(() => {
+			mWriteCount = 0;
+			mWriteIndex = 0;
+			mReadIndex = 0;
+			while (!mDoStop) {
+				var sleep = false;
+				lock (mLockBuffer) {
+					if (BufferCount <= mWriteCount + 1) {
+						/*** Buffer full ***/
+						sleep = true;
+					} else {
+						/*** Write Buffer ***/
+						SetData();
+						var pHdr = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[mWriteIndex]);
+						Marshal.Copy(mBuffer, 0, pHdr.lpData, BufferSize);
+						mWriteIndex = (mWriteIndex + 1) % BufferCount;
+						mWriteCount++;
+					}
+				}
+				if (sleep) {
+					Thread.Sleep(1);
+				}
+			}
+		});
+		mBufferThread.Priority = ThreadPriority.Highest;
+		mBufferThread.Start();
 	}
 
 	public void Close() {
@@ -360,6 +390,9 @@ public abstract class WaveOut : WaveLib, IDisposable {
 			return;
 		}
 		mDoStop = true;
+		if (null != mBufferThread) {
+			mBufferThread.Join();
+		}
 		for (int i = 0; i < 20 && !mStopped; i++) {
 			Thread.Sleep(100);
 		}
@@ -402,13 +435,11 @@ public abstract class WaveOut : WaveLib, IDisposable {
 				mStopped = true;
 				break;
 			}
-			waveOutWrite(mHandle, waveHdr, Marshal.SizeOf(typeof(WAVEHDR)));
-			for (mBufferIndex = 0; mBufferIndex < BufferCount; ++mBufferIndex) {
-				if (mpWaveHeader[mBufferIndex] == waveHdr) {
-					SetData();
-					var hdr = (WAVEHDR)Marshal.PtrToStructure(mpWaveHeader[mBufferIndex], typeof(WAVEHDR));
-					Marshal.Copy(mBuffer, 0, hdr.lpData, BufferSize);
-					Marshal.StructureToPtr(hdr, mpWaveHeader[mBufferIndex], true);
+			lock (mLockBuffer) {
+				waveOutWrite(mHandle, mpWaveHeader[mReadIndex], Marshal.SizeOf<WAVEHDR>());
+				if (0 < mWriteCount) {
+					mReadIndex = (mReadIndex + 1) % BufferCount;
+					mWriteCount--;
 				}
 			}
 			break;

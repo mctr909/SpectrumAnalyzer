@@ -27,6 +27,15 @@ namespace SpectrumAnalyzer {
 			Record = new Record(44100, 128, NOTE_COUNT, BASE_FREQ);
 		}
 
+		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
+			if(null != Playback) {
+				Playback.Dispose();
+			}
+			if (null != Record) {
+				Record.Dispose();
+			}
+		}
+
 		private void Form1_Load(object sender, EventArgs e) {
 			timer1.Interval = 1;
 			timer1.Enabled = true;
