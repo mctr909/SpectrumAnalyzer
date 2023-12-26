@@ -57,7 +57,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		return list;
 	}
 
-	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 168, int bufferCount = 32) :
+	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 48) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = new DCallback(Callback);
 	}
@@ -71,7 +71,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 		AllocHeader();
 		var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 		if (MMRESULT.MMSYSERR_NOERROR != ret) {
-			//throw new Exception(mr.ToString());
+			return;
 		}
 		for (int i = 0; i < BufferCount; ++i) {
 			waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
@@ -84,7 +84,7 @@ public abstract class WaveOut : WaveLib, IDisposable {
 			return;
 		}
 		mDoStop = true;
-		while (!mStopped) {
+		for (int i = 0; i < 20 && !mStopped; i++) {
 			Thread.Sleep(100);
 		}
 		for (int i = 0; i < BufferCount; ++i) {

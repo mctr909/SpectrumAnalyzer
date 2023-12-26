@@ -72,7 +72,7 @@ public abstract class WaveIn : WaveLib, IDisposable {
 		AllocHeader();
 		var mr = waveInOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero);
 		if (MMRESULT.MMSYSERR_NOERROR != mr) {
-			//throw new Exception(mr.ToString());
+			return;
 		}
 		for (int i = 0; i < BufferCount; ++i) {
 			waveInPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
@@ -86,7 +86,7 @@ public abstract class WaveIn : WaveLib, IDisposable {
 			return;
 		}
 		mDoStop = true;
-		while (!mStopped) {
+		for (int i = 0; i < 20 && !mStopped; i++) {
 			Thread.Sleep(100);
 		}
 		for (int i = 0; i < BufferCount; ++i) {
