@@ -43,8 +43,8 @@ public class Spectrum {
 		}
 	}
 
-	public const int TONE_DIV = 5;
-	public const int TONE_DIV_CENTER = 2;
+	public const int TONE_DIV = 3;
+	public const int TONE_DIV_CENTER = 1;
 
 	const int OCT_DIV = TONE_DIV * 12;
 	const double GAIN_MIN = 1e-5;
