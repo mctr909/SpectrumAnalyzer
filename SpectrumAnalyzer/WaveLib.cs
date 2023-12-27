@@ -379,8 +379,6 @@ public abstract class WaveOut : WaveLib {
 	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 128) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = new DCallback(Callback);
-		mBufferThread = new Thread(BufferTask);
-		mBufferThread.Priority = ThreadPriority.Highest;
 	}
 
 	public override void Open() {
@@ -394,6 +392,8 @@ public abstract class WaveOut : WaveLib {
 			waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 			waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
+		mBufferThread = new Thread(BufferTask);
+		mBufferThread.Priority = ThreadPriority.Highest;
 		mBufferThread.Start();
 	}
 
