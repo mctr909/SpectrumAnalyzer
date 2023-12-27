@@ -5,7 +5,7 @@
 		FilterBank = new Spectrum(sampleRate, baseFreq, notes);
 	}
 
-	protected override void SetData() {
+	protected override void ReadBuffer() {
 		FilterBank.SetLevel(mBuffer);
 	}
 }

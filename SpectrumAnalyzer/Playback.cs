@@ -63,7 +63,7 @@
 		mTime = 0.0;
 	}
 
-	protected override void SetData() {
+	protected override void WriteBuffer() {
 		for (int i = 0, j = 0; i < BufferSize; i += 2, j++) {
 			var waveL = 0.0;
 			var waveR = 0.0;
