@@ -108,23 +108,25 @@ public abstract class WaveLib : IDisposable {
 		BufferSize = bufferSize;
 		mBufferCount = bufferCount;
 		mBuffer = new short[bufferSize];
-		mWaveFormatEx = new WAVEFORMATEX();
-		mWaveFormatEx.wFormatTag = 1;
-		mWaveFormatEx.nChannels = (ushort)channels;
-		mWaveFormatEx.nSamplesPerSec = (uint)sampleRate;
-		mWaveFormatEx.nAvgBytesPerSec = (uint)(sampleRate * channels * 16 >> 3);
-		mWaveFormatEx.nBlockAlign = (ushort)(channels * 16 >> 3);
-		mWaveFormatEx.wBitsPerSample = 16;
-		mWaveFormatEx.cbSize = 0;
+		mWaveFormatEx = new WAVEFORMATEX() {
+			wFormatTag = 1,
+			nChannels = (ushort)channels,
+			nSamplesPerSec = (uint)sampleRate,
+			nAvgBytesPerSec = (uint)(sampleRate * channels * 16 >> 3),
+			nBlockAlign = (ushort)(channels * 16 >> 3),
+			wBitsPerSample = 16,
+			cbSize = 0
+		};
 	}
 
 	protected void AllocHeader() {
 		var defaultValue = new short[BufferSize];
 		mpWaveHeader = new IntPtr[mBufferCount];
 		for (int i = 0; i < mBufferCount; ++i) {
-			var hdr = new WAVEHDR();
-			hdr.dwFlags = WAVEHDR_FLAG.WHDR_NONE;
-			hdr.dwBufferLength = (uint)(BufferSize * 16 >> 3);
+			var hdr = new WAVEHDR() {
+				dwFlags = WAVEHDR_FLAG.WHDR_NONE,
+				dwBufferLength = (uint)(BufferSize * 16 >> 3)
+			};
 			hdr.lpData = Marshal.AllocHGlobal((int)hdr.dwBufferLength);
 			Marshal.Copy(defaultValue, 0, hdr.lpData, BufferSize);
 			mpWaveHeader[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());
@@ -217,8 +219,6 @@ public abstract class WaveIn : WaveLib {
 	static extern MMRESULT waveInStart(IntPtr hwi);
 	#endregion
 
-	DCallback mCallback;
-
 	public static List<string> GetDeviceList() {
 		var list = new List<string>();
 		var deviceCount = waveInGetNumDevs();
@@ -236,13 +236,12 @@ public abstract class WaveIn : WaveLib {
 
 	public WaveIn(int sampleRate = 44100, int channels = 2, int bufferSize = 256, int bufferCount = 32) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
-		mCallback = new DCallback(Callback);
 	}
 
 	public override void Open() {
 		Close();
 		AllocHeader();
-		var mr = waveInOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero);
+		var mr = waveInOpen(ref mHandle, DeviceId, ref mWaveFormatEx, Callback, IntPtr.Zero);
 		if (MMRESULT.MMSYSERR_NOERROR != mr) {
 			return;
 		}
@@ -354,12 +353,11 @@ public abstract class WaveOut : WaveLib {
 	static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr pwh, int size);
 	#endregion
 
-	DCallback mCallback;
 	Thread mBufferThread;
+	object mLockBuffer = new object();
 	int mWriteCount;
 	int mWriteIndex;
 	int mReadIndex;
-	object mLockBuffer = new object();
 
 	public static List<string> GetDeviceList() {
 		var list = new List<string>();
@@ -378,13 +376,12 @@ public abstract class WaveOut : WaveLib {
 
 	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 128) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
-		mCallback = new DCallback(Callback);
 	}
 
 	public override void Open() {
 		Close();
 		AllocHeader();
-		var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+		var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, Callback, IntPtr.Zero, 0x00030000);
 		if (MMRESULT.MMSYSERR_NOERROR != ret) {
 			return;
 		}
@@ -392,8 +389,9 @@ public abstract class WaveOut : WaveLib {
 			waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 			waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf(typeof(WAVEHDR)));
 		}
-		mBufferThread = new Thread(BufferTask);
-		mBufferThread.Priority = ThreadPriority.Highest;
+		mBufferThread = new Thread(BufferTask) {
+			Priority = ThreadPriority.Highest
+		};
 		mBufferThread.Start();
 	}
 
