@@ -78,7 +78,7 @@ namespace Spectrum {
 				 * 最近低音側または最近高音側の振幅が大きい方の位相を取得して設定する */
 				if (p_osc.declicked_l == 0 && p_osc.declicked_r == 0) {
 					/* 最近低音側 */
-					var low_end = Math.Max(ixT - 7, 0);
+					var low_end = Math.Max(ixT - 2, 0);
 					var low_amp = threshold;
 					for (int t = ixT - 1; t >= low_end; --t) {
 						var low_osc = mp_osc_banks[t];
@@ -90,7 +90,7 @@ namespace Spectrum {
 						}
 					}
 					/* 最近高音側 */
-					var high_end = Math.Min(ixT + 7, HALFTONE_COUNT - 1);
+					var high_end = Math.Min(ixT + 2, HALFTONE_COUNT - 1);
 					for (int t = ixT + 1; t <= high_end; ++t) {
 						var high_osc = mp_osc_banks[t];
 						var amp = Math.Max(high_osc.declicked_l, high_osc.declicked_r);

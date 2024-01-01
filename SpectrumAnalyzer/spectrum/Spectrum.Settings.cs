@@ -24,16 +24,16 @@ namespace Spectrum {
 		/// <summary>ゲイン自動調整 増加時間[秒]</summary>
 		const double AUTOGAIN_TIME_UP = 0.01;
 
-		/// <summary>フィルタ帯域幅に至る周波数[Hz]</summary>
-		const double FREQ_AT_BANDWIDTH = 300.0;
+		/// <summary>帯域幅が1半音に至る周波数[Hz]</summary>
+		const double HALFTONE_AT_FREQ = 200.0;
 
 		/// <summary>中音域 開始位置[フィルタバンク数]</summary>
-		const int BEGIN_MID = HALFTONE_DIV * 30;
+		const int BEGIN_MID = HALFTONE_DIV * 24;
 		/// <summary>高音域 開始位置[フィルタバンク数]</summary>
-		const int BEGIN_HIGH = HALFTONE_DIV * 48;
+		const int BEGIN_HIGH = HALFTONE_DIV * 60;
 		/// <summary>低音域 閾値幅[フィルタバンク数]</summary>
-		const int THRESHOLD_WIDTH_LOW = HALFTONE_DIV * 11 / 3;
+		const int THRESHOLD_WIDTH_LOW = 7;
 		/// <summary>高音域 閾値幅[フィルタバンク数]</summary>
-		const int THRESHOLD_WIDTH_HIGH = HALFTONE_DIV * 2 / 3;
+		const int THRESHOLD_WIDTH_HIGH = 1;
 	}
 }

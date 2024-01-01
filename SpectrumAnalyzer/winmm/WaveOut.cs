@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace WinMM {
 	public abstract class WaveOut : Wave {
@@ -164,7 +165,7 @@ namespace WinMM {
 					if (Paused && EndOfFile) {
 						EndOfFile = false;
 						Pause = true;
-						OnEndOfFile();
+						OnEndOfFile.Invoke();
 					}
 					Thread.Sleep(10);
 				}

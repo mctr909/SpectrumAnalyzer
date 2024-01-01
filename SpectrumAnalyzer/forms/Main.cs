@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
 using System.Diagnostics;
 
 using SpectrumAnalyzer.Properties;
 using static Spectrum.Spectrum;
-using System.Drawing.Drawing2D;
 
 namespace SpectrumAnalyzer.Forms {
 	public partial class Main : Form {
@@ -22,26 +20,18 @@ namespace SpectrumAnalyzer.Forms {
 
 		bool NeedResize = true;
 		bool GripSeekBar = false;
-		int GaugeHeight;
-		int ScrollHeight;
 
-		const int DB_LABEL_WIDTH = 52;
-		const int KEYBOARD_HEIGHT = 24;
-		readonly double[] PeakThick = new double[BANK_COUNT];
 		readonly double[] Peak = new double[BANK_COUNT];
 		readonly double[] Curve = new double[BANK_COUNT];
 		readonly double[] Threshold = new double[BANK_COUNT];
 
-		static readonly Pen PEAK = new Pen(Color.FromArgb(0, 191, 191), 1.0f);
-		static readonly Pen THRESHOLD = new Pen(Color.FromArgb(0, 221, 0), 1.0f);
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(57, 255, 255, 255)).Brush;
+		readonly Drawer Drawer = new Drawer();
 
-		Graphics G;
 		public Main() {
 			InitializeComponent();
-			Playback = new Playback(48000, 5e-4, 8);
+			Playback = new Playback(48000, 1e-3, 6);
 			Record = new Record(48000, 1e-3, 6);
-			MinimumSize = new Size(DB_LABEL_WIDTH + BANK_COUNT + 16, 192);
+			MinimumSize = new Size(Drawer.LabelWidth + BANK_COUNT + 16, 192);
 			Size = MinimumSize;
 		}
 
@@ -213,19 +203,12 @@ namespace SpectrumAnalyzer.Forms {
 			pictureBox1.Left = 0;
 			pictureBox1.Width = Width - 16;
 			pictureBox1.Height = Height - TrkSeek.Bottom - 39;
-			if (null != pictureBox1.Image) {
-				pictureBox1.Image.Dispose();
-				pictureBox1.Image = null;
-			}
 			if (pictureBox1.Width < MinimumSize.Width - 16) {
 				pictureBox1.Width = MinimumSize.Width - 16;
 			}
 			if (pictureBox1.Height < MinimumSize.Height - TrkSeek.Bottom - 39) {
 				pictureBox1.Height = MinimumSize.Height - TrkSeek.Bottom - 39;
 			}
-			pictureBox1.Image = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
-			G = Graphics.FromImage(pictureBox1.Image);
-			Drawer.ScrollCanvas = new byte[4 * pictureBox1.Width * pictureBox1.Height];
 			DrawBackground();
 		}
 
@@ -240,49 +223,37 @@ namespace SpectrumAnalyzer.Forms {
 			if (null == spectrum) {
 				return;
 			}
-			Array.Copy(spectrum.PeakThick, PeakThick, BANK_COUNT);
-			Array.Copy(spectrum.Peak, Peak, BANK_COUNT);
-			Array.Copy(spectrum.Curve, Curve, BANK_COUNT);
-			Array.Copy(spectrum.Threshold, Threshold, BANK_COUNT);
-			var bmp = (Bitmap)pictureBox1.Image;
-			G.SmoothingMode = SmoothingMode.None;
-			G.Clear(Color.Transparent);
-			var plotWidth = pictureBox1.Width - DB_LABEL_WIDTH;
+			Array.Copy(spectrum.DisplayData, Curve, BANK_COUNT);
+			Array.Copy(spectrum.DisplayData, BANK_COUNT, Threshold, 0, BANK_COUNT);
+			Array.Copy(spectrum.DisplayData, BANK_COUNT * 2, Peak, 0, BANK_COUNT);
+			Drawer.Clear();
 			if (EnableAutoGain) {
-				Drawer.Level(G, spectrum.AutoGain, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE);
+				Drawer.Level(spectrum.AutoGain);
 			}
 			if (EnableNormalize) {
-				Drawer.Level(G, spectrum.Max, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE);
-			}
-			if (Settings.DisplayCurve) {
-				Drawer.Surface(G, Curve, DB_LABEL_WIDTH, plotWidth, GaugeHeight, SURFACE);
+				Drawer.Level(spectrum.Max);
 			}
 			if (Settings.DisplayThreshold) {
-				Drawer.Curve(G, Threshold, DB_LABEL_WIDTH, plotWidth, GaugeHeight, THRESHOLD);
+				Drawer.Curve(Threshold);
 			}
 			if (Settings.DisplayPeak) {
-				Drawer.Peak(G, Peak, DB_LABEL_WIDTH, plotWidth, GaugeHeight, PEAK);
-				Drawer.Scroll(bmp, PeakThick, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
+				Drawer.Peak(Peak);
+				Drawer.Scroll(Peak, Settings.ScrollSpeed);
 			} else {
-				Drawer.Scroll(bmp, Curve, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
+				Drawer.Scroll(Curve, Settings.ScrollSpeed);
+			}
+			if (Settings.DisplayCurve) {
+				if (Settings.DisplayThreshold) {
+					Drawer.Surface(Curve);
+				} else {
+					Drawer.Curve(Curve);
+				}
 			}
 			pictureBox1.Image = pictureBox1.Image;
 		}
 
 		public void DrawBackground() {
-			if (Settings.DisplayScroll) {
-				GaugeHeight = pictureBox1.Height / 2;
-				ScrollHeight = pictureBox1.Height - GaugeHeight - KEYBOARD_HEIGHT;
-			} else {
-				GaugeHeight = pictureBox1.Height - KEYBOARD_HEIGHT;
-				ScrollHeight = 0;
-			}
-			if (null != pictureBox1.BackgroundImage) {
-				pictureBox1.BackgroundImage.Dispose();
-				pictureBox1.BackgroundImage = null;
-			}
-			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
-			Drawer.Background(pictureBox1, DB_LABEL_WIDTH, GaugeHeight, KEYBOARD_HEIGHT, Settings.DisplayFreq ? 0 : HALFTONE_COUNT);
+			Drawer.Resize(pictureBox1, Settings.DisplayScroll, Settings.DisplayFreq ? 0 : HALFTONE_COUNT);
 		}
 	}
 }

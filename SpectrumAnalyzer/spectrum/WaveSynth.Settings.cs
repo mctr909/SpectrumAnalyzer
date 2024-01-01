@@ -1,9 +1,9 @@
 ﻿namespace Spectrum {
 	public partial class WaveSynth {
 		/// <summary>対象閾値</summary>
-		const double TERGET_THRESHOLD = 1.0 / 1000;
+		const double TERGET_THRESHOLD = 1.0 / 10000;
 		/// <summary>デクリック速度</summary>
-		const double DECLICK_SPEED = 0.03;
+		const double DECLICK_SPEED = 0.05;
 		/// <summary>正弦波テーブルの長さ</summary>
 		const int SIN_TABLE_LENGTH = 48;
 		/// <summary>正弦波テーブル</summary>
