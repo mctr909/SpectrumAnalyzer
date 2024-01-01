@@ -80,7 +80,7 @@ namespace WINMM {
 			return list;
 		}
 
-		public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSamples = 128, int bufferCount = 64) :
+		public WaveOut(int sampleRate, int channels, int bufferSamples, int bufferCount) :
 			base(sampleRate, channels, bufferSamples, bufferCount) {
 			mCallback = Callback;
 		}
@@ -94,6 +94,9 @@ namespace WINMM {
 			}
 			for (int i = 0; i < mBufferCount; ++i) {
 				waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			}
+			Thread.Sleep(100);
+			for (int i = 0; i < mBufferCount; ++i) {
 				waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
 			mBufferThread = new Thread(BufferTask) {

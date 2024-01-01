@@ -7,8 +7,8 @@ using SpectrumAnalyzer.Properties;
 
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
-		const int NOTE_COUNT = 125;
-		readonly double BASE_FREQ = 440 * Math.Pow(2.0, 3 / 12.0 - 5);
+		static readonly Pen PEAK = new Pen(Color.FromArgb(255, 0, 0), 1.0f);
+		static readonly Pen SLOPE = new Pen(Color.FromArgb(0, 183, 0), 1.0f);
 
 		public Playback Playback;
 		public Record Record;
@@ -21,9 +21,8 @@ namespace SpectrumAnalyzer {
 
 		public MainForm() {
 			InitializeComponent();
-			Settings.Instance = new Settings(this);
-			Playback = new Playback(NOTE_COUNT, BASE_FREQ);
-			Record = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			Playback = new Playback(44100, Settings.NOTE_COUNT, Settings.BASE_FREQ);
+			Record = new Record(44100, 256, Settings.NOTE_COUNT, Settings.BASE_FREQ);
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -53,12 +52,21 @@ namespace SpectrumAnalyzer {
 			if (!File.Exists(filePath)) {
 				return;
 			}
+			var enable = Playback.Enabled;
 			Playback.Close();
 			Playback.Position = 0;
-			Playback.LoadFile(filePath);
+			try {
+				Playback.LoadFile(filePath);
+			} catch (Exception ex) {
+				MessageBox.Show(ex.ToString());
+			}
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = Playback.Length / Playback.SampleRate;
+			TrkSeek.Maximum = 10 * Playback.Length / Playback.SampleRate;
+			TrkSeek.TickFrequency = TrkSeek.Maximum / 10;
 			TrkSeek.Value = 0;
+			if (enable) {
+				Playback.Open();
+			}
 		}
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
@@ -94,10 +102,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
-			if (!Settings.Instance.Visible) {
-				Settings.Instance.Visible = true;
-				Settings.Instance.Location = Location;
-			}
+			Settings.Open(this);
 		}
 
 		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
@@ -105,7 +110,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
 			mGripSeekBar = false;
 		}
 
@@ -114,13 +119,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
-			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
 			mGripSeekBar = false;
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
 			if (!mGripSeekBar) {
-				var temp = Playback.Position / Playback.SampleRate;
+				var temp = (int)(10 * Playback.Position / Playback.SampleRate);
 				if (temp <= TrkSeek.Maximum) {
 					TrkSeek.Value = temp;
 				}
@@ -177,16 +182,19 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
+			var count = spectrum.PeakL.Length;
+			if (Drawer.DisplaySlope) {
+				Drawer.Slope(g, spectrum.Slope, count, 0, width, mGaugeHeight, SLOPE);
+			}
 			if (Drawer.DisplayPeak) {
-				Drawer.Peak(g, spectrum.PeakL, width, mGaugeHeight);
+				Drawer.Peak(g, spectrum.Slope, count, spectrum.PEAK_BEGIN, width, mGaugeHeight, PEAK);
+				Drawer.Scroll(bmp, spectrum.Slope, count, spectrum.PEAK_BEGIN, mGaugeHeight, mScrollHeight);
+			} else {
+				Drawer.Scroll(bmp, spectrum.Slope, count, 0, mGaugeHeight, mScrollHeight);
 			}
 			if (Drawer.DisplayThreshold) {
-				Drawer.Slope(g, spectrum.ThresholdL, width, mGaugeHeight, Pens.Cyan);
+				Drawer.Curve(g, spectrum.Slope, count, spectrum.THRESHOLD_BEGIN, width, mGaugeHeight, Pens.Cyan);
 			}
-			if (Drawer.DisplaySlope) {
-				Drawer.Slope(g, spectrum.SlopeL, width, mGaugeHeight, Pens.Red);
-			}
-			Drawer.Scroll(bmp, spectrum.PeakL, mGaugeHeight, mScrollHeight);
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
 		}
@@ -199,10 +207,7 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			Drawer.Keyboard(g,
-				pictureBox1.Width, pictureBox1.Height, mGaugeHeight,
-				NOTE_COUNT, BASE_FREQ
-			);
+			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, Settings.NOTE_COUNT);
 			Drawer.Gauge(g, pictureBox1.Width, mGaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();

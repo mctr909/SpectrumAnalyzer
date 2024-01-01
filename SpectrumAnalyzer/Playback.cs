@@ -1,95 +1,81 @@
 ﻿using System;
-using System.Runtime.InteropServices;
 using WINMM;
 
 public class Playback : WaveOut {
 	short[] mWaveL;
 	short[] mWaveR;
-	IntPtr mData;
-	uint mLoopBegin;
-	uint mLoopEnd;
 	double mDelta;
 	double mTime;
 	OscBank mOscBank;
 
 	public Spectrum FilterBank;
 
-	public int Position {
-		get { return (int)mTime; }
+	public double Position {
+		get { return mTime; }
 		set { mTime = value; }
 	}
-	public int Length {
-		get { return mWaveL.Length; }
-	}
+	public int Length { get; private set; } = 1;
 	public double Speed { get; set; } = 1.0;
 
-	public Playback(int notes, double baseFreq) {
-		mWaveL = new short[1];
-		mWaveR = new short[1];
-		mLoopBegin = 0;
-		mLoopEnd = 1;
+	public Playback(int sampleRate, int notes, double baseFreq) : base(sampleRate, 2, sampleRate / 200, 32) {
+		mWaveL = new short[2];
+		mWaveR = new short[2];
 		mDelta = 0.0;
 		mTime = 0.0;
-		mData = Marshal.AllocHGlobal(BufferSamples * 4);
 		mOscBank = new OscBank(SampleRate, BufferSamples, notes, baseFreq);
 		FilterBank = new Spectrum(SampleRate, baseFreq, notes, BufferSamples, true);
 	}
 
 	public void LoadFile(string filePath) {
 		var file = new WavReader(filePath);
-		mWaveL = new short[file.Data.Size / file.Fmt.BlockSize];
-		mWaveR = new short[file.Data.Size / file.Fmt.BlockSize];
+		Length = (int)file.Samples;
+		mWaveL = new short[Length + 1];
+		mWaveR = new short[Length + 1];
 		switch (file.Fmt.Channel) {
 		case 1:
-			for (var i = 0; i < mWaveL.Length; ++i) {
-				file.ReadMono(ref mWaveL[i]);
+			for (var i = 0; i < Length; ++i) {
+				file.Read();
+				mWaveL[i] = (short)(file.Values[0] * 32767);
 				mWaveR[i] = mWaveL[i];
 			}
 			break;
 		case 2:
-			for (var i = 0; i < mWaveL.Length; ++i) {
-				file.Read(ref mWaveL[i], ref mWaveR[i]);
+			for (var i = 0; i < Length; ++i) {
+				file.Read();
+				mWaveL[i] = (short)(file.Values[0] * 32767);
+				mWaveR[i] = (short)(file.Values[1] * 32767);
 			}
 			break;
 		default:
-			mWaveL = new short[1];
-			mWaveR = new short[1];
+			Length = 1;
+			mWaveL = new short[2];
+			mWaveR = new short[2];
 			break;
 		}
 
-		mLoopBegin = 0;
-		mLoopEnd = (uint)mWaveL.Length;
-		mDelta = (double)file.Fmt.SamplingFrequency / SampleRate;
+		mDelta = (double)file.Fmt.SampleRate / SampleRate;
 		mTime = 0.0;
 	}
 
 	protected unsafe override void WriteBuffer(IntPtr pBuffer) {
-		var pData = (short*)mData;
+		var pWave = (short*)pBuffer;
 		for (int t = 0, i = 0; t < BufferSamples; t++, i += 2) {
 			var waveL = 0.0;
 			var waveR = 0.0;
-			for (int o = 0; o < 4; o++) {
+			for (int o = 0; o < 8; o++) {
 				var idxA = (int)mTime;
-				var a2b = mTime - idxA;
 				var idxB = idxA + 1;
-				if (mWaveL.Length == idxB) {
-					idxB = idxA;
-				}
-				mTime += mDelta * Speed * 0.25;
-				if (mLoopEnd <= mTime) {
-					mTime = mLoopBegin + mTime - mLoopEnd;
-				}
-				waveL += mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
-				waveR += mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
+				var kb = mTime - idxA;
+				var ka = 1 - kb;
+				waveL += mWaveL[idxA] * ka + mWaveL[idxB] * kb;
+				waveR += mWaveR[idxA] * ka + mWaveR[idxB] * kb;
+				mTime += mDelta * Speed * 0.125;
+				mTime -= (int)mTime / Length * Length;
 			}
-			pData[i] = (short)(waveL * 0.25);
-			pData[i + 1] = (short)(waveR * 0.25);
+			pWave[i] = (short)(waveL * 0.125);
+			pWave[i + 1] = (short)(waveR * 0.125);
 		}
-		FilterBank.SetLevel(mData, BufferSamples);
-		mOscBank.SetWave(
-			FilterBank.GainL, FilterBank.GainR,
-			FilterBank.PeakL, FilterBank.PeakR,
-			pBuffer
-		);
+		FilterBank.SetValue(pBuffer, BufferSamples);
+		mOscBank.SetWave(FilterBank, pBuffer);
 	}
 }

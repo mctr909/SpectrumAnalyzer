@@ -9,6 +9,6 @@ public class Record : WaveIn {
 	}
 
 	protected override void ReadBuffer(IntPtr pInput) {
-		FilterBank.SetLevel(pInput, BufferSamples);
+		FilterBank.SetValue(pInput, BufferSamples);
 	}
 }
