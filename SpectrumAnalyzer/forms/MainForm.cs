@@ -273,7 +273,7 @@ namespace SpectrumAnalyzer {
 		void Draw() {
 			Spectrum spectrum = null;
 			if (Record.Playing) {
-				spectrum = Record.FilterBank;
+				spectrum = Record.Spectrum;
 			}
 			if (null == spectrum) {
 				spectrum = Playback.Spectrum;
@@ -282,7 +282,7 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
-			var count = spectrum.L.Length;
+			var count = spectrum.Banks.Length;
 			if (Drawer.DisplayCurve) {
 				Drawer.Curve(g, spectrum.Curve, count, width, mGaugeHeight, Drawer.SLOPE);
 			}

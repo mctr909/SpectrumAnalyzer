@@ -22,8 +22,6 @@ public class OscBank  {
 
 	Spectrum mSpectrum;
 
-	public double Pitch { get; set; } = 1.0;
-
 	public OscBank(int toneCount, Spectrum spectrum) {
 		mSpectrum = spectrum;
 		mTones = new Tone[toneCount];
@@ -35,7 +33,7 @@ public class OscBank  {
 		}
 	}
 
-	public unsafe void WriteBuffer(IntPtr output, int bufferSamples) {
+	public unsafe void WriteBuffer(float *pOutput, int sampleCount) {
 		var lowToneIndex = 0;
 		var lowTonePhase = 0.0;
 		var lowToneAmp = 0.0;
@@ -45,22 +43,19 @@ public class OscBank  {
 			var specAmpC = 0.0;
 			var delta = mSpectrum.Banks[idxB + Spectrum.TONE_DIV_CENTER].DELTA;
 			for (int div = 0, divB = idxB; div < Spectrum.TONE_DIV; div++, divB++) {
-				var peakL = mSpectrum.L[divB];
-				var peakR = mSpectrum.R[divB];
-				var peakC = Math.Max(peakL, peakR);
-				if (specAmpL < peakL) {
-					specAmpL = peakL;
+				var bank = mSpectrum.Banks[divB];
+				var peakC = Math.Max(bank.LPeak, bank.RPeak);
+				if (specAmpL < bank.LPeak) {
+					specAmpL = bank.LPeak;
 				}
-				if (specAmpR < peakR) {
-					specAmpR = peakR;
+				if (specAmpR < bank.RPeak) {
+					specAmpR = bank.RPeak;
 				}
 				if (specAmpC < peakC) {
 					specAmpC = peakC;
-					delta = mSpectrum.Banks[divB].DELTA;
+					delta = bank.DELTA;
 				}
 			}
-			specAmpL *= mSpectrum.GainL;
-			specAmpR *= mSpectrum.GainR;
 			var tone = mTones[idxT];
 			if (tone.AmpL >= THRESHOLD || tone.AmpR >= THRESHOLD) {
 				lowToneIndex = idxT;
@@ -91,9 +86,9 @@ public class OscBank  {
 					}
 				}
 			}
-			delta *= Pitch;
-			var pOutput = (float*)output;
-			for (int s = 0; s < bufferSamples; s++) {
+			delta *= mSpectrum.Pitch;
+			var pWave = pOutput;
+			for (int s = 0; s < sampleCount; ++s) {
 				var indexF = tone.Phase * TABLE_LENGTH;
 				var indexI = (int)indexF;
 				var a2b = indexF - indexI;
@@ -102,8 +97,8 @@ public class OscBank  {
 				tone.AmpL += (specAmpL - tone.AmpL) * DECLICK_SPEED;
 				tone.AmpR += (specAmpR - tone.AmpR) * DECLICK_SPEED;
 				var wave = TABLE[indexI] * (1.0 - a2b) + TABLE[indexI + 1] * a2b;
-				*pOutput++ += (float)(wave * tone.AmpL);
-				*pOutput++ += (float)(wave * tone.AmpR);
+				*pWave++ += (float)(wave * tone.AmpL);
+				*pWave++ += (float)(wave * tone.AmpR);
 			}
 		}
 	}
