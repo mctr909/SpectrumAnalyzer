@@ -1,0 +1,13 @@
+/.vs/*
+/SoundApi/.vs/*
+/SoundApi/bin/*
+/SoundApi/obj/*
+/SignalProcess/.vs/*
+/SignalProcess/bin/*
+/SignalProcess/obj/*
+/SpectrumAnalyzer/.vs/*
+/SpectrumAnalyzer/bin/*
+/SpectrumAnalyzer/obj/*
+/SpectrumAnalyzerNet/.vs/*
+/SpectrumAnalyzerNet/bin/*
+/SpectrumAnalyzerNet/obj/*
