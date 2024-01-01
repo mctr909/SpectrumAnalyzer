@@ -32,9 +32,9 @@ namespace SpectrumAnalyzer.Forms {
 		readonly double[] Curve = new double[BANK_COUNT];
 		readonly double[] Threshold = new double[BANK_COUNT];
 
-		static readonly Pen PEAK = new Pen(Color.FromArgb(0, 191, 191), 1.0f);
-		static readonly Pen THRESHOLD = new Pen(Color.FromArgb(0, 221, 0), 1.0f);
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(57, 255, 255, 255)).Brush;
+		static readonly Pen PEAK = new Pen(Color.FromArgb(0, 211, 211), 1.0f);
+		static readonly Pen THRESHOLD = new Pen(Color.FromArgb(0, 231, 0), 1.0f);
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(91, 255, 255, 255)).Brush;
 
 		Graphics G;
 		public Main() {

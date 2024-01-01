@@ -34,6 +34,6 @@ namespace Spectrum {
 		/// <summary>低音域 閾値幅[フィルタバンク数]</summary>
 		const int THRESHOLD_WIDTH_LOW = HALFTONE_DIV * 11 / 3;
 		/// <summary>高音域 閾値幅[フィルタバンク数]</summary>
-		const int THRESHOLD_WIDTH_HIGH = HALFTONE_DIV * 2 / 3;
+		const int THRESHOLD_WIDTH_HIGH = HALFTONE_DIV - 1;
 	}
 }
