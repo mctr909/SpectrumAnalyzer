@@ -117,9 +117,6 @@ namespace SpectrumAnalyzer {
 			File.Dispose();
 			File = new WavReader(filePath, SampleRate, BufferSamples, 2.0);
 			OnOpened(File.IsOpened);
-			if (playing) {
-				Start();
-			}
 		}
 
 		protected override void WriteBuffer(IntPtr pBuffer) {

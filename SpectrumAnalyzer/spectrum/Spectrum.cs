@@ -80,9 +80,9 @@ namespace Spectrum {
 		}
 
 		private unsafe static void SetBPFCoef(BPF_BANK* p_bank, int sample_rate, double frequency) {
-			var band_width = 1 + Math.Log(FREQ_AT_BANDWIDTH / frequency, 2.0);
-			if (band_width < 0.666) {
-				band_width = 0.666;
+			var band_width = 0.5 + Math.Log(HALFTONE_AT_FREQ / frequency, 2.0);
+			if (band_width < 0.5) {
+				band_width = 0.5;
 			}
 			var omega = 2 * Math.PI * frequency / sample_rate;
 			var c = Math.Cos(omega);
@@ -202,30 +202,29 @@ namespace Spectrum {
 						width = THRESHOLD_WIDTH_HIGH;
 					}
 					/* 閾値幅で指定される範囲の最大値を閾値とする */
-					/* 平均値を閾値の下限とする */
-					var ms_l = 0.0;
-					var ms_r = 0.0;
 					for (int ixW = -width; ixW <= width; ++ixW) {
 						var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, ixB + ixW));
 						var b = mp_bpf_banks[bw];
-						ms_l += b.ms_l;
-						ms_r += b.ms_r;
 						threshold_l = Math.Max(threshold_l, b.ms_l);
 						threshold_r = Math.Max(threshold_r, b.ms_r);
 					}
+					/* 平均値を閾値の下限とする */
+					width = HALFTONE_DIV;
+					var avg_l = 0.0;
+					var avg_r = 0.0;
+					for (int ixW = -width; ixW <= width; ++ixW) {
+						var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, ixB + ixW));
+						var b = mp_bpf_banks[bw];
+						avg_l += b.ms_l;
+						avg_r += b.ms_r;
+					}
 					width <<= 1;
 					width++;
-					double ms_scale;
-					if (ixB < BEGIN_HIGH) {
-						ms_scale = 1.047; //+0.2db
-					} else {
-						ms_scale = 1.188; //+0.75db
-					}
-					ms_scale /= width;
-					ms_l *= ms_scale;
-					ms_r *= ms_scale;
-					threshold_l = Math.Max(threshold_l, ms_l);
-					threshold_r = Math.Max(threshold_r, ms_r);
+					var ms_scale = 1.0 / width;
+					avg_l *= ms_scale;
+					avg_r *= ms_scale;
+					threshold_l = Math.Max(threshold_l, avg_l);
+					threshold_r = Math.Max(threshold_r, avg_r);
 					/* 2乗平均を振幅に変換 */
 					threshold_l = Math.Sqrt(threshold_l * 2);
 					threshold_r = Math.Sqrt(threshold_r * 2);
