@@ -221,8 +221,8 @@ public class WavReader : RiffWav {
 					File.Seek(chunkSize - 16, SeekOrigin.Current);
 				break;
 			case SIGN.data:
-				DataSize = chunkSize;
 				DataBegin = File.Position;
+				DataSize = Math.Min(chunkSize, File.Length - DataBegin);
 				File.Seek(chunkSize, SeekOrigin.Current);
 				break;
 			default:
