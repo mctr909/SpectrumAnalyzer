@@ -377,7 +377,7 @@ public abstract class WaveOut : WaveLib {
 		return list;
 	}
 
-	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 128) :
+	public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSize = 128, int bufferCount = 256) :
 		base(sampleRate, channels, bufferSize, bufferCount) {
 		mCallback = Callback;
 	}
