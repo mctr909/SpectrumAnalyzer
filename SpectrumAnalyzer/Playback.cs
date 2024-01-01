@@ -10,6 +10,7 @@ namespace SpectrumAnalyzer {
 
 		public delegate void DOpened(bool isOpened);
 
+		const int DIV = 32;
 		readonly int DIV_SAMPLES;
 		readonly int DIV_SIZE;
 
@@ -17,8 +18,8 @@ namespace SpectrumAnalyzer {
 		float[] mMuteData;
 
 		public Playback(int sampleRate, DOpened onOpened, DTerminated onTerminated)
-			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 800 << 4, 16) {
-			DIV_SAMPLES = BufferSamples >> 4;
+			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV, 6) {
+			DIV_SAMPLES = BufferSamples / DIV;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			mOnOpened = onOpened;
 			mOnTerminated = onTerminated;
@@ -44,10 +45,12 @@ namespace SpectrumAnalyzer {
 
 		protected override void WriteBuffer(IntPtr pBuffer) {
 			File.Read(pBuffer);
-			for (int i = 0, ofs = 0; i < 16; ++i, ofs += DIV_SIZE) {
-				Spectrum.SetValue(pBuffer + ofs, DIV_SAMPLES);
-				Marshal.Copy(mMuteData, 0, pBuffer + ofs, mMuteData.Length);
-				Osc.WriteBuffer(pBuffer + ofs, DIV_SAMPLES);
+			var pDivBuffer = pBuffer;
+			for (int d = 0; d < DIV; ++d) {
+				Spectrum.SetValue(pDivBuffer, DIV_SAMPLES);
+				Marshal.Copy(mMuteData, 0, pDivBuffer, mMuteData.Length);
+				Osc.WriteBuffer(pDivBuffer, DIV_SAMPLES);
+				pDivBuffer += DIV_SIZE;
 			}
 			if (File.Position >= File.Length) {
 				mTerminate = true;

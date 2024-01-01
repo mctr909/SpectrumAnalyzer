@@ -9,7 +9,7 @@ public class Spectrum {
 	const int LOW_FREQ = 80;
 	const int MID_FREQ = 250;
 	const int OCT_DIV = TONE_DIV * 12;
-	const int THRESHOLD_WIDE = TONE_DIV * 7;
+	const int THRESHOLD_WIDE = TONE_DIV * 3;
 	const int THRESHOLD_NARROW = TONE_DIV;
 	const double THRESHOLD_OFFSET = 1.06;
 	const double RMS_MIN = 1e-6;

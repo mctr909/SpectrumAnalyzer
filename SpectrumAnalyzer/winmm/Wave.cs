@@ -81,6 +81,7 @@ namespace WinMM {
 		protected bool mPause = false;
 		protected bool mTerminate = false;
 		protected bool mBufferPaused = true;
+		protected bool mEnableCallback = true;
 		protected object mLockBuffer = new object();
 		Thread mBufferThread;
 		#endregion
