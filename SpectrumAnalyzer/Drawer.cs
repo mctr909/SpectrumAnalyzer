@@ -5,7 +5,7 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		const int SCROLL_SPEED = 2;
+		const int SCROLL_SPEED = 4;
 
 		static readonly Font FONT = new Font("Meiryo UI", 8f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(147, 147, 147), 1.0f);
@@ -70,25 +70,25 @@ namespace SpectrumAnalyzer {
 				b = 255;
 				g = 0;
 				r = 0;
-				a = v * 0.32;
+				a = v * 0.24;
 			}
 			else if (v < 512) {
 				b = 255;
 				g = v - 256;
 				r = 0;
-				a = 0.33 + v * 0.32;
+				a = 0.25 + v * 0.24;
 			}
 			else if (v < 768) {
 				b = 255 - (v - 512);
 				g = 255;
 				r = 0;
-				a = 0.33 + v * 0.32;
+				a = 0.5 + v * 0.24;
 			}
 			else if (v < 1024) {
 				b = 0;
 				g = 255;
 				r = v - 768;
-				a = 255;
+				a = 0.75 + v * 0.24;
 			}
 			else {
 				b = 0;

@@ -21,10 +21,10 @@ namespace SpectrumAnalyzer {
 			if (mInstance.Visible) {
 				return;
 			}
-			var key = Math.Log(OscBank.Pitch * parent.Playback.Speed, 2.0) * 12;
+			var key = Math.Log(OscBank.Pitch * parent.Playback.File.Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
-			mInstance.GrbSpeed.Enabled = parent.Playback.Enabled;
-			mInstance.TrkSpeed.Value = (int)(10 * Math.Log(parent.Playback.Speed, 2.0) * 12 * Spectrum.TONE_DIV);
+			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
+			mInstance.TrkSpeed.Value = (int)(10 * Math.Log(parent.Playback.File.Speed, 2.0) * 12 * Spectrum.TONE_DIV);
 			mInstance.TrkMinLevel.Value = Drawer.MinLevel;
 			mInstance.TrkResponce.Value = (int)(0.5 + 10 * Math.Log(Spectrum.ResponceSpeed, 2));
 			mInstance.ChkCurve.Checked = Drawer.DisplayCurve;
@@ -57,17 +57,6 @@ namespace SpectrumAnalyzer {
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			SetKeySpeed();
 			DispValue();
-			Spectrum spectrum = null;
-			if (mParent.Playback.Enabled) {
-				spectrum = mParent.Playback.FilterBank;
-			}
-			if (mParent.Record.Enabled) {
-				spectrum = mParent.Record.FilterBank;
-			}
-			if (null == spectrum) {
-				return;
-			}
-			spectrum.SetSpeed(mParent.Playback.Speed);
 		}
 
 		private void ChkCurve_CheckedChanged(object sender, EventArgs e) {
@@ -95,10 +84,10 @@ namespace SpectrumAnalyzer {
 
 		private void TrkResponce_Scroll(object sender, EventArgs e) {
 			Spectrum spectrum = null;
-			if (mParent.Playback.Enabled) {
+			if (mParent.Playback.Playing) {
 				spectrum = mParent.Playback.FilterBank;
 			}
-			if (mParent.Record.Enabled) {
+			if (mParent.Record.Playing) {
 				spectrum = mParent.Record.FilterBank;
 			}
 			if (null == spectrum) {
@@ -166,7 +155,7 @@ namespace SpectrumAnalyzer {
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
 			Spectrum.Transpose = -transpose;
-			mParent.Playback.Speed = Math.Pow(2.0, transpose / 12.0);
+			mParent.Playback.File.Speed = Math.Pow(2.0, transpose / 12.0);
 			OscBank.Pitch = Math.Pow(2.0, pitchShift / 12.0);
 			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			mParent.DrawBackground();
@@ -174,7 +163,7 @@ namespace SpectrumAnalyzer {
 
 		void DispValue() {
 			GrbKey.Text = string.Format("キー:{0}半音", TrkKey.Value);
-			GrbSpeed.Text = string.Format("速さ:{0}", mParent.Playback.Speed.ToString("0.0%"));
+			GrbSpeed.Text = string.Format("速さ:{0}", mParent.Playback.File.Speed.ToString("0.0%"));
 			GrbResponce.Text = string.Format("応答速度:{0}Hz", Spectrum.ResponceSpeed.ToString("g3"));
 			GrbMinLevel.Text = string.Format("表示範囲:{0}db", TrkMinLevel.Value);
 		}

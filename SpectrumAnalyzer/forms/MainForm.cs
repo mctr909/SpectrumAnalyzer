@@ -12,6 +12,8 @@ namespace SpectrumAnalyzer {
 
 		public bool DoSetLayout { get; set; } = true;
 
+		const int SEEK_DIV = 100;
+
 		bool mGripSeekBar = false;
 		int mGaugeHeight;
 		int mScrollHeight;
@@ -58,8 +60,8 @@ namespace SpectrumAnalyzer {
 				MessageBox.Show(ex.ToString());
 			}
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = 10 * Playback.Length / Playback.SampleRate;
-			TrkSeek.TickFrequency = TrkSeek.Maximum / 10;
+			TrkSeek.Maximum = SEEK_DIV * Playback.File.Length / Playback.SampleRate;
+			TrkSeek.TickFrequency = (int)(TrkSeek.Maximum / 10.0 + 0.99);
 			TrkSeek.Value = 0;
 			if (playing) {
 				Playback.Start();
@@ -107,7 +109,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
+			Playback.File.Position = TrkSeek.Value * Playback.SampleRate / SEEK_DIV;
 			mGripSeekBar = false;
 		}
 
@@ -116,13 +118,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
-			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
+			Playback.File.Position = TrkSeek.Value * Playback.SampleRate / SEEK_DIV;
 			mGripSeekBar = false;
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
 			if (!mGripSeekBar) {
-				var temp = (int)(10 * Playback.Position / Playback.SampleRate);
+				var temp = (int)(SEEK_DIV * Playback.File.Position / Playback.SampleRate);
 				if (temp <= TrkSeek.Maximum) {
 					TrkSeek.Value = temp;
 				}

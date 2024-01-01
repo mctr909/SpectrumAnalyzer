@@ -63,8 +63,8 @@ public class OscBank {
 					delta = spectrum.Banks[divB].DELTA;
 				}
 			}
-			specAmpL *= spectrum.GainL * 2;
-			specAmpR *= spectrum.GainR * 2;
+			specAmpL *= spectrum.GainL;
+			specAmpR *= spectrum.GainR;
 			var tone = Tones[idxT];
 			if (tone.AmpL >= THRESHOLD || tone.AmpR >= THRESHOLD) {
 				lowToneIndex = idxT;

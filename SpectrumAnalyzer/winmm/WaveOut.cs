@@ -91,9 +91,11 @@ namespace WINMM {
 					mStoppedBufferCount = 0;
 					mStopBuffer = false;
 					mCallbackStopped = false;
+					AllocHeader();
 					Enabled = true;
 					break;
 				case MM_WOM.CLOSE:
+					DisposeHeader();
 					mHandle = IntPtr.Zero;
 					Enabled = false;
 					break;
@@ -123,11 +125,8 @@ namespace WINMM {
 			mBufferPaused = false;
 			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 			if (MMRESULT.MMSYSERR_NOERROR != ret) {
-				mHandle = IntPtr.Zero;
-				Enabled = false;
 				return;
 			}
-			AllocHeader();
 			for (int i = 0; i < mBufferCount; ++i) {
 				waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
@@ -166,7 +165,6 @@ namespace WINMM {
 				waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
 			waveOutClose(mHandle);
-			DisposeHeader();
 		}
 
 		protected abstract void WriteBuffer(IntPtr pBuffer);

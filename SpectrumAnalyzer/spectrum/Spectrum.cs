@@ -13,6 +13,7 @@ public class Spectrum {
 	const int THRESHOLD_NARROW = TONE_DIV * 5 / 4;
 	const double RMS_MIN = 1e-6;
 
+	readonly int SAMPLE_RATE;
 	readonly int LOW_TONE;
 	readonly int MID_TONE;
 	readonly double AUTO_GAIN_ATTENUATION;
@@ -27,10 +28,10 @@ public class Spectrum {
 	delegate void DSetRms(IntPtr pInput, int sampleCount);
 	DSetRms mSetRms;
 
+	public static double ResponceSpeed { get; set; } = 16;
 	public static double Transpose { get; set; } = 0;
 	public static bool AutoGain { get; set; } = true;
 	public static bool NormGain { get; set; } = false;
-	public static double ResponceSpeed { get; set; } = 16.0;
 
 	public double GainL { get; private set; }
 	public double GainR { get; private set; }
@@ -43,6 +44,7 @@ public class Spectrum {
 
 	public Spectrum(int sampleRate, double baseFrequency, int tones, int bufferSamples, bool stereo) {
 		var bankCount = tones * TONE_DIV;
+		SAMPLE_RATE = sampleRate;
 		LOW_TONE = (int)(12 * TONE_DIV * Math.Log(LOW_FREQ / baseFrequency, 2));
 		MID_TONE = (int)(12 * TONE_DIV * Math.Log(MID_FREQ / baseFrequency, 2));
 		AUTO_GAIN_ATTENUATION = 0.5 * bufferSamples / sampleRate;
@@ -59,7 +61,8 @@ public class Spectrum {
 		for (int b = 0; b < bankCount; b += TONE_DIV) {
 			for (int d = 0, bd = b; d < TONE_DIV; ++d, ++bd) {
 				var frequency = baseFrequency * Math.Pow(2.0, (bd - 0.5 * TONE_DIV) / OCT_DIV);
-				Banks[bd] = new BPFBank(sampleRate, frequency);
+				Banks[bd] = new BPFBank();
+				SetBPF(Banks[bd], frequency);
 			}
 		}
 		SetResponceSpeed();
@@ -74,17 +77,47 @@ public class Spectrum {
 	public void SetResponceSpeed() {
 		for (int b = 0; b < Banks.Length; b += TONE_DIV) {
 			for (int d = 0, bd = b; d < TONE_DIV; ++d, ++bd) {
-				Banks[bd].SetResponceSpeed(ResponceSpeed);
+				SetResponceSpeed(Banks[bd], ResponceSpeed);
 			}
 		}
 	}
 
-	public void SetSpeed(double speed) {
-		for (int b = 0; b < Banks.Length; b += TONE_DIV) {
-			for (int d = 0, bd = b; d < TONE_DIV; ++d, ++bd) {
-				Banks[bd].SetSpeed(speed);
-			}
+	void SetBPF(BPFBank bank, double frequency) {
+		bank.DELTA = frequency / SAMPLE_RATE;
+		bank.SIGMA = GetAlpha(10 * frequency);
+		var alpha = GetAlpha(frequency);
+		var a0 = 1.0 + alpha;
+		bank.KB0 = alpha / a0;
+		bank.KA1 = -2.0 * Math.Cos(2 * Math.PI * bank.DELTA) / a0;
+		bank.KA2 = (1.0 - alpha) / a0;
+	}
+
+	void SetResponceSpeed(BPFBank bank, double responceSpeed) {
+		var frequency = bank.DELTA * SAMPLE_RATE;
+		responceSpeed *= 10;
+		if (responceSpeed > frequency) {
+			bank.DisplaySigma = GetAlpha(frequency);
 		}
+		else {
+			bank.DisplaySigma = GetAlpha(responceSpeed);
+		}
+	}
+
+	double GetAlpha(double frequency) {
+		const double MIN_WIDTH = 1.0;
+		const double MIN_WIDTH_AT_FREQ = 440.0;
+		var halfToneWidth = MIN_WIDTH + Math.Log(MIN_WIDTH_AT_FREQ / frequency, 2.0);
+		if (halfToneWidth < MIN_WIDTH) {
+			halfToneWidth = MIN_WIDTH;
+		}
+		var omega = 2 * Math.PI * frequency / SAMPLE_RATE;
+		var s = Math.Sin(omega);
+		var x = Math.Log(2) / 4 * halfToneWidth / 12.0 * omega / s;
+		var a = s * Math.Sinh(x);
+		if (a > 1) {
+			return 1;
+		}
+		return a;
 	}
 
 	public void SetValue(IntPtr pInput, int sampleCount) {
@@ -210,17 +243,17 @@ public class Spectrum {
 			for (int t = 0; t < sampleCount; ++t) {
 				var input = inputWave[t];
 				var output
-					= bank.Kb0 * input
-					- bank.Kb0 * bank.Lb2
-					- bank.Ka1 * bank.La1
-					- bank.Ka2 * bank.La2
+					= bank.KB0 * input
+					- bank.KB0 * bank.Lb2
+					- bank.KA1 * bank.La1
+					- bank.KA2 * bank.La2
 				;
 				bank.La2 = bank.La1;
 				bank.La1 = output;
 				bank.Lb2 = bank.Lb1;
 				bank.Lb1 = input;
 				output *= output;
-				bank.LPower += (output - bank.LPower) * bank.Sigma;
+				bank.LPower += (output - bank.LPower) * bank.SIGMA;
 				bank.LDisplay += (output - bank.LDisplay) * bank.DisplaySigma;
 			}
 			mMaxL = Math.Max(mMaxL, bank.LPower);
@@ -239,31 +272,31 @@ public class Spectrum {
 			for (int t = 0, i = 0; t < sampleCount; ++t, i += 2) {
 				var input = inputWave[i];
 				var output
-					= bank.Kb0 * input
-					- bank.Kb0 * bank.Lb2
-					- bank.Ka1 * bank.La1
-					- bank.Ka2 * bank.La2
+					= bank.KB0 * input
+					- bank.KB0 * bank.Lb2
+					- bank.KA1 * bank.La1
+					- bank.KA2 * bank.La2
 				;
 				bank.La2 = bank.La1;
 				bank.La1 = output;
 				bank.Lb2 = bank.Lb1;
 				bank.Lb1 = input;
 				output *= output;
-				bank.LPower += (output - bank.LPower) * bank.Sigma;
+				bank.LPower += (output - bank.LPower) * bank.SIGMA;
 				bank.LDisplay += (output - bank.LDisplay) * bank.DisplaySigma;
 				input = inputWave[i + 1];
 				output
-					= bank.Kb0 * input
-					- bank.Kb0 * bank.Rb2
-					- bank.Ka1 * bank.Ra1
-					- bank.Ka2 * bank.Ra2
+					= bank.KB0 * input
+					- bank.KB0 * bank.Rb2
+					- bank.KA1 * bank.Ra1
+					- bank.KA2 * bank.Ra2
 				;
 				bank.Ra2 = bank.Ra1;
 				bank.Ra1 = output;
 				bank.Rb2 = bank.Rb1;
 				bank.Rb1 = input;
 				output *= output;
-				bank.RPower += (output - bank.RPower) * bank.Sigma;
+				bank.RPower += (output - bank.RPower) * bank.SIGMA;
 				bank.RDisplay += (output - bank.RDisplay) * bank.DisplaySigma;
 			}
 			mMaxL = Math.Max(mMaxL, bank.LPower);
