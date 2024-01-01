@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace WINMM {
-	public abstract class WaveOut : WaveLib {
+	public abstract class WaveOut : Wave {
 		enum MM_WOM {
 			OPEN = 0x3BB,
 			CLOSE = 0x3BC,
@@ -57,14 +57,6 @@ namespace WINMM {
 		static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr lpWaveHdr, int size);
 		#endregion
 
-		#region dynamic variable
-		Thread mBufferThread;
-		object mLockBuffer = new object();
-		int mWriteCount;
-		int mWriteIndex;
-		int mReadIndex;
-		#endregion
-
 		public static List<string> GetDeviceList() {
 			var list = new List<string>();
 			var deviceCount = waveOutGetNumDevs();
@@ -73,106 +65,92 @@ namespace WINMM {
 				var ret = waveOutGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
 				if (MMRESULT.MMSYSERR_NOERROR == ret) {
 					list.Add(caps.szPname);
-				} else {
+				}
+				else {
 					list.Add(ret.ToString());
 				}
 			}
 			return list;
 		}
 
-		public WaveOut(int sampleRate = 44100, int channels = 2, int bufferSamples = 128, int bufferCount = 64) :
-			base(sampleRate, channels, bufferSamples, bufferCount) {
-			mCallback = Callback;
-		}
-
-		public override void Open() {
-			Close();
-			AllocHeader();
-			var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
-			if (MMRESULT.MMSYSERR_NOERROR != ret) {
-				return;
-			}
-			for (int i = 0; i < mBufferCount; ++i) {
-				waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-				waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-			}
-			mBufferThread = new Thread(BufferTask) {
-				Priority = ThreadPriority.Highest
-			};
-			mBufferThread.Start();
-		}
-
-		public override void Close() {
-			if (IntPtr.Zero == mHandle) {
-				return;
-			}
-			mDoStop = true;
-			mBufferThread.Join();
-			for (int i = 0; i < 20 && !mStopped; i++) {
-				Thread.Sleep(100);
-			}
-			for (int i = 0; i < mBufferCount; ++i) {
-				waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-			}
-			var ret = waveOutReset(mHandle);
-			if (MMRESULT.MMSYSERR_NOERROR != ret) {
-				throw new Exception(ret.ToString());
-			}
-			ret = waveOutClose(mHandle);
-			if (MMRESULT.MMSYSERR_NOERROR != ret) {
-				throw new Exception(ret.ToString());
-			}
-			mHandle = IntPtr.Zero;
-			DisposeHeader();
-		}
-
-		void Callback(IntPtr hwo, MM_WOM uMsg, int dwUser, IntPtr lpWaveHdr, int dwParam2) {
-			switch (uMsg) {
-			case MM_WOM.OPEN:
-				mStopped = false;
-				Enabled = true;
-				break;
-			case MM_WOM.CLOSE:
-				mDoStop = false;
-				Enabled = false;
-				break;
-			case MM_WOM.DONE: {
-				if (mDoStop) {
-					mStopped = true;
+		public WaveOut(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount)
+			: base(sampleRate, channels, type, bufferSamples, bufferCount) {
+			mCallback = (hwo, uMsg, dwUser, lpWaveHdr, dwParam2) => {
+				switch (uMsg) {
+				case MM_WOM.OPEN:
+					mProcessedBufferCount = 0;
+					mStartedBufferCount = 0;
+					mStoppedBufferCount = 0;
+					mStopBuffer = false;
+					mCallbackStopped = false;
+					break;
+				case MM_WOM.CLOSE:
+					break;
+				case MM_WOM.DONE:
+					lock (mLockBuffer) {
+						if (mStopBuffer && mStartedBufferCount >= mBufferCount) {
+							if (++mStoppedBufferCount == mBufferCount) {
+								mCallbackStopped = true;
+							}
+							break;
+						}
+						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
+						if (mProcessedBufferCount > 0) {
+							mProcessedBufferCount--;
+						}
+						if (mStartedBufferCount < mBufferCount) {
+							mStartedBufferCount++;
+						}
+					}
 					break;
 				}
-				lock (mLockBuffer) {
-					waveOutWrite(mHandle, mpWaveHeader[mReadIndex], Marshal.SizeOf<WAVEHDR>());
-					if (0 < mWriteCount) {
-						mReadIndex = (mReadIndex + 1) % mBufferCount;
-						mWriteCount--;
-					}
-				}
-				break;
-			}
-			}
+			};
 		}
 
-		void BufferTask() {
-			mWriteCount = 0;
-			mWriteIndex = 0;
-			mReadIndex = 0;
-			while (!mDoStop) {
-				var sleep = false;
+		protected override void BufferTask() {
+			Enabled = true;
+			var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+			if (MMRESULT.MMSYSERR_NOERROR != ret) {
+				mHandle = IntPtr.Zero;
+				Enabled = false;
+				return;
+			}
+			AllocHeader();
+			for (int i = 0; i < mBufferCount; ++i) {
+				waveOutPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			}
+			for (int i = 0; i < mBufferCount; ++i) {
+				waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			}
+			var writeIndex = 0;
+			while (!mStopBuffer) {
+				var enableWait = false;
 				lock (mLockBuffer) {
-					if (mBufferCount <= mWriteCount + 1) {
-						sleep = true;
-					} else {
-						var pHdr = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[mWriteIndex]);
-						WriteBuffer(pHdr.lpData);
-						mWriteIndex = (mWriteIndex + 1) % mBufferCount;
-						mWriteCount++;
+					if (mBufferCount <= mProcessedBufferCount + 1) {
+						enableWait = true;
+					}
+					else {
+						var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[writeIndex]);
+						WriteBuffer(header.lpData);
+						writeIndex = (writeIndex + 1) % mBufferCount;
+						mProcessedBufferCount++;
 					}
 				}
-				if (sleep) {
+				if (enableWait) {
 					Thread.Sleep(1);
 				}
 			}
+			for (int i = 0; i < 100 && !mCallbackStopped; i++) {
+				Thread.Sleep(50);
+			}
+			waveOutReset(mHandle);
+			for (int i = 0; i < mBufferCount; ++i) {
+				waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			}
+			waveOutClose(mHandle);
+			DisposeHeader();
+			mHandle = IntPtr.Zero;
+			Enabled = false;
 		}
 
 		protected abstract void WriteBuffer(IntPtr pBuffer);

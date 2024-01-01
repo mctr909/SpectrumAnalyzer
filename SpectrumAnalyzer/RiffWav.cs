@@ -1,293 +1,272 @@
 ﻿using System;
 using System.IO;
-using System.Runtime.InteropServices;
 
-public abstract class RiffWav {
-	protected struct RIFF {
-		public uint Sign;
-		public uint Size;
-		public uint Type;
-		public const uint SIGN = 0x46464952;
-		public const uint TYPE_WAVE = 0x45564157;
-		public void Write(BinaryWriter bw) {
-			bw.Write(SIGN);
-			bw.Write(Size);
-			bw.Write(Type);
-		}
-	}
+public abstract class RiffWav : IDisposable {
+	protected const uint SIGN_RIFF = 0x46464952;
+	protected const uint TYPE_WAVE = 0x45564157;
+	protected const uint SIGN_FMT_ = 0x20746d66;
+	protected const uint SIGN_DATA = 0x61746164;
 
 	public struct FMT {
-		public ushort FormatID;
+		public TYPE FormatID;
 		public ushort Channel;
-		public uint SamplingFrequency;
-		public uint BytePerSecond;
+		public uint SampleRate;
+		public uint BytesPerSecond;
 		public ushort BlockSize;
-		public ushort BitPerSample;
-		public const uint SIGN = 0x20746d66;
-		public const ushort TYPE_PCM = 1;
-		public const ushort TYPE_PCM_FLOAT = 3;
-		public void Write(BinaryWriter bw) {
-			bw.Write(SIGN);
-			bw.Write((uint)16);
-			bw.Write(FormatID);
-			bw.Write(Channel);
-			bw.Write(SamplingFrequency);
-			bw.Write(BytePerSecond);
-			bw.Write(BlockSize);
-			bw.Write(BitPerSample);
+		public ushort BitsPerSample;
+
+		public enum TYPE : ushort {
+			PCM_INT = 1,
+			PCM_FLOAT = 3
 		}
 	}
 
-	public struct DATA {
-		public uint Sign;
-		public uint Size;
-		public const uint SIGN = 0x61746164;
-		public void Write(BinaryWriter bw) {
-			bw.Write(SIGN);
-			bw.Write(Size);
-		}
-	}
-
-	protected RIFF Riff;
 	public FMT Fmt;
-	public DATA Data;
+	public long Samples { get; protected set; } = 0;
+
+	protected FileStream mFs;
+	protected long mDataSize;
+	protected long mDataBegin;
+
+	public void Dispose() {
+		mFs.Close();
+		mFs.Dispose();
+	}
+
+	protected void WriteHeader(BinaryWriter bw) {
+		bw.Write(SIGN_RIFF);
+		bw.Write((uint)0);
+		bw.Write(TYPE_WAVE);
+
+		bw.Write(SIGN_FMT_);
+		bw.Write((uint)16);
+		bw.Write((ushort)Fmt.FormatID);
+		bw.Write(Fmt.Channel);
+		bw.Write(Fmt.SampleRate);
+		bw.Write(Fmt.BytesPerSecond);
+		bw.Write(Fmt.BlockSize);
+		bw.Write(Fmt.BitsPerSample);
+
+		bw.Write(SIGN_DATA);
+		bw.Write((uint)0);
+	}
 }
 
-public class WavReader : RiffWav, IDisposable {
-	public delegate void Reader(ref short left, ref short right);
-	public delegate void ReaderM(ref short mono);
+public class WavReader : RiffWav {
+	public delegate void Reader();
 
 	public Reader Read;
-	public ReaderM ReadMono;
 
-	FileStream mFs;
+	public double[] Values { get; private set; }
+
 	BinaryReader mBr;
 
 	public WavReader(string filePath) {
 		mFs = new FileStream(filePath, FileMode.Open);
 		mBr = new BinaryReader(mFs);
-
-		Riff.Sign = mBr.ReadUInt32();
-		Riff.Size = mBr.ReadUInt32();
-		Riff.Type = mBr.ReadUInt32();
-
-		if (Riff.Sign != RIFF.SIGN)
+		if (!ReadHeader()) {
+			Read = ReadInvalid;
 			return;
-		if (Riff.Type != RIFF.TYPE_WAVE)
-			return;
-
-		uint sign;
-		uint size;
-		while (true) {
-			sign = mBr.ReadUInt32();
-			size = mBr.ReadUInt32();
-			if (FMT.SIGN == sign) {
-				if (size < 16)
-					return;
-				Fmt.FormatID = mBr.ReadUInt16();
-				Fmt.Channel = mBr.ReadUInt16();
-				Fmt.SamplingFrequency = mBr.ReadUInt32();
-				Fmt.BytePerSecond = mBr.ReadUInt32();
-				Fmt.BlockSize = mBr.ReadUInt16();
-				Fmt.BitPerSample = mBr.ReadUInt16();
-				if (Fmt.FormatID != FMT.TYPE_PCM && Fmt.FormatID != FMT.TYPE_PCM_FLOAT)
-					return;
-				if (size > 16)
-					mFs.Seek(size - 16, SeekOrigin.Current);
-				continue;
-			}
-			if (DATA.SIGN == sign) {
-				break;
-			}
-			mFs.Seek(size, SeekOrigin.Current);
 		}
+		SetReader();
+	}
 
-		switch (Fmt.Channel) {
-		case 1:
-			switch (Fmt.BitPerSample) {
-			case 8:
-				ReadMono = read8;
+	bool ReadHeader() {
+		var fileSign = mBr.ReadUInt32();
+		if (fileSign != SIGN_RIFF)
+			return false;
+
+		var fileSize = mBr.ReadUInt32();
+		var fileType = mBr.ReadUInt32();
+		if (fileType != TYPE_WAVE)
+			return false;
+
+		uint chunkSign;
+		uint chunkSize;
+		while (mFs.Position < fileSize) {
+			chunkSign = mBr.ReadUInt32();
+			chunkSize = mBr.ReadUInt32();
+			switch (chunkSign) {
+			case SIGN_FMT_:
+				Fmt.FormatID = (FMT.TYPE)mBr.ReadUInt16();
+				Fmt.Channel = mBr.ReadUInt16();
+				Fmt.SampleRate = mBr.ReadUInt32();
+				Fmt.BytesPerSecond = mBr.ReadUInt32();
+				Fmt.BlockSize = mBr.ReadUInt16();
+				Fmt.BitsPerSample = mBr.ReadUInt16();
+				if (chunkSize > 16)
+					mFs.Seek(chunkSize - 16, SeekOrigin.Current);
 				break;
-			case 16:
-				ReadMono = read16;
-				break;
-			case 24:
-				ReadMono = read24;
-				break;
-			case 32:
-				ReadMono = read32;
+			case SIGN_DATA:
+				mDataSize = chunkSize;
+				mDataBegin = mFs.Position;
+				mFs.Seek(chunkSize, SeekOrigin.Current);
 				break;
 			default:
-				ReadMono = readInvalid;
+				mFs.Seek(chunkSize, SeekOrigin.Current);
+				break;
+			}
+		}
+
+		switch (Fmt.FormatID) {
+		case FMT.TYPE.PCM_INT:
+			switch (Fmt.BitsPerSample) {
+			case 8:
+			case 16:
+			case 24:
+			case 32:
+				break;
+			default:
+				return false;
+			}
+			break;
+		case FMT.TYPE.PCM_FLOAT:
+			switch (Fmt.BitsPerSample) {
+			case 32:
+				break;
+			default:
+				return false;
+			}
+			break;
+		default:
+			return false;
+		}
+
+		Samples = mDataSize / Fmt.BlockSize;
+		mFs.Seek(mDataBegin, SeekOrigin.Begin);
+		return true;
+	}
+
+	void SetReader() {
+		switch (Fmt.Channel) {
+		case 1:
+			switch (Fmt.BitsPerSample) {
+			case 8:
+				Read = Read8M;
+				break;
+			case 16:
+				Read = Read16M;
+				break;
+			case 24:
+				Read = Read24M;
+				break;
+			case 32:
+				if (Fmt.FormatID == FMT.TYPE.PCM_FLOAT) {
+					Read = Read32fM;
+				}
+				else {
+					Read = Read32M;
+				}
+				break;
+			default:
+				Read = ReadInvalid;
 				break;
 			}
 			break;
 		case 2:
-			switch (Fmt.BitPerSample) {
+			switch (Fmt.BitsPerSample) {
 			case 8:
-				Read = read8;
+				Read = Read8S;
 				break;
 			case 16:
-				Read = read16;
+				Read = Read16S;
 				break;
 			case 24:
-				Read = read24;
+				Read = Read24S;
 				break;
 			case 32:
-				Read = read32;
+				if (Fmt.FormatID == FMT.TYPE.PCM_FLOAT) {
+					Read = Read32fS;
+				}
+				else {
+					Read = Read32S;
+				}
 				break;
 			default:
-				Read = readInvalid;
+				Read = ReadInvalid;
 				break;
 			}
 			break;
 		default:
-			ReadMono = readInvalid;
-			Read = readInvalid;
+			Read = ReadInvalid;
 			break;
 		}
+		Values = new double[Fmt.Channel];
 	}
 
-	public void Dispose() {
-		mFs.Close();
-		mFs.Dispose();
+	void ReadInvalid() { }
+	void Read8M() {
+		Values[0] = (mBr.ReadByte() - 128) / 128.0;
 	}
-
-	void read32(ref short left, ref short right) {
-		var fL = mBr.ReadSingle();
-		var fR = mBr.ReadSingle();
-		if (fL < -1.0) {
-			fL = -1.0f;
-		}
-		if (1.0 < fL) {
-			fL = 1.0f;
-		}
-		if (fR < -1.0) {
-			fR = -1.0f;
-		}
-		if (1.0 < fR) {
-			fR = 1.0f;
-		}
-		left = (short)(fL * 32767);
-		right = (short)(fR * 32767);
+	void Read8S() {
+		Values[0] = (mBr.ReadByte() - 128) / 128.0;
+		Values[1] = (mBr.ReadByte() - 128) / 128.0;
 	}
-
-	void read32(ref short mono) {
-		var f = mBr.ReadSingle();
-		if (f < -1.0) {
-			f = -1.0f;
-		}
-		if (1.0 < f) {
-			f = 1.0f;
-		}
-		mono = (short)(f * 32767);
+	void Read16M() {
+		Values[0] = mBr.ReadInt16() / 32768.0;
 	}
-
-	void read24(ref short left, ref short right) {
-		mBr.ReadByte();
-		left = mBr.ReadInt16();
-		mBr.ReadByte();
-		right = mBr.ReadInt16();
+	void Read16S() {
+		Values[0] = mBr.ReadInt16() / 32768.0;
+		Values[1] = mBr.ReadInt16() / 32768.0;
 	}
-
-	void read24(ref short mono) {
-		mBr.ReadByte();
-		mono = mBr.ReadInt16();
+	void Read24M() {
+		var temp = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
+		Values[0] = (double)(int)temp / (1 << 31);
 	}
-
-	void read16(ref short left, ref short right) {
-		left = mBr.ReadInt16();
-		right = mBr.ReadInt16();
+	void Read24S() {
+		var tempL = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
+		var tempR = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
+		Values[0] = (double)(int)tempL / (1 << 31);
+		Values[1] = (double)(int)tempR / (1 << 31);
 	}
-
-	void read16(ref short mono) {
-		mono = mBr.ReadInt16();
+	void Read32M() {
+		Values[0] = (double)mBr.ReadInt32() / (1 << 31);
 	}
-
-	void read8(ref short left, ref short right) {
-		left = (short)((mBr.ReadByte() - 128) << 8);
-		right = (short)((mBr.ReadByte() - 128) << 8);
+	void Read32S() {
+		Values[0] = (double)mBr.ReadInt32() / (1 << 31);
+		Values[1] = (double)mBr.ReadInt32() / (1 << 31);
 	}
-
-	void read8(ref short mono) {
-		mono = (short)((mBr.ReadByte() - 128) << 8);
+	void Read32fM() {
+		Values[0] = mBr.ReadSingle();
 	}
-
-	void readInvalid(ref short left, ref short right) {
-		mBr.BaseStream.Position += Fmt.BlockSize;
-		left = 0;
-		right = 0;
-	}
-
-	void readInvalid(ref short mono) {
-		mBr.BaseStream.Position += Fmt.BlockSize;
-		mono = 0;
+	void Read32fS() {
+		Values[0] = mBr.ReadSingle();
+		Values[1] = mBr.ReadSingle();
 	}
 }
 
-public class WavWriter : RiffWav, IDisposable {
-	FileStream mFs;
+public class WavWriter : RiffWav {
 	BinaryWriter mBw;
-	uint mSamples;
 
-	public WavWriter(string filePath) {
+	public WavWriter(string filePath, int sampleRate, int ch, int bits, bool enableFloat) {
+		Fmt.FormatID = enableFloat ? FMT.TYPE.PCM_FLOAT : FMT.TYPE.PCM_INT;
+		Fmt.Channel = (ushort)ch;
+		Fmt.SampleRate = (uint)sampleRate;
+		Fmt.BitsPerSample = (ushort)(enableFloat ? 32 : bits);
+		Fmt.BlockSize = (ushort)(Fmt.Channel * Fmt.BitsPerSample >> 3);
+		Fmt.BytesPerSecond = Fmt.BlockSize * Fmt.SampleRate;
+
 		mFs = new FileStream(filePath, FileMode.OpenOrCreate);
 		mBw = new BinaryWriter(mFs);
-		mBw.Write(new byte[
-			Marshal.SizeOf<RIFF>() +
-			Marshal.SizeOf<FMT>() +
-			Marshal.SizeOf<DATA>()
-		]);
-		mSamples = 0;
+		WriteHeader(mBw);
+		mDataBegin = mFs.Position;
+		Samples = 0;
 	}
 
-	public void Dispose() {
-		mFs.Close();
-		mFs.Dispose();
+	public void Save() {
+		var currentPos = mFs.Position;
+
+		mFs.Seek(4, SeekOrigin.Begin);
+		mBw.Write((uint)(Fmt.BlockSize * Samples + 36));
+
+		mFs.Seek(mDataBegin - 4, SeekOrigin.Begin);
+		mBw.Write((uint)(Fmt.BlockSize * Samples));
+
+		mFs.Seek(currentPos, SeekOrigin.Begin);
 	}
 
-	public void Save(uint sampleRate, ushort ch, bool enableFloat) {
-		mFs.Seek(0, SeekOrigin.Begin);
-
-		var bits = enableFloat ? 32 : 16;
-
-		Riff.Size = (uint)(ch * bits * mSamples / 8 + 36);
-		Riff.Type = RIFF.TYPE_WAVE;
-		Riff.Write(mBw);
-
-		Fmt.FormatID = enableFloat ? FMT.TYPE_PCM_FLOAT : FMT.TYPE_PCM;
-		Fmt.Channel = ch;
-		Fmt.SamplingFrequency = sampleRate;
-		Fmt.BytePerSecond = (uint)(ch * bits * sampleRate / 8);
-		Fmt.BlockSize = (ushort)(ch * bits / 8);
-		Fmt.BitPerSample = (ushort)bits;
-		Fmt.Write(mBw);
-
-		Data.Size = (uint)(ch * bits * mSamples / 8);
-		Data.Write(mBw);
-
-		mFs.Close();
-	}
-
-	public void Write(double left, double right) {
-		mBw.Write((float)left);
-		mBw.Write((float)right);
-		mSamples++;
-	}
-
-	public void Write(double mono) {
-		mBw.Write((float)mono);
-		mSamples++;
-	}
-
-	public void Write(short left, short right) {
-		mBw.Write(left);
-		mBw.Write(right);
-		mSamples++;
-	}
-
-	public void Write(short mono) {
-		mBw.Write(mono);
-		mSamples++;
+	public void WriteBuffer(byte[] buffer, int begin, int samples) {
+		mBw.Write(buffer, begin * Fmt.BlockSize, samples * Fmt.BlockSize);
+		Samples += samples;
 	}
 }
