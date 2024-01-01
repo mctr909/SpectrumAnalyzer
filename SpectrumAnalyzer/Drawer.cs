@@ -24,7 +24,7 @@ namespace SpectrumAnalyzer {
 		public static readonly Pen SLOPE = new Pen(Color.FromArgb(0, 221, 0), 1.0f);
 		public static readonly Pen THRESHOLD = Pens.Cyan;
 
-		public const int KEYBOARD_HEIGHT = 20;
+		public const int KEYBOARD_HEIGHT = 18;
 		public static byte[] ScrollCanvas;
 		public static int MinLevel = -24;
 		public static int KeyboardShift = 0;
@@ -147,12 +147,12 @@ namespace SpectrumAnalyzer {
 				Alignment = StringAlignment.Far,
 				LineAlignment = StringAlignment.Center
 			};
-			for (int n = 0; n < noteCount + 12; n += 12) {
+			for (int n = -12; n < noteCount + 12; n += 12) {
 				var note = n - KeyboardShift;
 				var px = 6 + width * note / noteCount - textOfsX;
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
-				g.DrawString("" + (n / 12), FONT, Brushes.Gray, textArea, stringFormat);
+				g.DrawString("" + (n / 12), FONT, Brushes.LightGray, textArea, stringFormat);
 				g.RotateTransform(90);
 				g.TranslateTransform(-px, -textBottom);
 			}
@@ -181,17 +181,17 @@ namespace SpectrumAnalyzer {
 			var stringFormat = new StringFormat() {
 				Alignment = StringAlignment.Near
 			};
-			for (var db = dbOfs; dbMin < db; --db) {
+			for (var db = dbOfs; dbMin <= db; --db) {
 				if (db % 12 == 0) {
 					var py = DbToY(db - dbOfs, height) - 2;
 					if (py < textBottom) {
 						g.TranslateTransform(0, py);
-						g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+						g.DrawString(db + "", FONT, Brushes.Yellow, textArea, stringFormat);
 						g.TranslateTransform(0, -py);
 					}
 					else {
 						g.TranslateTransform(0, textBottom);
-						g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+						g.DrawString(db + "", FONT, Brushes.Yellow, textArea, stringFormat);
 						g.TranslateTransform(0, -textBottom);
 					}
 				}

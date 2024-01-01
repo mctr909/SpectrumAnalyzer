@@ -2,15 +2,16 @@
 using System;
 
 public class Spectrum {
-	public const int TONE_DIV = 3;
+	public const int TONE_DIV = 5;
 	public const int TONE_DIV_CENTER = TONE_DIV / 2;
 
 	const int WAVE_LENGTH = 96;
 	const int LOW_FREQ = 80;
-	const int MID_FREQ = 350;
+	const int MID_FREQ = 250;
 	const int OCT_DIV = TONE_DIV * 12;
-	const int THRESHOLD_WIDE = TONE_DIV * 6;
-	const int THRESHOLD_NARROW = TONE_DIV * 5 / 4;
+	const int THRESHOLD_WIDE = TONE_DIV * 7;
+	const int THRESHOLD_NARROW = TONE_DIV;
+	const double THRESHOLD_OFFSET = 1.06;
 	const double RMS_MIN = 1e-6;
 
 	readonly int SAMPLE_RATE;
@@ -43,12 +44,12 @@ public class Spectrum {
 	public double[] Curve { get; private set; }
 	public double[] Threshold { get; private set; }
 
-	public Spectrum(int sampleRate, double baseFrequency, int tones, int bufferSamples, bool stereo) {
+	public Spectrum(int sampleRate, double baseFrequency, int tones, bool stereo) {
 		SAMPLE_RATE = sampleRate;
 		BANK_COUNT = tones * TONE_DIV;
 		LOW_TONE = (int)(12 * TONE_DIV * Math.Log(LOW_FREQ / baseFrequency, 2));
 		MID_TONE = (int)(12 * TONE_DIV * Math.Log(MID_FREQ / baseFrequency, 2));
-		AUTO_GAIN_ATTENUATION = 0.5 * bufferSamples / sampleRate;
+		AUTO_GAIN_ATTENUATION = 0.5 / sampleRate;
 		L = new double[BANK_COUNT];
 		R = new double[BANK_COUNT];
 		Peak = new double[BANK_COUNT];
@@ -78,35 +79,35 @@ public class Spectrum {
 	public void SetResponceSpeed() {
 		for (int b = 0; b < BANK_COUNT; ++b) {
 			var bank = Banks[b];
-			var frequency = bank.DELTA * SAMPLE_RATE;
-			var responceSpeed = ResponceSpeed * 16;
+			var frequency = bank.DELTA * SAMPLE_RATE / 2;
+			var responceSpeed = ResponceSpeed;
 			if (responceSpeed > frequency) {
-				bank.DisplaySigma = GetAlpha(frequency);
+				bank.DisplaySigma = GetAlpha(SAMPLE_RATE / 4, frequency);
 			}
 			else {
-				bank.DisplaySigma = GetAlpha(responceSpeed);
+				bank.DisplaySigma = GetAlpha(SAMPLE_RATE / 4, responceSpeed);
 			}
 		}
 	}
 
 	void SetBPF(BPFBank bank, double frequency) {
 		bank.DELTA = frequency / SAMPLE_RATE;
-		bank.SIGMA = GetAlpha(8 * frequency);
-		var alpha = GetAlpha(frequency);
+		bank.SIGMA = GetAlpha(SAMPLE_RATE / 4, frequency);
+		var alpha = GetAlpha(SAMPLE_RATE, frequency);
 		var a0 = 1.0 + alpha;
 		bank.KB0 = alpha / a0;
 		bank.KA1 = -2.0 * Math.Cos(2 * Math.PI * bank.DELTA) / a0;
 		bank.KA2 = (1.0 - alpha) / a0;
 	}
 
-	double GetAlpha(double frequency) {
+	double GetAlpha(int sampleRate, double frequency) {
 		const double MIN_WIDTH = 1.0;
 		const double MIN_WIDTH_AT_FREQ = 440.0;
 		var halfToneWidth = MIN_WIDTH + Math.Log(MIN_WIDTH_AT_FREQ / frequency, 2.0);
 		if (halfToneWidth < MIN_WIDTH) {
 			halfToneWidth = MIN_WIDTH;
 		}
-		var omega = 2 * Math.PI * frequency / SAMPLE_RATE;
+		var omega = 2 * Math.PI * frequency / sampleRate;
 		var s = Math.Sin(omega);
 		var x = Math.Log(2) / 4 * halfToneWidth / 12.0 * omega / s;
 		var a = s * Math.Sinh(x);
@@ -121,12 +122,13 @@ public class Spectrum {
 			mMaxDisplayL = RMS_MIN;
 			mMaxDisplayR = RMS_MIN;
 		}
+		var autoGainAttenuation = sampleCount * AUTO_GAIN_ATTENUATION;
 		if (AutoGain) {
-			mMaxDisplayL += (RMS_MIN - mMaxDisplayL) * AUTO_GAIN_ATTENUATION;
-			mMaxDisplayR += (RMS_MIN - mMaxDisplayR) * AUTO_GAIN_ATTENUATION;
+			mMaxDisplayL += (RMS_MIN - mMaxDisplayL) * autoGainAttenuation;
+			mMaxDisplayR += (RMS_MIN - mMaxDisplayR) * autoGainAttenuation;
 		}
-		mMaxL += (RMS_MIN - mMaxL) * AUTO_GAIN_ATTENUATION;
-		mMaxR += (RMS_MIN - mMaxR) * AUTO_GAIN_ATTENUATION;
+		mMaxL += (RMS_MIN - mMaxL) * autoGainAttenuation;
+		mMaxR += (RMS_MIN - mMaxR) * autoGainAttenuation;
 		mSetRms(pInput, sampleCount);
 		GainL = Math.Sqrt(mMaxL);
 		GainR = Math.Sqrt(mMaxR);
@@ -174,52 +176,12 @@ public class Spectrum {
 				thDisplayR /= width;
 			}
 
-			double thLd;
-			double thRd;
-			double thDisplayLd;
-			double thDisplayRd;
-			{
-				if (idxB == 0) {
-					thLd = TONE_DIV * Math.Abs(Banks[idxB].LPower - Banks[idxB + 1].LPower);
-					thRd = TONE_DIV * Math.Abs(Banks[idxB].RPower - Banks[idxB + 1].RPower);
-					thDisplayLd = TONE_DIV * Math.Abs(Banks[idxB].LDisplay - Banks[idxB + 1].LDisplay);
-					thDisplayRd = TONE_DIV * Math.Abs(Banks[idxB].RDisplay - Banks[idxB + 1].RDisplay);
-				}
-				else if (idxB >= BANK_COUNT - 1) {
-					thLd = TONE_DIV * Math.Abs(Banks[idxB].LPower - Banks[idxB - 1].LPower);
-					thRd = TONE_DIV * Math.Abs(Banks[idxB].RPower - Banks[idxB - 1].RPower);
-					thDisplayLd = TONE_DIV * Math.Abs(Banks[idxB].LDisplay - Banks[idxB - 1].LDisplay);
-					thDisplayRd = TONE_DIV * Math.Abs(Banks[idxB].RDisplay - Banks[idxB - 1].RDisplay);
-				}
-				else {
-					thLd = Math.Abs(Banks[idxB].LPower - Banks[idxB - 1].LPower);
-					thRd = Math.Abs(Banks[idxB].RPower - Banks[idxB - 1].RPower);
-					thDisplayLd = Math.Abs(Banks[idxB].LDisplay - Banks[idxB - 1].LDisplay);
-					thDisplayRd = Math.Abs(Banks[idxB].RDisplay - Banks[idxB - 1].RDisplay);
-					thLd += Math.Abs(Banks[idxB].LPower - Banks[idxB + 1].LPower);
-					thRd += Math.Abs(Banks[idxB].RPower - Banks[idxB + 1].RPower);
-					thDisplayLd += Math.Abs(Banks[idxB].LDisplay - Banks[idxB + 1].LDisplay);
-					thDisplayRd += Math.Abs(Banks[idxB].RDisplay - Banks[idxB + 1].RDisplay);
-					thLd *= TONE_DIV * 0.5;
-					thRd *= TONE_DIV * 0.5;
-					thDisplayLd *= TONE_DIV * 0.5;
-					thDisplayRd *= TONE_DIV * 0.5;
-				}
-				const double A = 1.2;
-				const double A1 = A - 1.0;
-				const double G = 0.05;
-				thLd = A - A1 * thLd / (thLd + G);
-				thRd = A - A1 * thRd / (thRd + G);
-				thDisplayLd = A - A1 * thDisplayLd / (thDisplayLd + G);
-				thDisplayRd = A - A1 * thDisplayRd / (thDisplayRd + G);
-			}
-
 			/* Set threshold */
-			thL = Math.Sqrt(thL * thLd / mMaxL);
-			thR = Math.Sqrt(thR * thRd / mMaxR);
-			Threshold[idxB] = Math.Sqrt(Math.Max(
-				thDisplayL * thDisplayLd / mMaxDisplayL,
-				thDisplayR * thDisplayRd / mMaxDisplayR
+			thL = THRESHOLD_OFFSET * Math.Sqrt(thL / mMaxL);
+			thR = THRESHOLD_OFFSET * Math.Sqrt(thR / mMaxR);
+			Threshold[idxB] = THRESHOLD_OFFSET * Math.Sqrt(Math.Max(
+				thDisplayL / mMaxDisplayL,
+				thDisplayR / mMaxDisplayR
 			));
 
 			/* Set peak */

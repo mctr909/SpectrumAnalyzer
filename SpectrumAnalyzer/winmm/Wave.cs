@@ -2,7 +2,7 @@
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace WINMM {
+namespace WinMM {
 	public abstract class Wave : IDisposable {
 		public enum BUFFER_TYPE {
 			INTEGER = 0,
@@ -142,28 +142,15 @@ namespace WINMM {
 			}
 		}
 
-		public void Dispose() {
-			Close();
-		}
-
-		public void SetDevice(uint deviceId) {
-			var enable = Enabled;
-			Close();
-			DeviceId = deviceId;
-			if (enable) {
-				Open();
-			}
-		}
-
-		public void Open() {
-			Close();
+		protected void OpenDevice() {
+			CloseDevice();
 			mBufferThread = new Thread(BufferTask) {
 				Priority = ThreadPriority.Highest
 			};
 			mBufferThread.Start();
 		}
 
-		public void Close() {
+		protected void CloseDevice() {
 			if (IntPtr.Zero == mHandle) {
 				return;
 			}
@@ -171,11 +158,24 @@ namespace WINMM {
 			mBufferThread.Join();
 		}
 
+		public void Dispose() {
+			CloseDevice();
+		}
+
+		public void SetDevice(uint deviceId) {
+			var enable = Enabled;
+			CloseDevice();
+			DeviceId = deviceId;
+			if (enable) {
+				OpenDevice();
+			}
+		}
+
 		public void Pause() {
 			mPause = true;
 			if (Playing) {
-				for (int i = 0; i < 50 && !mBufferPaused; i++) {
-					Thread.Sleep(100);
+				for (int i = 0; i < 40 && !mBufferPaused; i++) {
+					Thread.Sleep(50);
 				}
 			}
 			Playing = false;

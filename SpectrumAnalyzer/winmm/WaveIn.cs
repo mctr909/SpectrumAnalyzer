@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-namespace WINMM {
+namespace WinMM {
 	public abstract class WaveIn : Wave {
 		enum MM_WIM {
 			OPEN = 0x3BE,
@@ -144,6 +144,9 @@ namespace WINMM {
 				waveInUnprepareHeader(mpWaveHeader[i], mHandle, Marshal.SizeOf<WAVEHDR>());
 			}
 			waveInClose(mHandle);
+			for (int i = 0; i < 40 && Enabled; ++i) {
+				Thread.Sleep(50);
+			}
 		}
 
 		protected abstract void ReadBuffer(IntPtr pInput);

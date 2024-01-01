@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Forms;
 
-using WINMM;
+using WinMM;
 
 namespace SpectrumAnalyzer {
 	public partial class Settings : Form {
@@ -23,7 +23,7 @@ namespace SpectrumAnalyzer {
 			if (mInstance.Visible) {
 				return;
 			}
-			var key = Math.Log(OscBank.Pitch * Speed, 2.0) * 12;
+			var key = Math.Log(parent.Playback.Osc.Pitch * Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
 			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * 12 * Spectrum.TONE_DIV);
@@ -87,7 +87,7 @@ namespace SpectrumAnalyzer {
 		private void TrkResponce_Scroll(object sender, EventArgs e) {
 			Spectrum spectrum = null;
 			if (mParent.Playback.Playing) {
-				spectrum = mParent.Playback.FilterBank;
+				spectrum = mParent.Playback.Spectrum;
 			}
 			if (mParent.Record.Playing) {
 				spectrum = mParent.Record.FilterBank;
@@ -159,7 +159,7 @@ namespace SpectrumAnalyzer {
 			Spectrum.Transpose = -transpose;
 			Speed = Math.Pow(2.0, transpose / 12.0);
 			mParent.Playback.File.Speed = Speed;
-			OscBank.Pitch = Math.Pow(2.0, pitchShift / 12.0);
+			mParent.Playback.Osc.Pitch = Math.Pow(2.0, pitchShift / 12.0);
 			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			mParent.DrawBackground();
 		}

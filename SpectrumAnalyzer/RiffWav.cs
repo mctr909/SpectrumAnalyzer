@@ -50,6 +50,8 @@ public abstract class RiffWav : IDisposable {
 }
 
 public class WavReader : RiffWav {
+	public readonly bool IsOpened;
+
 	public double Position { get; set; } = 0;
 	public double Speed { get; set; } = 1.0;
 
@@ -75,7 +77,13 @@ public class WavReader : RiffWav {
 	}
 
 	public WavReader(string filePath, int sampleRate = 44100, int outputSamples = 1024, double bufferUnitSec = 0.1) {
-		mFs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+		IsOpened = false;
+		try {
+			mFs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+		}
+		catch {
+			return;
+		}
 		mBr = new BinaryReader(mFs);
 		if (!ReadHeader()) {
 			return;
@@ -92,6 +100,7 @@ public class WavReader : RiffWav {
 		mMuteData = new byte[BUFFER_SIZE];
 		mOffset = 0;
 		SetBuffer();
+		IsOpened = true;
 	}
 
 	public override void Dispose() {

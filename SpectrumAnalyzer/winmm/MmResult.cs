@@ -1,4 +1,4 @@
-﻿namespace WINMM {
+﻿namespace WinMM {
 	public enum MMRESULT {
 		MMSYSERR_NOERROR = 0,
 		MMSYSERR_ERROR = 1,

@@ -218,15 +218,16 @@
 			// TrkResponce
 			// 
 			this.TrkResponce.AutoSize = false;
-			this.TrkResponce.LargeChange = 6;
+			this.TrkResponce.LargeChange = 10;
 			this.TrkResponce.Location = new System.Drawing.Point(6, 15);
 			this.TrkResponce.Maximum = 60;
+			this.TrkResponce.Minimum = 20;
 			this.TrkResponce.Name = "TrkResponce";
 			this.TrkResponce.RightToLeft = System.Windows.Forms.RightToLeft.No;
 			this.TrkResponce.Size = new System.Drawing.Size(314, 24);
 			this.TrkResponce.TabIndex = 9;
 			this.TrkResponce.TickFrequency = 10;
-			this.TrkResponce.Value = 10;
+			this.TrkResponce.Value = 20;
 			this.TrkResponce.Scroll += new System.EventHandler(this.TrkResponce_Scroll);
 			// 
 			// GrbOutput
