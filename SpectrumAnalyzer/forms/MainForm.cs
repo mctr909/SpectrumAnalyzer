@@ -35,6 +35,7 @@ namespace SpectrumAnalyzer {
 				}
 			});
 			Record = new Record(48000);
+			MinimumSize = new Size(Settings.NOTE_COUNT * 3 + 16, 200);
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -273,7 +274,7 @@ namespace SpectrumAnalyzer {
 		void Draw() {
 			Spectrum spectrum = null;
 			if (Record.Playing) {
-				spectrum = Record.FilterBank;
+				spectrum = Record.Spectrum;
 			}
 			if (null == spectrum) {
 				spectrum = Playback.Spectrum;
@@ -282,11 +283,8 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
-			var count = spectrum.L.Length;
+			var count = spectrum.Banks.Length;
 			if (Drawer.DisplayCurve) {
-				Drawer.Curve(g, spectrum.Curve, count, width, mGaugeHeight, Drawer.SLOPE);
-			}
-			else {
 				Drawer.Surface(g, spectrum.Curve, count, width, mGaugeHeight);
 			}
 			if (Drawer.DisplayPeak) {
