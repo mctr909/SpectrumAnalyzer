@@ -24,7 +24,7 @@ namespace SpectrumAnalyzer {
 			var key = Math.Log(OscBank.Pitch * parent.Playback.File.Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
-			mInstance.TrkSpeed.Value = (int)(10 * Math.Log(parent.Playback.File.Speed, 2.0) * 12 * Spectrum.TONE_DIV);
+			mInstance.TrkSpeed.Value = (int)(Math.Log(parent.Playback.File.Speed, 2.0) * 12 * Spectrum.TONE_DIV);
 			mInstance.TrkMinLevel.Value = Drawer.MinLevel;
 			mInstance.TrkResponce.Value = (int)(0.5 + 10 * Math.Log(Spectrum.ResponceSpeed, 2));
 			mInstance.ChkCurve.Checked = Drawer.DisplayCurve;
@@ -121,9 +121,9 @@ namespace SpectrumAnalyzer {
 		}
 
 		void Initialize() {
-			TrkSpeed.Minimum = -240 * Spectrum.TONE_DIV;
-			TrkSpeed.Maximum = 120 * Spectrum.TONE_DIV;
-			TrkSpeed.TickFrequency = 10 * Spectrum.TONE_DIV;
+			TrkSpeed.Minimum = -24 * Spectrum.TONE_DIV;
+			TrkSpeed.Maximum = 12 * Spectrum.TONE_DIV;
+			TrkSpeed.TickFrequency = 6 * Spectrum.TONE_DIV;
 			CmbOutput.Items.Clear();
 			var outDevices = WaveOut.GetDeviceList();
 			if (0 == outDevices.Count) {
@@ -151,7 +151,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		void SetKeySpeed() {
-			var transpose = 0.1 * TrkSpeed.Value / Spectrum.TONE_DIV;
+			var transpose = (double)TrkSpeed.Value / Spectrum.TONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
 			Spectrum.Transpose = -transpose;

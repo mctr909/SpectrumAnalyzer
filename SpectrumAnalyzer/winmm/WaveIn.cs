@@ -79,10 +79,6 @@ namespace WINMM {
 			mCallback = (hwi, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WIM.OPEN:
-					mProcessedBufferCount = 0;
-					mStoppedBufferCount = 0;
-					mStopBuffer = false;
-					mCallbackStopped = false;
 					AllocHeader();
 					Enabled = true;
 					break;
@@ -94,9 +90,6 @@ namespace WINMM {
 				case MM_WIM.DATA:
 					lock (mLockBuffer) {
 						if (mStopBuffer) {
-							if (++mStoppedBufferCount == mBufferCount) {
-								mCallbackStopped = true;
-							}
 							break;
 						}
 						waveInAddBuffer(hwi, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
@@ -110,8 +103,10 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
+			mStopBuffer = false;
 			mPauseBuffer = false;
 			mBufferPaused = false;
+			mProcessedBufferCount = 0;
 			var mr = waveInOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero);
 			if (MMRESULT.MMSYSERR_NOERROR != mr) {
 				return;
@@ -143,9 +138,6 @@ namespace WINMM {
 				if (enableWait) {
 					Thread.Sleep(1);
 				}
-			}
-			for (int i = 0; i < 50 && !mCallbackStopped; i++) {
-				Thread.Sleep(100);
 			}
 			waveInReset(mHandle);
 			for (int i = 0; i < mBufferCount; ++i) {

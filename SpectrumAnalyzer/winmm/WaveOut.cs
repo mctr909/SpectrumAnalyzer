@@ -86,11 +86,6 @@ namespace WINMM {
 			mCallback = (hwo, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WOM.OPEN:
-					mProcessedBufferCount = 0;
-					mStartedBufferCount = 0;
-					mStoppedBufferCount = 0;
-					mStopBuffer = false;
-					mCallbackStopped = false;
 					AllocHeader();
 					Enabled = true;
 					break;
@@ -101,18 +96,12 @@ namespace WINMM {
 					break;
 				case MM_WOM.DONE:
 					lock (mLockBuffer) {
-						if (mStopBuffer && mStartedBufferCount >= mBufferCount) {
-							if (++mStoppedBufferCount == mBufferCount) {
-								mCallbackStopped = true;
-							}
+						if (mStopBuffer) {
 							break;
 						}
 						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
 						if (mProcessedBufferCount > 0) {
 							mProcessedBufferCount--;
-						}
-						if (mStartedBufferCount < mBufferCount) {
-							mStartedBufferCount++;
 						}
 					}
 					break;
@@ -121,8 +110,10 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
+			mStopBuffer = false;
 			mPauseBuffer = false;
 			mBufferPaused = false;
+			mProcessedBufferCount = 0;
 			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 			if (MMRESULT.MMSYSERR_NOERROR != ret) {
 				return;
@@ -156,9 +147,6 @@ namespace WINMM {
 				if (enableWait) {
 					Thread.Sleep(1);
 				}
-			}
-			for (int i = 0; i < 100 && !mCallbackStopped; i++) {
-				Thread.Sleep(50);
 			}
 			waveOutReset(mHandle);
 			for (int i = 0; i < mBufferCount; ++i) {

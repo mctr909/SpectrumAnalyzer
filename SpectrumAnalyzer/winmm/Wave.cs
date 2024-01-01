@@ -77,11 +77,8 @@ namespace WINMM {
 		protected int mBufferSize;
 		protected int mBufferCount;
 		protected int mProcessedBufferCount = 0;
-		protected int mStartedBufferCount = 0;
-		protected int mStoppedBufferCount = 0;
 		protected bool mStopBuffer = false;
 		protected bool mPauseBuffer = false;
-		protected bool mCallbackStopped = true;
 		protected bool mBufferPaused = true;
 		protected object mLockBuffer = new object();
 		Thread mBufferThread;
@@ -163,9 +160,6 @@ namespace WINMM {
 				Priority = ThreadPriority.Highest
 			};
 			mBufferThread.Start();
-			for (int i = 0; i < 50 && mCallbackStopped; i++) {
-				Thread.Sleep(100);
-			}
 		}
 
 		public void Close() {

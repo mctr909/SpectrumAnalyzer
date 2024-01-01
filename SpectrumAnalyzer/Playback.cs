@@ -29,7 +29,7 @@ namespace SpectrumAnalyzer {
 		public void OpenFile(string filePath) {
 			Pause();
 			File.Dispose();
-			File = new WavReader(filePath, SampleRate, BufferSamples, 0.1);
+			File = new WavReader(filePath, SampleRate, BufferSamples, 0.25);
 		}
 
 		protected override void WriteBuffer(IntPtr pBuffer) {

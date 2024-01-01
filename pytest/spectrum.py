@@ -11,7 +11,6 @@ class _ToneBank:
     def __init__(self, sampleRate: int, freq: float):
         MIN_WIDTH = 1.0
         MIN_WIDTH_AT_FREQ = 800
-        SIDEROBE = 1.5
         halfToneWidth = MIN_WIDTH + math.log(MIN_WIDTH_AT_FREQ / freq, 2.0)
         if (halfToneWidth < MIN_WIDTH):
             halfToneWidth = MIN_WIDTH
@@ -22,10 +21,10 @@ class _ToneBank:
         omega = 2 * math.pi * delta
         s = math.sin(omega)
         x = math.log(2, math.exp(1)) / 4 * omega / s * halfToneWidth / 12.0
-        self.SIGMA = s * math.sinh(x*SIDEROBE)
+        self.SIGMA = s * math.sinh(x)
 
 class _BPFBank:
-    DELTA: float
+    SIGMA: float
     KB0: float
     KA1: float
     KA2: float
@@ -41,12 +40,12 @@ class _BPFBank:
         halfToneWidth = MIN_WIDTH + math.log(MIN_WIDTH_AT_FREQ / freq, 2.0)
         if (halfToneWidth < MIN_WIDTH):
             halfToneWidth = MIN_WIDTH
-        self.DELTA = freq / sampleRate
-        omega = 2 * math.pi * self.DELTA
+        omega = 2 * math.pi * freq / sampleRate
         s = math.sin(omega)
         x = math.log(2, math.exp(1)) / 4 * omega / s * halfToneWidth / 12.0
         alpha = s * math.sinh(x)
         a0 = 1.0 + alpha
+        self.SIGMA = alpha
         self.KB0 = alpha / a0
         self.KA1 = -2.0 * math.cos(omega) / a0
         self.KA2 = (1.0 - alpha) / a0
@@ -161,7 +160,7 @@ class Spectrum:
                 tone.Im += (self.InputBuffer[i]*bs - tone.Im)*tone.SIGMA
                 # 振幅の2乗の平均
                 power = tone.Re*tone.Re + tone.Im*tone.Im
-                avgPower += (power - avgPower) * tone.DELTA
+                avgPower += (power - avgPower) * tone.SIGMA
             # 振幅の2乗の平均を格納
             self.__AvgPower[b] = avgPower
             # 振幅(db)を格納
@@ -185,7 +184,7 @@ class Spectrum:
                 bpf.b2 = bpf.b1
                 bpf.b1 = input
                 # 振幅の2乗の平均
-                avgPower += (output * output - avgPower) * bpf.DELTA
+                avgPower += (output * output - avgPower) * bpf.SIGMA
             # 振幅の2乗の平均を格納
             self.__AvgPower[b] = avgPower
             # 振幅(db)を格納

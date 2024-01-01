@@ -59,12 +59,12 @@
 			this.TrkSpeed.AutoSize = false;
 			this.TrkSpeed.LargeChange = 6;
 			this.TrkSpeed.Location = new System.Drawing.Point(6, 15);
-			this.TrkSpeed.Maximum = 120;
-			this.TrkSpeed.Minimum = -240;
+			this.TrkSpeed.Maximum = 12;
+			this.TrkSpeed.Minimum = -24;
 			this.TrkSpeed.Name = "TrkSpeed";
 			this.TrkSpeed.Size = new System.Drawing.Size(314, 24);
 			this.TrkSpeed.TabIndex = 1;
-			this.TrkSpeed.TickFrequency = 10;
+			this.TrkSpeed.TickFrequency = 1;
 			this.TrkSpeed.Scroll += new System.EventHandler(this.TrkSpeed_Scroll);
 			// 
 			// TrkKey

@@ -1,13 +1,14 @@
 ﻿using System;
+using System.Runtime.InteropServices;
 
-public class OscBank {
+public class OscBank  {
 	class Tone {
 		public double AmpL;
 		public double AmpR;
 		public double Phase;
 	}
 
-	const double DECLICK_SPEED = 0.05;
+	const double DECLICK_SPEED = 0.1;
 	const double THRESHOLD = 0.001; /* -60db */
 	const int TABLE_LENGTH = 192;
 	readonly int BUFFER_SAMPLES;
@@ -21,8 +22,7 @@ public class OscBank {
 	}
 
 	Tone[] Tones;
-	double[] mBufferL;
-	double[] mBufferR;
+	float[] mMuteData;
 
 	public static double Pitch { get; set; } = 1.0;
 
@@ -35,11 +35,11 @@ public class OscBank {
 				Phase = random.NextDouble(),
 			};
 		}
-		mBufferL = new double[BUFFER_SAMPLES];
-		mBufferR = new double[BUFFER_SAMPLES];
+		mMuteData = new float[BUFFER_SAMPLES * 2];
 	}
 
-	public unsafe void SetWave(Spectrum spectrum, IntPtr pOutput) {
+	public unsafe void SetWave(Spectrum spectrum, IntPtr output) {
+		Marshal.Copy(mMuteData, 0, output, mMuteData.Length);
 		var lowToneIndex = 0;
 		var lowTonePhase = 0.0;
 		var lowToneAmp = 0.0;
@@ -96,25 +96,19 @@ public class OscBank {
 				}
 			}
 			delta *= Pitch;
-			for (int t = 0; t < BUFFER_SAMPLES; t++) {
-				var indexD = tone.Phase * TABLE_LENGTH;
-				var index = (int)indexD;
-				var a2b = indexD - index;
+			var pOutput = (float*)output;
+			for (int s = 0; s < BUFFER_SAMPLES; s++) {
+				var indexF = tone.Phase * TABLE_LENGTH;
+				var indexI = (int)indexF;
+				var a2b = indexF - indexI;
 				tone.Phase += delta;
 				tone.Phase -= (int)tone.Phase;
 				tone.AmpL += (specAmpL - tone.AmpL) * DECLICK_SPEED;
 				tone.AmpR += (specAmpR - tone.AmpR) * DECLICK_SPEED;
-				var wave = TABLE[index] * (1.0 - a2b) + TABLE[index + 1] * a2b;
-				mBufferL[t] += wave * tone.AmpL;
-				mBufferR[t] += wave * tone.AmpR;
+				var wave = TABLE[indexI] * (1.0 - a2b) + TABLE[indexI + 1] * a2b;
+				*pOutput++ += (float)(wave * tone.AmpL);
+				*pOutput++ += (float)(wave * tone.AmpR);
 			}
-		}
-		var output = (float*)pOutput;
-		for (int t = 0, i = 0; t < BUFFER_SAMPLES; t++, i += 2) {
-			output[i] = (float)mBufferL[t];
-			output[i + 1] = (float)mBufferR[t];
-			mBufferL[t] = 0.0;
-			mBufferR[t] = 0.0;
 		}
 	}
 }
