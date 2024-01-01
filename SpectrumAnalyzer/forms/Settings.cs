@@ -169,7 +169,7 @@ namespace SpectrumAnalyzer.Forms {
 			ParentForm.Playback.File.Speed = Speed;
 			ParentForm.Playback.Spectrum.Transpose = -transpose;
 			ParentForm.Playback.Spectrum.Pitch = Math.Pow(2.0, pitchShift / 12.0);
-			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
+			Drawer.KeyShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			ParentForm.DrawBackground();
 			DispValue();
 		}
