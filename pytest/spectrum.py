@@ -10,7 +10,7 @@ class _ToneBank:
 
     def __init__(self, sampleRate: int, freq: float):
         MIN_WIDTH = 1.0
-        MIN_WIDTH_AT_FREQ = 660
+        MIN_WIDTH_AT_FREQ = 800
         SIDEROBE = 1.5
         halfToneWidth = MIN_WIDTH + math.log(MIN_WIDTH_AT_FREQ / freq, 2.0)
         if (halfToneWidth < MIN_WIDTH):

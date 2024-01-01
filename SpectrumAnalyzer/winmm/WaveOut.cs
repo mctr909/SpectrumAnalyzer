@@ -38,6 +38,8 @@ namespace WINMM {
 		delegate void DCallback(IntPtr hwo, MM_WOM uMsg, int dwUser, IntPtr lpWaveHdr, int dwParam2);
 		DCallback mCallback;
 
+		byte[] mMuteData;
+
 		#region dll
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		static extern uint waveOutGetNumDevs();
@@ -75,6 +77,12 @@ namespace WINMM {
 
 		public WaveOut(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount)
 			: base(sampleRate, channels, type, bufferSamples, bufferCount) {
+			mMuteData = new byte[WaveFormatEx.nBlockAlign * bufferSamples];
+			if (WaveFormatEx.wBitsPerSample == 8) {
+				for (int i = 0; i < mMuteData.Length; ++i) {
+					mMuteData[i] = 128;
+				}
+			}
 			mCallback = (hwo, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WOM.OPEN:
@@ -83,8 +91,11 @@ namespace WINMM {
 					mStoppedBufferCount = 0;
 					mStopBuffer = false;
 					mCallbackStopped = false;
+					Enabled = true;
 					break;
 				case MM_WOM.CLOSE:
+					mHandle = IntPtr.Zero;
+					Enabled = false;
 					break;
 				case MM_WOM.DONE:
 					lock (mLockBuffer) {
@@ -108,8 +119,9 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
-			Enabled = true;
-			var ret = waveOutOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+			mPauseBuffer = false;
+			mBufferPaused = false;
+			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 			if (MMRESULT.MMSYSERR_NOERROR != ret) {
 				mHandle = IntPtr.Zero;
 				Enabled = false;
@@ -131,7 +143,13 @@ namespace WINMM {
 					}
 					else {
 						var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[writeIndex]);
-						WriteBuffer(header.lpData);
+						if (mPauseBuffer) {
+							Marshal.Copy(mMuteData, 0, header.lpData, mMuteData.Length);
+							mBufferPaused = true;
+						}
+						else {
+							WriteBuffer(header.lpData);
+						}
 						writeIndex = (writeIndex + 1) % mBufferCount;
 						mProcessedBufferCount++;
 					}
@@ -149,8 +167,6 @@ namespace WINMM {
 			}
 			waveOutClose(mHandle);
 			DisposeHeader();
-			mHandle = IntPtr.Zero;
-			Enabled = false;
 		}
 
 		protected abstract void WriteBuffer(IntPtr pBuffer);

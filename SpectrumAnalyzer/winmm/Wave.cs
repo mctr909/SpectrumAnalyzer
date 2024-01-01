@@ -47,7 +47,7 @@ namespace WINMM {
 		}
 
 		[StructLayout(LayoutKind.Sequential)]
-		protected struct WAVEFORMATEX {
+		public struct WAVEFORMATEX {
 			public ushort wFormatTag;
 			public ushort nChannels;
 			public uint nSamplesPerSec;
@@ -71,8 +71,8 @@ namespace WINMM {
 		protected const uint WAVE_MAPPER = unchecked((uint)-1);
 
 		#region dynamic variable
+		public WAVEFORMATEX WaveFormatEx;
 		protected IntPtr mHandle;
-		protected WAVEFORMATEX mWaveFormatEx;
 		protected IntPtr[] mpWaveHeader;
 		protected int mBufferSize;
 		protected int mBufferCount;
@@ -80,13 +80,16 @@ namespace WINMM {
 		protected int mStartedBufferCount = 0;
 		protected int mStoppedBufferCount = 0;
 		protected bool mStopBuffer = false;
+		protected bool mPauseBuffer = false;
 		protected bool mCallbackStopped = true;
+		protected bool mBufferPaused = true;
 		protected object mLockBuffer = new object();
 		Thread mBufferThread;
 		#endregion
 
 		#region property
 		public bool Enabled { get; protected set; }
+		public bool Playing { get; protected set; }
 		public uint DeviceId { get; private set; } = WAVE_MAPPER;
 		public int SampleRate { get; private set; }
 		public int Channels { get; private set; }
@@ -101,7 +104,7 @@ namespace WINMM {
 			BufferSamples = bufferSamples;
 			mBufferSize = bufferSamples * bytesPerSample;
 			mBufferCount = bufferCount;
-			mWaveFormatEx = new WAVEFORMATEX() {
+			WaveFormatEx = new WAVEFORMATEX() {
 				wFormatTag = (ushort)((type & BUFFER_TYPE.FLOAT) > 0 ? 3 : 1),
 				nChannels = (ushort)channels,
 				nSamplesPerSec = (uint)sampleRate,
@@ -171,6 +174,22 @@ namespace WINMM {
 			}
 			mStopBuffer = true;
 			mBufferThread.Join();
+		}
+
+		public void Pause() {
+			mPauseBuffer = true;
+			if (Playing) {
+				for (int i = 0; i < 50 && !mBufferPaused; i++) {
+					Thread.Sleep(100);
+				}
+			}
+			Playing = false;
+		}
+
+		public void Start() {
+			mPauseBuffer = false;
+			mBufferPaused = false;
+			Playing = Enabled;
 		}
 
 		protected abstract void BufferTask();

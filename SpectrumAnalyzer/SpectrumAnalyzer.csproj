@@ -72,8 +72,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="spectrum\Bandpass.cs" />
     <Compile Include="Drawer.cs" />
+    <Compile Include="spectrum\BPFBank.cs" />
     <Compile Include="winmm\MmResult.cs" />
     <Compile Include="Record.cs" />
     <Compile Include="forms\Settings.cs">

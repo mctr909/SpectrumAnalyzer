@@ -57,6 +57,17 @@ namespace SpectrumAnalyzer {
 		private void TrkSpeed_Scroll(object sender, EventArgs e) {
 			SetKeySpeed();
 			DispValue();
+			Spectrum spectrum = null;
+			if (mParent.Playback.Enabled) {
+				spectrum = mParent.Playback.FilterBank;
+			}
+			if (mParent.Record.Enabled) {
+				spectrum = mParent.Record.FilterBank;
+			}
+			if (null == spectrum) {
+				return;
+			}
+			spectrum.SetSpeed(mParent.Playback.Speed);
 		}
 
 		private void ChkCurve_CheckedChanged(object sender, EventArgs e) {
@@ -94,16 +105,18 @@ namespace SpectrumAnalyzer {
 				return;
 			}
 			Spectrum.ResponceSpeed = Math.Pow(2, 0.1 * TrkResponce.Value);
-			spectrum.SetResponceSpeed(44100);
+			spectrum.SetResponceSpeed();
 			DispValue();
 		}
 
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
 			Spectrum.NormGain = RbNormGain.Checked;
+			mParent.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
 			Spectrum.AutoGain = RbAutoGain.Checked;
+			mParent.DrawBackground();
 		}
 
 		private void RbGainNone_CheckedChanged(object sender, EventArgs e) {

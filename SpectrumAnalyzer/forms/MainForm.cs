@@ -35,6 +35,8 @@ namespace SpectrumAnalyzer {
 			timer1.Interval = 1;
 			timer1.Enabled = true;
 			timer1.Start();
+			Playback.Open();
+			Record.Open();
 		}
 
 		private void Form1_Resize(object sender, EventArgs e) {
@@ -49,11 +51,9 @@ namespace SpectrumAnalyzer {
 			if (!File.Exists(filePath)) {
 				return;
 			}
-			var enable = Playback.Enabled;
-			Playback.Close();
-			Playback.Position = 0;
+			var playing = Playback.Playing;
 			try {
-				Playback.LoadFile(filePath);
+				Playback.OpenFile(filePath);
 			} catch (Exception ex) {
 				MessageBox.Show(ex.ToString());
 			}
@@ -61,19 +61,19 @@ namespace SpectrumAnalyzer {
 			TrkSeek.Maximum = 10 * Playback.Length / Playback.SampleRate;
 			TrkSeek.TickFrequency = TrkSeek.Maximum / 10;
 			TrkSeek.Value = 0;
-			if (enable) {
-				Playback.Open();
+			if (playing) {
+				Playback.Start();
 			}
 		}
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
-			if (Playback.Enabled) {
-				Playback.Close();
+			if (Playback.Playing) {
+				Playback.Pause();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 			} else {
-				Record.Close();
-				Playback.Open();
+				Record.Pause();
+				Playback.Start();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 				TsbPlay.Text = "停止";
@@ -83,13 +83,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
-			if (Record.Enabled) {
-				Record.Close();
+			if (Record.Playing) {
+				Record.Pause();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 			} else {
-				Playback.Close();
-				Record.Open();
+				Playback.Pause();
+				Record.Start();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 				TsbRec.Text = "停止";
@@ -166,14 +166,11 @@ namespace SpectrumAnalyzer {
 
 		void Draw() {
 			Spectrum spectrum = null;
-			if (Playback.Enabled) {
-				spectrum = Playback.FilterBank;
-			}
-			if (Record.Enabled) {
+			if (Record.Playing) {
 				spectrum = Record.FilterBank;
 			}
 			if (null == spectrum) {
-				return;
+				spectrum = Playback.FilterBank;
 			}
 			var bmp = (Bitmap)pictureBox1.Image;
 			var g = Graphics.FromImage(bmp);
@@ -187,9 +184,9 @@ namespace SpectrumAnalyzer {
 			}
 			if (Drawer.DisplayPeak) {
 				Drawer.Peak(g, spectrum.Peak, count, width, mGaugeHeight);
-				Drawer.Scroll(bmp, spectrum.Peak, count, mGaugeHeight, mScrollHeight);
+				Drawer.Scroll(bmp, spectrum.Peak, count, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
 			} else {
-				Drawer.Scroll(bmp, spectrum.Curve, count, mGaugeHeight, mScrollHeight);
+				Drawer.Scroll(bmp, spectrum.Curve, count, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
 			}
 			if (Drawer.DisplayThreshold) {
 				Drawer.Curve(g, spectrum.Threshold, count, width, mGaugeHeight, Drawer.THRESHOLD);

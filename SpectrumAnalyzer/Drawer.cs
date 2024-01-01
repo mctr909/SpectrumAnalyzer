@@ -7,8 +7,6 @@ namespace SpectrumAnalyzer {
 	static class Drawer {
 		const int SCROLL_SPEED = 2;
 
-		const int ALPHA_MAX = 191;
-
 		static readonly Font FONT = new Font("Meiryo UI", 8f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(147, 147, 147), 1.0f);
 		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(71, 71, 71), 1.0f);
@@ -72,31 +70,31 @@ namespace SpectrumAnalyzer {
 				b = 255;
 				g = 0;
 				r = 0;
-				a = ALPHA_MAX * v / 255.0;
+				a = v * 0.32;
 			}
 			else if (v < 512) {
 				b = 255;
 				g = v - 256;
 				r = 0;
-				a = ALPHA_MAX;
+				a = 0.33 + v * 0.32;
 			}
 			else if (v < 768) {
 				b = 255 - (v - 512);
 				g = 255;
 				r = 0;
-				a = ALPHA_MAX;
+				a = 0.33 + v * 0.32;
 			}
 			else if (v < 1024) {
 				b = 0;
 				g = 255;
 				r = v - 768;
-				a = ALPHA_MAX;
+				a = 255;
 			}
 			else {
 				b = 0;
 				g = 255 - (v - 1024);
 				r = 255;
-				a = ALPHA_MAX;
+				a = 255;
 			}
 			for (int x = 0, p = offset; x < width; x++, p += 4) {
 				ScrollCanvas[p + 0] = (byte)b;
@@ -260,7 +258,7 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		public static void Scroll(Bitmap bmp, double[] arr, int count, int top, int scrollHeight) {
+		public static void Scroll(Bitmap bmp, double[] arr, int count, int top, int scrollHeight, int keyboardHeight) {
 			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : 4;
 			var width = bmp.Width;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
@@ -287,7 +285,7 @@ namespace SpectrumAnalyzer {
 					}
 				}
 			}
-			for (int y = 1; y < KEYBOARD_HEIGHT; y++) {
+			for (int y = 1; y < keyboardHeight; y++) {
 				Buffer.BlockCopy(
 					ScrollCanvas, offsetY0,
 					ScrollCanvas, offsetY0 + pix.Stride * y,
@@ -295,7 +293,7 @@ namespace SpectrumAnalyzer {
 				);
 			}
 			if (SCROLL_SPEED < scrollHeight) {
-				var offsetY1 = pix.Stride * (top + KEYBOARD_HEIGHT);
+				var offsetY1 = pix.Stride * (top + keyboardHeight);
 				Buffer.BlockCopy(
 					ScrollCanvas, offsetY1,
 					ScrollCanvas, offsetY1 + pix.Stride * SCROLL_SPEED,
@@ -310,7 +308,7 @@ namespace SpectrumAnalyzer {
 			Marshal.Copy(
 				ScrollCanvas, offsetY0,
 				pix.Scan0 + offsetY0,
-				pix.Stride * (KEYBOARD_HEIGHT + scrollHeight)
+				pix.Stride * (keyboardHeight + scrollHeight)
 			);
 			bmp.UnlockBits(pix);
 		}

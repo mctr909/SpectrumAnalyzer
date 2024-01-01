@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Runtime.InteropServices;
 
 public abstract class RiffWav : IDisposable {
 	protected const uint SIGN_RIFF = 0x46464952;
@@ -23,14 +24,25 @@ public abstract class RiffWav : IDisposable {
 
 	public FMT Fmt;
 	public long Samples { get; protected set; } = 0;
+	public int Position { get; protected set; } = 0;
 
 	protected FileStream mFs;
 	protected long mDataSize;
 	protected long mDataBegin;
 
-	public void Dispose() {
+	public virtual void Dispose() {
 		mFs.Close();
 		mFs.Dispose();
+	}
+
+	public void Seek(int samples) {
+		mFs.Seek(Fmt.BlockSize * samples, SeekOrigin.Current);
+		Position += samples;
+	}
+
+	public void SeekBegin(int samples) {
+		mFs.Seek(Fmt.BlockSize * samples, SeekOrigin.Begin);
+		Position = samples;
 	}
 
 	protected void WriteHeader(BinaryWriter bw) {
@@ -53,22 +65,43 @@ public abstract class RiffWav : IDisposable {
 }
 
 public class WavReader : RiffWav {
-	public delegate void Reader();
-
-	public Reader Read;
-
-	public double[] Values { get; private set; }
+	public readonly int BufferSamples;
+	public IntPtr Buffer = IntPtr.Zero;
 
 	BinaryReader mBr;
+	byte[] mMuteData;
 
-	public WavReader(string filePath) {
+	public WavReader(string filePath, int bufferSamples) {
+		BufferSamples = bufferSamples;
 		mFs = new FileStream(filePath, FileMode.Open);
 		mBr = new BinaryReader(mFs);
 		if (!ReadHeader()) {
-			Read = ReadInvalid;
 			return;
 		}
-		SetReader();
+		Buffer = Marshal.AllocHGlobal(Fmt.BlockSize * bufferSamples);
+		mMuteData = new byte[Fmt.BlockSize * bufferSamples];
+		SetBuffer(0);
+	}
+
+	public override void Dispose() {
+		base.Dispose();
+		Marshal.FreeHGlobal(Buffer);
+	}
+
+	public void SetBuffer(int offset) {
+		SeekBegin(offset);
+		if (Samples - Position <= BufferSamples) {
+			var readSize = (int)(Samples - Position) * Fmt.BlockSize;
+			Marshal.Copy(mMuteData, 0, Buffer, mMuteData.Length);
+			Marshal.Copy(mBr.ReadBytes(readSize), 0, Buffer, readSize);
+			Position = (int)Samples;
+		}
+		else {
+			var readSize = (BufferSamples + 1) * Fmt.BlockSize;
+			Marshal.Copy(mBr.ReadBytes(readSize), 0, Buffer, readSize);
+			Seek(-1);
+			Position += BufferSamples;
+		}
 	}
 
 	bool ReadHeader() {
@@ -135,103 +168,6 @@ public class WavReader : RiffWav {
 		Samples = mDataSize / Fmt.BlockSize;
 		mFs.Seek(mDataBegin, SeekOrigin.Begin);
 		return true;
-	}
-
-	void SetReader() {
-		switch (Fmt.Channel) {
-		case 1:
-			switch (Fmt.BitsPerSample) {
-			case 8:
-				Read = Read8M;
-				break;
-			case 16:
-				Read = Read16M;
-				break;
-			case 24:
-				Read = Read24M;
-				break;
-			case 32:
-				if (Fmt.FormatID == FMT.TYPE.PCM_FLOAT) {
-					Read = Read32fM;
-				}
-				else {
-					Read = Read32M;
-				}
-				break;
-			default:
-				Read = ReadInvalid;
-				break;
-			}
-			break;
-		case 2:
-			switch (Fmt.BitsPerSample) {
-			case 8:
-				Read = Read8S;
-				break;
-			case 16:
-				Read = Read16S;
-				break;
-			case 24:
-				Read = Read24S;
-				break;
-			case 32:
-				if (Fmt.FormatID == FMT.TYPE.PCM_FLOAT) {
-					Read = Read32fS;
-				}
-				else {
-					Read = Read32S;
-				}
-				break;
-			default:
-				Read = ReadInvalid;
-				break;
-			}
-			break;
-		default:
-			Read = ReadInvalid;
-			break;
-		}
-		Values = new double[Fmt.Channel];
-	}
-
-	void ReadInvalid() { }
-	void Read8M() {
-		Values[0] = (mBr.ReadByte() - 128) / 128.0;
-	}
-	void Read8S() {
-		Values[0] = (mBr.ReadByte() - 128) / 128.0;
-		Values[1] = (mBr.ReadByte() - 128) / 128.0;
-	}
-	void Read16M() {
-		Values[0] = mBr.ReadInt16() / 32768.0;
-	}
-	void Read16S() {
-		Values[0] = mBr.ReadInt16() / 32768.0;
-		Values[1] = mBr.ReadInt16() / 32768.0;
-	}
-	void Read24M() {
-		var temp = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
-		Values[0] = (double)(int)temp / (1 << 31);
-	}
-	void Read24S() {
-		var tempL = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
-		var tempR = ((uint)mBr.ReadByte() << 8) | ((uint)mBr.ReadUInt16() << 16);
-		Values[0] = (double)(int)tempL / (1 << 31);
-		Values[1] = (double)(int)tempR / (1 << 31);
-	}
-	void Read32M() {
-		Values[0] = (double)mBr.ReadInt32() / (1 << 31);
-	}
-	void Read32S() {
-		Values[0] = (double)mBr.ReadInt32() / (1 << 31);
-		Values[1] = (double)mBr.ReadInt32() / (1 << 31);
-	}
-	void Read32fM() {
-		Values[0] = mBr.ReadSingle();
-	}
-	void Read32fS() {
-		Values[0] = mBr.ReadSingle();
-		Values[1] = mBr.ReadSingle();
 	}
 }
 

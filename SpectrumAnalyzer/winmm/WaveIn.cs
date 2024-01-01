@@ -83,8 +83,11 @@ namespace WINMM {
 					mStoppedBufferCount = 0;
 					mStopBuffer = false;
 					mCallbackStopped = false;
+					Enabled = true;
 					break;
 				case MM_WIM.CLOSE:
+					mHandle = IntPtr.Zero;
+					Enabled = false;
 					break;
 				case MM_WIM.DATA:
 					lock (mLockBuffer) {
@@ -105,8 +108,9 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
-			Enabled = true;
-			var mr = waveInOpen(ref mHandle, DeviceId, ref mWaveFormatEx, mCallback, IntPtr.Zero);
+			mPauseBuffer = false;
+			mBufferPaused = false;
+			var mr = waveInOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero);
 			if (MMRESULT.MMSYSERR_NOERROR != mr) {
 				mHandle = IntPtr.Zero;
 				Enabled = false;
@@ -126,10 +130,15 @@ namespace WINMM {
 						enableWait = true;
 					}
 					else {
-						var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[readIndex]);
-						ReadBuffer(header.lpData);
-						readIndex = (readIndex + 1) % mBufferCount;
-						mProcessedBufferCount++;
+						if (mPauseBuffer) {
+							mBufferPaused = true;
+						}
+						else {
+							var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[readIndex]);
+							ReadBuffer(header.lpData);
+							readIndex = (readIndex + 1) % mBufferCount;
+							mProcessedBufferCount++;
+						}
 					}
 				}
 				if (enableWait) {
@@ -145,8 +154,6 @@ namespace WINMM {
 			}
 			waveInClose(mHandle);
 			DisposeHeader();
-			mHandle = IntPtr.Zero;
-			Enabled = false;
 		}
 
 		protected abstract void ReadBuffer(IntPtr pInput);

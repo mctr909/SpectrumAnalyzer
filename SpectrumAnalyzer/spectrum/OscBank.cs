@@ -7,7 +7,7 @@ public class OscBank {
 		public double Phase;
 	}
 
-	const double DECLICK_SPEED = 0.02;
+	const double DECLICK_SPEED = 0.05;
 	const double THRESHOLD = 0.001; /* -60db */
 	const int TABLE_LENGTH = 192;
 	readonly int BUFFER_SAMPLES;
@@ -47,7 +47,7 @@ public class OscBank {
 			var specAmpL = 0.0;
 			var specAmpR = 0.0;
 			var specAmpC = 0.0;
-			var delta = spectrum.Banks[idxB + Spectrum.TONE_DIV_CENTER].Delta;
+			var delta = spectrum.Banks[idxB + Spectrum.TONE_DIV_CENTER].DELTA;
 			for (int div = 0, divB = idxB; div < Spectrum.TONE_DIV; div++, divB++) {
 				var peakL = spectrum.L[divB];
 				var peakR = spectrum.R[divB];
@@ -60,7 +60,7 @@ public class OscBank {
 				}
 				if (specAmpC < peakC) {
 					specAmpC = peakC;
-					delta = spectrum.Banks[divB].Delta;
+					delta = spectrum.Banks[divB].DELTA;
 				}
 			}
 			specAmpL *= spectrum.GainL * 2;
