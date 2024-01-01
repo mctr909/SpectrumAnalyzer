@@ -1,11 +1,15 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.14.36121.58
+# Visual Studio Version 18
+VisualStudioVersion = 18.8.12105.206
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectrumAnalyzer", "SpectrumAnalyzer\SpectrumAnalyzer.csproj", "{9D6AD913-AC21-49C6-B225-F32271722D64}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinAPI", "WinAPI\WinAPI.vcxproj", "{0883138E-CF72-45D4-A284-642E234C4A1B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SignalProcess", "SignalProcess\SignalProcess.csproj", "{647CC365-B339-47FF-BB6B-481D162C4248}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectrumAnalyzerNet", "SpectrumAnalyzerNet\SpectrumAnalyzerNet.csproj", "{C53CA7DA-B2DD-4C56-9ED7-8C69A7A40E06}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SoundApi", "SoundApi\SoundApi.csproj", "{5634E2C7-4F2F-46C8-9151-76E0D8981D02}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -17,10 +21,18 @@ Global
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x64.Build.0 = Debug|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.ActiveCfg = Release|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.Build.0 = Release|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Debug|x64.ActiveCfg = Debug|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Debug|x64.Build.0 = Debug|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Release|x64.ActiveCfg = Release|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Release|x64.Build.0 = Release|x64
+		{647CC365-B339-47FF-BB6B-481D162C4248}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{647CC365-B339-47FF-BB6B-481D162C4248}.Debug|x64.Build.0 = Debug|Any CPU
+		{647CC365-B339-47FF-BB6B-481D162C4248}.Release|x64.ActiveCfg = Release|Any CPU
+		{647CC365-B339-47FF-BB6B-481D162C4248}.Release|x64.Build.0 = Release|Any CPU
+		{C53CA7DA-B2DD-4C56-9ED7-8C69A7A40E06}.Debug|x64.ActiveCfg = Debug|x64
+		{C53CA7DA-B2DD-4C56-9ED7-8C69A7A40E06}.Debug|x64.Build.0 = Debug|x64
+		{C53CA7DA-B2DD-4C56-9ED7-8C69A7A40E06}.Release|x64.ActiveCfg = Release|x64
+		{C53CA7DA-B2DD-4C56-9ED7-8C69A7A40E06}.Release|x64.Build.0 = Release|x64
+		{5634E2C7-4F2F-46C8-9151-76E0D8981D02}.Debug|x64.ActiveCfg = Debug|x64
+		{5634E2C7-4F2F-46C8-9151-76E0D8981D02}.Debug|x64.Build.0 = Debug|x64
+		{5634E2C7-4F2F-46C8-9151-76E0D8981D02}.Release|x64.ActiveCfg = Release|x64
+		{5634E2C7-4F2F-46C8-9151-76E0D8981D02}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
