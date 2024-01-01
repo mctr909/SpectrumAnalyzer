@@ -2,14 +2,14 @@
 using System;
 
 public class Spectrum {
-	public const int TONE_DIV = 5;
+	public const int TONE_DIV = 3;
 	public const int TONE_DIV_CENTER = TONE_DIV / 2;
 
 	const int WAVE_LENGTH = 96;
 	const int LOW_FREQ = 80;
 	const int MID_FREQ = 350;
 	const int OCT_DIV = TONE_DIV * 12;
-	const int THRESHOLD_WIDE = TONE_DIV * 12 / 2;
+	const int THRESHOLD_WIDE = TONE_DIV * 6;
 	const int THRESHOLD_NARROW = TONE_DIV * 5 / 4;
 	const double RMS_MIN = 1e-6;
 
@@ -143,61 +143,85 @@ public class Spectrum {
 		var lastDisplayIndex = -1;
 		for (int idxB = 0; idxB < BANK_COUNT; ++idxB) {
 			/* Calc threshold */
-			int width;
-			var transposeB = idxB + Transpose * TONE_DIV;
-			if (transposeB < LOW_TONE) {
-				width = THRESHOLD_WIDE;
-			}
-			else if (transposeB < MID_TONE) {
-				var a2b = (double)(transposeB - LOW_TONE) / (MID_TONE - LOW_TONE);
-				width = (int)(THRESHOLD_NARROW * a2b + THRESHOLD_WIDE * (1 - a2b));
-			}
-			else {
-				width = THRESHOLD_NARROW;
-			}
 			var thL = 0.0;
 			var thR = 0.0;
 			var thDisplayL = 0.0;
 			var thDisplayR = 0.0;
-			for (int w = -width; w <= width; ++w) {
-				var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, idxB + w));
-				thL += Banks[bw].LPower;
-				thR += Banks[bw].RPower;
-				thDisplayL += Banks[bw].LDisplay;
-				thDisplayR += Banks[bw].RDisplay;
+			{
+				int width;
+				var transposeB = idxB + Transpose * TONE_DIV;
+				if (transposeB < LOW_TONE) {
+					width = THRESHOLD_WIDE;
+				}
+				else if (transposeB < MID_TONE) {
+					var a2b = (double)(transposeB - LOW_TONE) / (MID_TONE - LOW_TONE);
+					width = (int)(THRESHOLD_NARROW * a2b + THRESHOLD_WIDE * (1 - a2b));
+				}
+				else {
+					width = THRESHOLD_NARROW;
+				}
+				for (int w = -width; w <= width; ++w) {
+					var b = Math.Min(BANK_COUNT - 1, Math.Max(0, idxB + w));
+					thL += Banks[b].LPower;
+					thR += Banks[b].RPower;
+					thDisplayL += Banks[b].LDisplay;
+					thDisplayR += Banks[b].RDisplay;
+				}
+				width = 1 + width << 1;
+				thL /= width;
+				thR /= width;
+				thDisplayL /= width;
+				thDisplayR /= width;
 			}
-			thL /= width * 2 + 1;
-			thR /= width * 2 + 1;
 
-			double dthL;
-			double dthR;
-			double dthDisplayL;
-			double dthDisplayR;
-			if (idxB == 0) {
-				dthL = 0;
-				dthR = 0;
-				dthDisplayL = 0;
-				dthDisplayR = 0;
-			} else {
-				dthL = Math.Abs(Banks[idxB].LPower - Banks[idxB - 1].LPower);
-				dthR = Math.Abs(Banks[idxB].RPower - Banks[idxB - 1].RPower);
-				dthDisplayL = Math.Abs(Banks[idxB].LDisplay - Banks[idxB - 1].LDisplay);
-				dthDisplayR = Math.Abs(Banks[idxB].RDisplay - Banks[idxB - 1].RDisplay);
+			double thLd;
+			double thRd;
+			double thDisplayLd;
+			double thDisplayRd;
+			{
+				if (idxB == 0) {
+					thLd = TONE_DIV * Math.Abs(Banks[idxB].LPower - Banks[idxB + 1].LPower);
+					thRd = TONE_DIV * Math.Abs(Banks[idxB].RPower - Banks[idxB + 1].RPower);
+					thDisplayLd = TONE_DIV * Math.Abs(Banks[idxB].LDisplay - Banks[idxB + 1].LDisplay);
+					thDisplayRd = TONE_DIV * Math.Abs(Banks[idxB].RDisplay - Banks[idxB + 1].RDisplay);
+				}
+				else if (idxB >= BANK_COUNT - 1) {
+					thLd = TONE_DIV * Math.Abs(Banks[idxB].LPower - Banks[idxB - 1].LPower);
+					thRd = TONE_DIV * Math.Abs(Banks[idxB].RPower - Banks[idxB - 1].RPower);
+					thDisplayLd = TONE_DIV * Math.Abs(Banks[idxB].LDisplay - Banks[idxB - 1].LDisplay);
+					thDisplayRd = TONE_DIV * Math.Abs(Banks[idxB].RDisplay - Banks[idxB - 1].RDisplay);
+				}
+				else {
+					thLd = Math.Abs(Banks[idxB].LPower - Banks[idxB - 1].LPower);
+					thRd = Math.Abs(Banks[idxB].RPower - Banks[idxB - 1].RPower);
+					thDisplayLd = Math.Abs(Banks[idxB].LDisplay - Banks[idxB - 1].LDisplay);
+					thDisplayRd = Math.Abs(Banks[idxB].RDisplay - Banks[idxB - 1].RDisplay);
+					thLd += Math.Abs(Banks[idxB].LPower - Banks[idxB + 1].LPower);
+					thRd += Math.Abs(Banks[idxB].RPower - Banks[idxB + 1].RPower);
+					thDisplayLd += Math.Abs(Banks[idxB].LDisplay - Banks[idxB + 1].LDisplay);
+					thDisplayRd += Math.Abs(Banks[idxB].RDisplay - Banks[idxB + 1].RDisplay);
+					thLd *= TONE_DIV * 0.5;
+					thRd *= TONE_DIV * 0.5;
+					thDisplayLd *= TONE_DIV * 0.5;
+					thDisplayRd *= TONE_DIV * 0.5;
+				}
+				const double A = 1.2;
+				const double A1 = A - 1.0;
+				const double G = 0.05;
+				thLd = A - A1 * thLd / (thLd + G);
+				thRd = A - A1 * thRd / (thRd + G);
+				thDisplayLd = A - A1 * thDisplayLd / (thDisplayLd + G);
+				thDisplayRd = A - A1 * thDisplayRd / (thDisplayRd + G);
 			}
-			const double A = 1.26;
-			const double A1 = A - 1.0;
-			const double G = 0.01;
-			dthL = A - A1 * dthL / (dthL + G);
-			dthR = A - A1 * dthR / (dthR + G);
-			dthDisplayL = A - A1 * dthDisplayL / (dthDisplayL + G);
-			dthDisplayR = A - A1 * dthDisplayR / (dthDisplayR + G);
 
-			thL = Math.Sqrt(thL * dthL / mMaxL);
-			thR = Math.Sqrt(thR * dthR / mMaxR);
+			/* Set threshold */
+			thL = Math.Sqrt(thL * thLd / mMaxL);
+			thR = Math.Sqrt(thR * thRd / mMaxR);
 			Threshold[idxB] = Math.Sqrt(Math.Max(
-				thDisplayL * dthDisplayL / mMaxDisplayL,
-				thDisplayR * dthDisplayR / mMaxDisplayR
-			) / (width * 2 + 1));
+				thDisplayL * thDisplayLd / mMaxDisplayL,
+				thDisplayR * thDisplayRd / mMaxDisplayR
+			));
+
 			/* Set peak */
 			L[idxB] = 0.0;
 			R[idxB] = 0.0;

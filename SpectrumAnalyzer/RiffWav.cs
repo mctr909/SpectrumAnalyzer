@@ -22,7 +22,7 @@ public abstract class RiffWav : IDisposable {
 		}
 	}
 
-	public FMT Format;
+	public FMT Format = new FMT() { SampleRate = 44100 };
 	public int Length { get; protected set; } = 0;
 	public int Cursor { get; protected set; } = 0;
 
@@ -74,7 +74,7 @@ public class WavReader : RiffWav {
 		Length = 1;
 	}
 
-	public WavReader(string filePath, int sampleRate, int outputSamples, double bufferUnitSec) {
+	public WavReader(string filePath, int sampleRate = 44100, int outputSamples = 1024, double bufferUnitSec = 0.1) {
 		mFs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 		mBr = new BinaryReader(mFs);
 		if (!ReadHeader()) {
@@ -99,48 +99,7 @@ public class WavReader : RiffWav {
 		Marshal.FreeHGlobal(mBuffer);
 	}
 
-	bool ReadHeader() {
-		var fileSign = mBr.ReadUInt32();
-		if (fileSign != SIGN_RIFF)
-			return false;
-
-		var fileSize = mBr.ReadUInt32();
-		var fileType = mBr.ReadUInt32();
-		if (fileType != TYPE_WAVE)
-			return false;
-
-		uint chunkSign;
-		uint chunkSize;
-		while (mFs.Position < fileSize) {
-			chunkSign = mBr.ReadUInt32();
-			chunkSize = mBr.ReadUInt32();
-			switch (chunkSign) {
-			case SIGN_FMT_:
-				Format.FormatID = (FMT.TYPE)mBr.ReadUInt16();
-				Format.Channel = mBr.ReadUInt16();
-				Format.SampleRate = mBr.ReadUInt32();
-				Format.BytesPerSecond = mBr.ReadUInt32();
-				Format.BlockSize = mBr.ReadUInt16();
-				Format.BitsPerSample = mBr.ReadUInt16();
-				if (chunkSize > 16)
-					mFs.Seek(chunkSize - 16, SeekOrigin.Current);
-				break;
-			case SIGN_DATA:
-				mDataSize = chunkSize;
-				mDataBegin = mFs.Position;
-				mFs.Seek(chunkSize, SeekOrigin.Current);
-				break;
-			default:
-				mFs.Seek(chunkSize, SeekOrigin.Current);
-				break;
-			}
-		}
-
-		mFs.Seek(mDataBegin, SeekOrigin.Begin);
-		return true;
-	}
-
-	bool CheckFormat() {
+	public bool CheckFormat() {
 		switch (Format.FormatID) {
 		case FMT.TYPE.PCM_INT:
 			switch (Format.BitsPerSample) {
@@ -206,6 +165,50 @@ public class WavReader : RiffWav {
 			return false;
 		}
 
+		return true;
+	}
+
+	bool ReadHeader() {
+		if (mFs.Length < 12)
+			return false;
+
+		var fileSign = mBr.ReadUInt32();
+		if (fileSign != SIGN_RIFF)
+			return false;
+
+		var fileSize = mBr.ReadUInt32();
+		var fileType = mBr.ReadUInt32();
+		if (fileType != TYPE_WAVE)
+			return false;
+
+		uint chunkSign;
+		uint chunkSize;
+		while (mFs.Position < fileSize) {
+			chunkSign = mBr.ReadUInt32();
+			chunkSize = mBr.ReadUInt32();
+			switch (chunkSign) {
+			case SIGN_FMT_:
+				Format.FormatID = (FMT.TYPE)mBr.ReadUInt16();
+				Format.Channel = mBr.ReadUInt16();
+				Format.SampleRate = mBr.ReadUInt32();
+				Format.BytesPerSecond = mBr.ReadUInt32();
+				Format.BlockSize = mBr.ReadUInt16();
+				Format.BitsPerSample = mBr.ReadUInt16();
+				if (chunkSize > 16)
+					mFs.Seek(chunkSize - 16, SeekOrigin.Current);
+				break;
+			case SIGN_DATA:
+				mDataSize = chunkSize;
+				mDataBegin = mFs.Position;
+				mFs.Seek(chunkSize, SeekOrigin.Current);
+				break;
+			default:
+				mFs.Seek(chunkSize, SeekOrigin.Current);
+				break;
+			}
+		}
+
+		mFs.Seek(mDataBegin, SeekOrigin.Begin);
 		return true;
 	}
 

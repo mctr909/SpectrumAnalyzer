@@ -89,7 +89,7 @@ namespace WINMM {
 					break;
 				case MM_WIM.DATA:
 					lock (mLockBuffer) {
-						if (mStopBuffer) {
+						if (mStop) {
 							break;
 						}
 						waveInAddBuffer(hwi, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
@@ -103,8 +103,8 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
-			mStopBuffer = false;
-			mPauseBuffer = false;
+			mStop = false;
+			mPause = false;
 			mBufferPaused = false;
 			mProcessedBufferCount = 0;
 			var mr = waveInOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero);
@@ -117,14 +117,14 @@ namespace WINMM {
 			}
 			waveInStart(mHandle);
 			var readIndex = 0;
-			while (!mStopBuffer) {
+			while (!mStop) {
 				var enableWait = false;
 				lock (mLockBuffer) {
 					if (mBufferCount <= mProcessedBufferCount + 1) {
 						enableWait = true;
 					}
 					else {
-						if (mPauseBuffer) {
+						if (mPause) {
 							mBufferPaused = true;
 						}
 						else {

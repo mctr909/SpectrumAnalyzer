@@ -6,6 +6,8 @@ using System.Runtime.InteropServices;
 namespace SpectrumAnalyzer {
 	static class Drawer {
 		const int SCROLL_SPEED = 4;
+		const int OFS_DB = -15;
+		const double OFS_GAIN = 5.62;
 
 		static readonly Font FONT = new Font("Meiryo UI", 8f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(147, 147, 147), 1.0f);
@@ -158,9 +160,11 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Gauge(Graphics g, int width, int height) {
+			var dbOfs = Spectrum.AutoGain || Spectrum.NormGain ? 0 : OFS_DB;
+			var dbMin = MinLevel + dbOfs;
 			var right = width - 1;
-			for (double db = 0; MinLevel <= db; db -= 1.0) {
-				var py = DbToY(db, height);
+			for (var db = dbOfs; dbMin <= db; --db) {
+				var py = DbToY(db - dbOfs, height);
 				if (db % 12 == 0) {
 					g.DrawLine(GRID_MAJOR, 0, py, right, py);
 				}
@@ -177,24 +181,25 @@ namespace SpectrumAnalyzer {
 			var stringFormat = new StringFormat() {
 				Alignment = StringAlignment.Near
 			};
-			var dbOfs = Spectrum.AutoGain || Spectrum.NormGain ? 0 : -12;
-			for (double db = 0; MinLevel < db; db -= 12.0) {
-				var py = DbToY(db, height) - 2;
-				if (py < textBottom) {
-					g.TranslateTransform(0, py);
-					g.DrawString(db + dbOfs + "", FONT, Brushes.Gray, textArea, stringFormat);
-					g.TranslateTransform(0, -py);
-				}
-				else {
-					g.TranslateTransform(0, textBottom);
-					g.DrawString(db + dbOfs + "", FONT, Brushes.Gray, textArea, stringFormat);
-					g.TranslateTransform(0, -textBottom);
+			for (var db = dbOfs; dbMin < db; --db) {
+				if (db % 12 == 0) {
+					var py = DbToY(db - dbOfs, height) - 2;
+					if (py < textBottom) {
+						g.TranslateTransform(0, py);
+						g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+						g.TranslateTransform(0, -py);
+					}
+					else {
+						g.TranslateTransform(0, textBottom);
+						g.DrawString(db + "", FONT, Brushes.Gray, textArea, stringFormat);
+						g.TranslateTransform(0, -textBottom);
+					}
 				}
 			}
 		}
 
 		public static void Surface(Graphics g, double[] arr, int count, int width, int height) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : 4;
+			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
 			var minValue = Math.Pow(10, MinLevel / 20.0);
 			for (int x = 0, i = 0; x < count; x++, i++) {
 				var val = arr[i] * scale;
@@ -209,7 +214,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Curve(Graphics g, double[] arr, int count, int width, int height, Pen color) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : 4;
+			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
 			var idxA = 0;
 			var preX = 0;
 			var preY = AmpToY(arr[idxA] * scale, height);
@@ -242,7 +247,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Peak(Graphics g, double[] arr, int count, int width, int height) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : 4;
+			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
 			var minValue = Math.Pow(10, MinLevel / 20.0);
 			var dx = (double)width / count;
 			var ox = Spectrum.TONE_DIV * dx * 0.5;
@@ -259,7 +264,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Scroll(Bitmap bmp, double[] arr, int count, int top, int scrollHeight, int keyboardHeight) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : 4;
+			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
 			var width = bmp.Width;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = pix.Stride * top;

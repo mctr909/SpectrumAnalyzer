@@ -77,8 +77,9 @@ namespace WINMM {
 		protected int mBufferSize;
 		protected int mBufferCount;
 		protected int mProcessedBufferCount = 0;
-		protected bool mStopBuffer = false;
-		protected bool mPauseBuffer = false;
+		protected bool mStop = false;
+		protected bool mPause = false;
+		protected bool mTerminate = false;
 		protected bool mBufferPaused = true;
 		protected object mLockBuffer = new object();
 		Thread mBufferThread;
@@ -166,12 +167,12 @@ namespace WINMM {
 			if (IntPtr.Zero == mHandle) {
 				return;
 			}
-			mStopBuffer = true;
+			mStop = true;
 			mBufferThread.Join();
 		}
 
 		public void Pause() {
-			mPauseBuffer = true;
+			mPause = true;
 			if (Playing) {
 				for (int i = 0; i < 50 && !mBufferPaused; i++) {
 					Thread.Sleep(100);
@@ -181,7 +182,7 @@ namespace WINMM {
 		}
 
 		public void Start() {
-			mPauseBuffer = false;
+			mPause = false;
 			mBufferPaused = false;
 			Playing = Enabled;
 		}

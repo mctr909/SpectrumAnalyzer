@@ -64,7 +64,6 @@
 			this.TrkSpeed.Name = "TrkSpeed";
 			this.TrkSpeed.Size = new System.Drawing.Size(314, 24);
 			this.TrkSpeed.TabIndex = 1;
-			this.TrkSpeed.TickFrequency = 1;
 			this.TrkSpeed.Scroll += new System.EventHandler(this.TrkSpeed_Scroll);
 			// 
 			// TrkKey
@@ -160,10 +159,10 @@
 			this.RbGainNone.AutoSize = true;
 			this.RbGainNone.Location = new System.Drawing.Point(229, 45);
 			this.RbGainNone.Name = "RbGainNone";
-			this.RbGainNone.Size = new System.Drawing.Size(68, 19);
+			this.RbGainNone.Size = new System.Drawing.Size(82, 19);
 			this.RbGainNone.TabIndex = 2;
 			this.RbGainNone.TabStop = true;
-			this.RbGainNone.Text = "調整なし";
+			this.RbGainNone.Text = "-15db最大";
 			this.RbGainNone.UseVisualStyleBackColor = true;
 			this.RbGainNone.CheckedChanged += new System.EventHandler(this.RbGainNone_CheckedChanged);
 			// 

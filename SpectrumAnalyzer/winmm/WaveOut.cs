@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace WINMM {
 	public abstract class WaveOut : Wave {
@@ -39,6 +40,9 @@ namespace WINMM {
 		DCallback mCallback;
 
 		byte[] mMuteData;
+
+		public delegate void DTerminated();
+		protected DTerminated mOnTerminated = () => { };
 
 		#region dll
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -96,7 +100,7 @@ namespace WINMM {
 					break;
 				case MM_WOM.DONE:
 					lock (mLockBuffer) {
-						if (mStopBuffer) {
+						if (mStop) {
 							break;
 						}
 						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
@@ -110,8 +114,9 @@ namespace WINMM {
 		}
 
 		protected override void BufferTask() {
-			mStopBuffer = false;
-			mPauseBuffer = false;
+			mStop = false;
+			mPause = false;
+			mTerminate = false;
 			mBufferPaused = false;
 			mProcessedBufferCount = 0;
 			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
@@ -125,7 +130,7 @@ namespace WINMM {
 				waveOutWrite(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
 			var writeIndex = 0;
-			while (!mStopBuffer) {
+			while (!mStop) {
 				var enableWait = false;
 				lock (mLockBuffer) {
 					if (mBufferCount <= mProcessedBufferCount + 1) {
@@ -133,9 +138,14 @@ namespace WINMM {
 					}
 					else {
 						var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[writeIndex]);
-						if (mPauseBuffer) {
+						if (mPause || mTerminate) {
 							Marshal.Copy(mMuteData, 0, header.lpData, mMuteData.Length);
 							mBufferPaused = true;
+							if (mTerminate) {
+								mPause = true;
+								mTerminate = false;
+								new Task(() => { mOnTerminated(); }).Start();
+							}
 						}
 						else {
 							WriteBuffer(header.lpData);

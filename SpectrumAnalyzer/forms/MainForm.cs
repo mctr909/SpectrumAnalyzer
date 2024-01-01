@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.IO;
@@ -17,10 +18,17 @@ namespace SpectrumAnalyzer {
 		bool mGripSeekBar = false;
 		int mGaugeHeight;
 		int mScrollHeight;
+		int mPlayFileIndex = 0;
+		List<string> mFileList = new List<string>();
 
 		public MainForm() {
 			InitializeComponent();
-			Playback = new Playback(48000);
+			Playback = new Playback(48000, () => {
+				mPlayFileIndex = ++mPlayFileIndex % mFileList.Count;
+				Playback.OpenFile(mFileList[mPlayFileIndex]);
+				Playback.File.Speed = Settings.Speed;
+				Playback.Start();
+			});
 			Record = new Record(48000);
 		}
 
@@ -48,21 +56,32 @@ namespace SpectrumAnalyzer {
 		private void TsbOpen_Click(object sender, EventArgs e) {
 			openFileDialog1.FileName = "";
 			openFileDialog1.Filter = "WAVファイル(*.wav)|*.wav";
+			openFileDialog1.Multiselect = true;
 			openFileDialog1.ShowDialog();
-			var filePath = openFileDialog1.FileName;
-			if (!File.Exists(filePath)) {
+			var selectedFiles = openFileDialog1.FileNames;
+			if (selectedFiles.Length == 0) {
 				return;
 			}
+
+			mPlayFileIndex = 0;
+			mFileList.Clear();
+			foreach (var filePath in selectedFiles) {
+				var file = new WavReader(filePath);
+				if (file.CheckFormat()) {
+					mFileList.Add(filePath);
+				}
+			}
+			if (mFileList.Count == 0) {
+				return;
+			}
+
 			var playing = Playback.Playing;
 			try {
-				Playback.OpenFile(filePath);
+				Playback.OpenFile(mFileList[mPlayFileIndex]);
 			} catch (Exception ex) {
 				MessageBox.Show(ex.ToString());
 			}
-			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = SEEK_DIV * Playback.File.Length / Playback.SampleRate;
-			TrkSeek.TickFrequency = (int)(TrkSeek.Maximum / 10.0 + 0.99);
-			TrkSeek.Value = 0;
+			Playback.File.Speed = Settings.Speed;
 			if (playing) {
 				Playback.Start();
 			}
@@ -109,7 +128,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			Playback.File.Position = TrkSeek.Value * Playback.SampleRate / SEEK_DIV;
+			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_DIV;
 			mGripSeekBar = false;
 		}
 
@@ -118,14 +137,27 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
-			Playback.File.Position = TrkSeek.Value * Playback.SampleRate / SEEK_DIV;
+			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_DIV;
 			mGripSeekBar = false;
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
+			var maximum = SEEK_DIV * Playback.File.Length / (int)Playback.File.Format.SampleRate;
+			if (TrkSeek.Maximum != maximum) {
+				TrkSeek.Value = 0;
+				TrkSeek.Maximum = maximum;
+				var sec = (double)Playback.File.Length / Playback.File.Format.SampleRate;
+				if (sec >= 90) {
+					TrkSeek.TickFrequency = (int)(60 * maximum / sec + 0.99);
+				} else if (sec >= 15) {
+					TrkSeek.TickFrequency = (int)(10 * maximum / sec + 0.99);
+				} else {
+					TrkSeek.TickFrequency = (int)(maximum / sec + 0.99);
+				}
+			}
 			if (!mGripSeekBar) {
-				var temp = (int)(SEEK_DIV * Playback.File.Position / Playback.SampleRate);
-				if (temp <= TrkSeek.Maximum) {
+				var temp = (int)(SEEK_DIV * Playback.File.Position / Playback.File.Format.SampleRate);
+				if (temp <= maximum) {
 					TrkSeek.Value = temp;
 				}
 			}
