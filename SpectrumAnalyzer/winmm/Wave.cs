@@ -81,6 +81,7 @@ namespace WinMM {
 		protected bool mPause = false;
 		protected bool mTerminate = false;
 		protected bool mBufferPaused = true;
+		protected bool mEnableCallback = true;
 		protected object mLockBuffer = new object();
 		Thread mBufferThread;
 		#endregion
@@ -118,9 +119,9 @@ namespace WinMM {
 			mpWaveHeader = new IntPtr[mBufferCount];
 			for (int i = 0; i < mBufferCount; ++i) {
 				var header = new WAVEHDR() {
-					dwFlags = WAVEHDR_FLAG.WHDR_NONE,
+					dwFlags = WAVEHDR_FLAG.WHDR_BEGINLOOP | WAVEHDR_FLAG.WHDR_ENDLOOP,
 					dwBufferLength = (uint)mBufferSize,
-					lpData = Marshal.AllocHGlobal(mBufferSize)
+					lpData = Marshal.AllocHGlobal(mBufferSize),
 				};
 				Marshal.Copy(defaultValue, 0, header.lpData, mBufferSize);
 				mpWaveHeader[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());

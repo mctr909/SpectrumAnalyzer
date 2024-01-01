@@ -5,23 +5,21 @@ using System.Runtime.InteropServices;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		const int SCROLL_SPEED = 4;
+		const int SCROLL_SPEED = 2;
 		const int OFS_DB = -15;
 		const double OFS_GAIN = 5.62;
 
 		static readonly Font FONT = new Font("Meiryo UI", 8f);
-		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(147, 147, 147), 1.0f);
-		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(71, 71, 71), 1.0f);
-		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
+		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(167, 167, 167), 1.0f);
+		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
+		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(71, 71, 71), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
-		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(107, 107, 0), 1.0f);
-		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(71, 71, 0), 1.0f);
-		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(63, 63, 63), 1.0f);
+		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(147, 147, 0), 1.0f);
+		static readonly Pen GRID_MINOR = new Pen(Color.FromArgb(111, 111, 111), 1.0f);
 
 		static readonly Brush PEAK = new Pen(Color.FromArgb(255, 0, 0)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(71, 191, 71)).Brush;
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(167, 63, 255, 63)).Brush;
 
-		public static readonly Pen SLOPE = new Pen(Color.FromArgb(0, 221, 0), 1.0f);
 		public static readonly Pen THRESHOLD = Pens.Cyan;
 
 		public const int KEYBOARD_HEIGHT = 18;
@@ -168,11 +166,8 @@ namespace SpectrumAnalyzer {
 				if (db % 12 == 0) {
 					g.DrawLine(GRID_MAJOR, 0, py, right, py);
 				}
-				else if (height >= -MinLevel && db % 6 == 0) {
-					g.DrawLine(GRID_MINOR1, 0, py, right, py);
-				}
 				else if (db % 3 == 0) {
-					g.DrawLine(GRID_MINOR2, 0, py, right, py);
+					g.DrawLine(GRID_MINOR, 0, py, right, py);
 				}
 			}
 			var textSize = g.MeasureString("9", FONT);
@@ -205,7 +200,7 @@ namespace SpectrumAnalyzer {
 				var val = arr[i] * scale;
 				if (val > minValue) {
 					var barX = (x - 0.5f) * width / count;
-					var barWidth = (x + 0.5f) * width / count - barX + 1;
+					var barWidth = (x + 0.5f) * width / count - barX;
 					var barY = AmpToY(val, height);
 					var barHeight = height - barY;
 					g.FillRectangle(SURFACE, barX, barY, barWidth, barHeight);
@@ -255,7 +250,7 @@ namespace SpectrumAnalyzer {
 				var val = arr[i] * scale;
 				if (val > minValue) {
 					var barA = (int)(x*dx - ox) + 1;
-					var barB = (int)(x*dx + ox) + 1;
+					var barB = (int)(x*dx + ox);
 					var barY = AmpToY(val, height);
 					var barHeight = height - barY;
 					g.FillRectangle(PEAK, barA, barY, barB - barA, barHeight);
@@ -276,7 +271,7 @@ namespace SpectrumAnalyzer {
 				for (int x = 0, i = 0; x < count; x++, i++) {
 					if (arr[i] * scale > minValue) {
 						var barA = (int)(x*dx - ox) + 1;
-						var barB = (int)(x*dx + ox) + 1;
+						var barB = (int)(x*dx + ox);
 						SetHue(arr[i] * scale, offsetY0 + barA * 4, barB - barA);
 					}
 				}

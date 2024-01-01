@@ -1,44 +1,62 @@
-﻿using SpectrumAnalyzer.spectrum;
-using System;
+﻿using System;
 
 public class Spectrum {
-	public const int TONE_DIV = 5;
+	public const int TONE_DIV = 4;
 	public const int TONE_DIV_CENTER = TONE_DIV / 2;
+	public const int OCT_DIV = TONE_DIV * 12;
 
-	const int WAVE_LENGTH = 96;
-	const int LOW_FREQ = 80;
-	const int MID_FREQ = 250;
-	const int OCT_DIV = TONE_DIV * 12;
-	const int THRESHOLD_WIDE = TONE_DIV * 7;
+	const int LOW_FREQ = 55;
+	const int MID_FREQ = 180;
+	const int THRESHOLD_WIDE = TONE_DIV * 6;
 	const int THRESHOLD_NARROW = TONE_DIV;
-	const double THRESHOLD_OFFSET = 1.06;
+	const double THRESHOLD_GAIN_LOW = 1.059;
+	const double THRESHOLD_GAIN_MID = 1.122;
 	const double RMS_MIN = 1e-6;
+	const double NARROW_WIDTH = 1.0;
+	const double NARROW_WIDTH_AT_FREQ = 660.0;
 
 	readonly int SAMPLE_RATE;
 	readonly int BANK_COUNT;
 	readonly int LOW_TONE;
 	readonly int MID_TONE;
-	readonly double AUTO_GAIN_ATTENUATION;
 
 	double mMaxL;
 	double mMaxR;
-	double mMaxDisplayL;
-	double mMaxDisplayR;
+	double mResponceSpeed;
 
+	public class BPFBank {
+		public double KB0;
+		public double KA2;
+		public double KA1;
+		public double Lb2;
+		public double Lb1;
+		public double La2;
+		public double La1;
+		public double Rb2;
+		public double Rb1;
+		public double Ra2;
+		public double Ra1;
+
+		public double SIGMA;
+		public double LPower;
+		public double RPower;
+		public double SIGMA_DISP;
+		public double LPowerDisp;
+		public double RPowerDisp;
+
+		public double LPeak;
+		public double RPeak;
+		public double DELTA;
+	}
 	public BPFBank[] Banks { get; private set; }
 
-	delegate void DSetRms(IntPtr pInput, int sampleCount);
-	DSetRms mSetRms;
+	unsafe delegate void DSetRms(float *pInput, int sampleCount);
+	DSetRms mCalc;
 
-	public static double ResponceSpeed { get; set; } = 16;
-	public static double Transpose { get; set; } = 0;
+	public double Transpose { get; set; } = 0;
+	public double Pitch { get; set; } = 1.0;
 	public static bool AutoGain { get; set; } = true;
 	public static bool NormGain { get; set; } = false;
-
-	public double GainL { get; private set; }
-	public double GainR { get; private set; }
-	public double[] L { get; private set; }
-	public double[] R { get; private set; }
 
 	public double[] Peak { get; private set; }
 	public double[] Curve { get; private set; }
@@ -47,52 +65,49 @@ public class Spectrum {
 	public Spectrum(int sampleRate, double baseFrequency, int tones, bool stereo) {
 		SAMPLE_RATE = sampleRate;
 		BANK_COUNT = tones * TONE_DIV;
-		LOW_TONE = (int)(12 * TONE_DIV * Math.Log(LOW_FREQ / baseFrequency, 2));
-		MID_TONE = (int)(12 * TONE_DIV * Math.Log(MID_FREQ / baseFrequency, 2));
-		AUTO_GAIN_ATTENUATION = 0.5 / sampleRate;
-		L = new double[BANK_COUNT];
-		R = new double[BANK_COUNT];
+		LOW_TONE = (int)(OCT_DIV * Math.Log(LOW_FREQ / baseFrequency, 2));
+		MID_TONE = (int)(OCT_DIV * Math.Log(MID_FREQ / baseFrequency, 2));
 		Peak = new double[BANK_COUNT];
 		Curve = new double[BANK_COUNT];
 		Threshold = new double[BANK_COUNT];
 		mMaxL = RMS_MIN;
 		mMaxR = RMS_MIN;
-		mMaxDisplayL = RMS_MIN;
-		mMaxDisplayR = RMS_MIN;
 		Banks = new BPFBank[BANK_COUNT];
-		for (int b = 0; b < BANK_COUNT; b += TONE_DIV) {
-			for (int d = 0, bd = b; d < TONE_DIV; ++d, ++bd) {
-				var frequency = baseFrequency * Math.Pow(2.0, (bd - 0.5 * TONE_DIV) / OCT_DIV);
-				Banks[bd] = new BPFBank();
-				SetBPF(Banks[bd], frequency);
-			}
+		for (int b = 0; b < BANK_COUNT; ++b) {
+			var frequency = baseFrequency * Math.Pow(2.0, (b - 0.5 * TONE_DIV) / OCT_DIV);
+			Banks[b] = new BPFBank();
+			SetBPF(Banks[b], frequency);
 		}
-		SetResponceSpeed();
+		SetResponceSpeed(16);
 		if (stereo) {
-			mSetRms = SetRmsStereo;
+			unsafe { mCalc = CalcStereo; }
 		}
 		else {
-			mSetRms = SetRmsMono;
+			unsafe { mCalc = CalcMono; }
 		}
 	}
 
-	public void SetResponceSpeed() {
+	public double GetResponceSpeed() {
+		return mResponceSpeed;
+	}
+
+	public void SetResponceSpeed(double frequency) {
+		mResponceSpeed = frequency;
 		for (int b = 0; b < BANK_COUNT; ++b) {
 			var bank = Banks[b];
-			var frequency = bank.DELTA * SAMPLE_RATE / 2;
-			var responceSpeed = ResponceSpeed;
-			if (responceSpeed > frequency) {
-				bank.DisplaySigma = GetAlpha(SAMPLE_RATE / 4, frequency);
+			var limitFreq = bank.DELTA * SAMPLE_RATE / 2;
+			if (frequency > limitFreq) {
+				bank.SIGMA_DISP = GetAlpha(SAMPLE_RATE / 4, limitFreq);
 			}
 			else {
-				bank.DisplaySigma = GetAlpha(SAMPLE_RATE / 4, responceSpeed);
+				bank.SIGMA_DISP = GetAlpha(SAMPLE_RATE / 4, frequency);
 			}
 		}
 	}
 
 	void SetBPF(BPFBank bank, double frequency) {
 		bank.DELTA = frequency / SAMPLE_RATE;
-		bank.SIGMA = GetAlpha(SAMPLE_RATE / 4, frequency);
+		bank.SIGMA = GetAlpha(SAMPLE_RATE / 2, frequency);
 		var alpha = GetAlpha(SAMPLE_RATE, frequency);
 		var a0 = 1.0 + alpha;
 		bank.KB0 = alpha / a0;
@@ -101,11 +116,9 @@ public class Spectrum {
 	}
 
 	double GetAlpha(int sampleRate, double frequency) {
-		const double MIN_WIDTH = 1.0;
-		const double MIN_WIDTH_AT_FREQ = 440.0;
-		var halfToneWidth = MIN_WIDTH + Math.Log(MIN_WIDTH_AT_FREQ / frequency, 2.0);
-		if (halfToneWidth < MIN_WIDTH) {
-			halfToneWidth = MIN_WIDTH;
+		var halfToneWidth = NARROW_WIDTH + Math.Log(NARROW_WIDTH_AT_FREQ / frequency, 2.0);
+		if (halfToneWidth < NARROW_WIDTH) {
+			halfToneWidth = NARROW_WIDTH;
 		}
 		var omega = 2 * Math.PI * frequency / sampleRate;
 		var s = Math.Sin(omega);
@@ -117,24 +130,20 @@ public class Spectrum {
 		return a;
 	}
 
-	public void SetValue(IntPtr pInput, int sampleCount) {
+	public unsafe void Calc(float* pInput, int sampleCount) {
 		if (NormGain) {
-			mMaxDisplayL = RMS_MIN;
-			mMaxDisplayR = RMS_MIN;
+			mMaxL = RMS_MIN;
+			mMaxR = RMS_MIN;
 		}
-		var autoGainAttenuation = sampleCount * AUTO_GAIN_ATTENUATION;
 		if (AutoGain) {
-			mMaxDisplayL += (RMS_MIN - mMaxDisplayL) * autoGainAttenuation;
-			mMaxDisplayR += (RMS_MIN - mMaxDisplayR) * autoGainAttenuation;
+			var autoGainAttenuation = (double)sampleCount / SAMPLE_RATE;
+			mMaxL += (RMS_MIN - mMaxL) * autoGainAttenuation;
+			mMaxR += (RMS_MIN - mMaxR) * autoGainAttenuation;
 		}
-		mMaxL += (RMS_MIN - mMaxL) * autoGainAttenuation;
-		mMaxR += (RMS_MIN - mMaxR) * autoGainAttenuation;
-		mSetRms(pInput, sampleCount);
-		GainL = Math.Sqrt(mMaxL);
-		GainR = Math.Sqrt(mMaxR);
+		mCalc(pInput, sampleCount);
 		if (!(AutoGain || NormGain)) {
-			mMaxDisplayL = 1;
-			mMaxDisplayR = 1;
+			mMaxL = 1;
+			mMaxR = 1;
 		}
 
 		var lastL = 0.0;
@@ -151,47 +160,47 @@ public class Spectrum {
 			var thDisplayR = 0.0;
 			{
 				int width;
+				double gain;
 				var transposeB = idxB + Transpose * TONE_DIV;
 				if (transposeB < LOW_TONE) {
 					width = THRESHOLD_WIDE;
+					gain = THRESHOLD_GAIN_LOW;
 				}
 				else if (transposeB < MID_TONE) {
 					var a2b = (double)(transposeB - LOW_TONE) / (MID_TONE - LOW_TONE);
 					width = (int)(THRESHOLD_NARROW * a2b + THRESHOLD_WIDE * (1 - a2b));
+					gain = THRESHOLD_GAIN_MID * a2b + THRESHOLD_GAIN_LOW * (1 - a2b);
 				}
 				else {
 					width = THRESHOLD_NARROW;
+					gain = THRESHOLD_GAIN_MID;
 				}
 				for (int w = -width; w <= width; ++w) {
-					var b = Math.Min(BANK_COUNT - 1, Math.Max(0, idxB + w));
-					thL += Banks[b].LPower;
-					thR += Banks[b].RPower;
-					thDisplayL += Banks[b].LDisplay;
-					thDisplayR += Banks[b].RDisplay;
+					var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, idxB + w));
+					var b = Banks[bw];
+					thL += b.LPower;
+					thR += b.RPower;
+					thDisplayL += b.LPowerDisp;
+					thDisplayR += b.RPowerDisp;
 				}
 				width = 1 + width << 1;
 				thL /= width;
 				thR /= width;
-				thDisplayL /= width;
-				thDisplayR /= width;
+				thDisplayL /= width * mMaxL;
+				thDisplayR /= width * mMaxR;
+				thL = gain * Math.Sqrt(thL);
+				thR = gain * Math.Sqrt(thR);
+				thDisplayL = gain * Math.Sqrt(Math.Max(thDisplayL, thDisplayR));
 			}
-
-			/* Set threshold */
-			thL = THRESHOLD_OFFSET * Math.Sqrt(thL / mMaxL);
-			thR = THRESHOLD_OFFSET * Math.Sqrt(thR / mMaxR);
-			Threshold[idxB] = THRESHOLD_OFFSET * Math.Sqrt(Math.Max(
-				thDisplayL / mMaxDisplayL,
-				thDisplayR / mMaxDisplayR
-			));
-
 			/* Set peak */
-			L[idxB] = 0.0;
-			R[idxB] = 0.0;
-			var l = Math.Sqrt(Banks[idxB].LPower / mMaxL);
-			var r = Math.Sqrt(Banks[idxB].RPower / mMaxR);
+			var bank = Banks[idxB];
+			bank.LPeak = 0.0;
+			bank.RPeak = 0.0;
+			var l = Math.Sqrt(bank.LPower);
+			var r = Math.Sqrt(bank.RPower);
 			if (l < thL) {
 				if (0 <= lastIndexL) {
-					L[lastIndexL] = lastL;
+					Banks[lastIndexL].LPeak = lastL;
 				}
 				l = 0.0;
 				lastL = 0.0;
@@ -203,7 +212,7 @@ public class Spectrum {
 			}
 			if (r < thR) {
 				if (0 <= lastIndexR) {
-					R[lastIndexR] = lastR;
+					Banks[lastIndexR].RPeak = lastR;
 				}
 				r = 0.0;
 				lastR = 0.0;
@@ -215,12 +224,13 @@ public class Spectrum {
 			}
 			/* Set display value */
 			var display = Math.Sqrt(Math.Max(
-				Banks[idxB].LDisplay / mMaxDisplayL,
-				Banks[idxB].RDisplay / mMaxDisplayR
+				bank.LPowerDisp / mMaxL,
+				bank.RPowerDisp / mMaxR
 			));
-			Curve[idxB] = display;
 			Peak[idxB] = 0.0;
-			if (display < Threshold[idxB]) {
+			Curve[idxB] = display;
+			Threshold[idxB] = thDisplayL;
+			if (display < thDisplayL) {
 				if (0 <= lastDisplayIndex) {
 					Peak[lastDisplayIndex] = lastDisplay;
 				}
@@ -234,80 +244,73 @@ public class Spectrum {
 			}
 		}
 		if (0 <= lastIndexL) {
-			L[lastIndexL] = lastL;
+			Banks[lastIndexL].LPeak = lastL;
 		}
 		if (0 <= lastIndexR) {
-			R[lastIndexR] = lastR;
+			Banks[lastIndexR].RPeak = lastR;
 		}
 	}
 
-	unsafe void SetRmsMono(IntPtr pInput, int sampleCount) {
+	unsafe void CalcMono(float *pInput, int sampleCount) {
 		for (int b = 0; b < BANK_COUNT; ++b) {
-			var pWave = (float*)pInput;
+			var pWave = pInput;
 			var bank = Banks[b];
 			for (int s = 0; s < sampleCount; ++s) {
-				var input = *pWave++;
-				var output
-					= bank.KB0 * input
-					- bank.KB0 * bank.Lb2
-					- bank.KA1 * bank.La1
+				var lb0 = *pWave++;
+				var la0
+					= bank.KB0 * (lb0 - bank.Lb2)
 					- bank.KA2 * bank.La2
+					- bank.KA1 * bank.La1
 				;
-				bank.La2 = bank.La1;
-				bank.La1 = output;
 				bank.Lb2 = bank.Lb1;
-				bank.Lb1 = input;
-				output *= output;
-				bank.LPower += (output - bank.LPower) * bank.SIGMA;
-				bank.LDisplay += (output - bank.LDisplay) * bank.DisplaySigma;
+				bank.Lb1 = lb0;
+				bank.La2 = bank.La1;
+				bank.La1 = la0;
+				la0 *= la0;
+				bank.LPower += (la0 - bank.LPower) * bank.SIGMA;
+				bank.LPowerDisp += (la0 - bank.LPowerDisp) * bank.SIGMA_DISP;
 			}
-			mMaxL = Math.Max(mMaxL, bank.LPower);
-			mMaxDisplayL = Math.Max(mMaxDisplayL, bank.LDisplay);
+			mMaxL = Math.Max(mMaxL, bank.LPowerDisp);
 			bank.RPower = bank.LPower;
-			bank.RDisplay = bank.LDisplay;
+			bank.RPowerDisp = bank.LPowerDisp;
 		}
 		mMaxR = mMaxL;
-		mMaxDisplayR = mMaxDisplayL;
 	}
 
-	unsafe void SetRmsStereo(IntPtr pInput, int sampleCount) {
+	unsafe void CalcStereo(float* pInput, int sampleCount) {
 		for (int b = 0; b < BANK_COUNT; ++b) {
-			var pWave = (float*)pInput;
+			var pWave = pInput;
 			var bank = Banks[b];
 			for (int s = 0; s < sampleCount; ++s) {
-				var input = *pWave++;
-				var output
-					= bank.KB0 * input
-					- bank.KB0 * bank.Lb2
-					- bank.KA1 * bank.La1
+				var lb0 = *pWave++;
+				var rb0 = *pWave++;
+				var la0
+					= bank.KB0 * (lb0 - bank.Lb2)
 					- bank.KA2 * bank.La2
+					- bank.KA1 * bank.La1
 				;
-				bank.La2 = bank.La1;
-				bank.La1 = output;
-				bank.Lb2 = bank.Lb1;
-				bank.Lb1 = input;
-				output *= output;
-				bank.LPower += (output - bank.LPower) * bank.SIGMA;
-				bank.LDisplay += (output - bank.LDisplay) * bank.DisplaySigma;
-				input = *pWave++;
-				output
-					= bank.KB0 * input
-					- bank.KB0 * bank.Rb2
-					- bank.KA1 * bank.Ra1
+				var ra0
+					= bank.KB0 * (rb0 - bank.Rb2)
 					- bank.KA2 * bank.Ra2
+					- bank.KA1 * bank.Ra1
 				;
-				bank.Ra2 = bank.Ra1;
-				bank.Ra1 = output;
+				bank.Lb2 = bank.Lb1;
+				bank.Lb1 = lb0;
+				bank.La2 = bank.La1;
+				bank.La1 = la0;
 				bank.Rb2 = bank.Rb1;
-				bank.Rb1 = input;
-				output *= output;
-				bank.RPower += (output - bank.RPower) * bank.SIGMA;
-				bank.RDisplay += (output - bank.RDisplay) * bank.DisplaySigma;
+				bank.Rb1 = rb0;
+				bank.Ra2 = bank.Ra1;
+				bank.Ra1 = ra0;
+				la0 *= la0;
+				ra0 *= ra0;
+				bank.LPower += (la0 - bank.LPower) * bank.SIGMA;
+				bank.RPower += (ra0 - bank.RPower) * bank.SIGMA;
+				bank.LPowerDisp += (la0 - bank.LPowerDisp) * bank.SIGMA_DISP;
+				bank.RPowerDisp += (ra0 - bank.RPowerDisp) * bank.SIGMA_DISP;
 			}
-			mMaxL = Math.Max(mMaxL, bank.LPower);
-			mMaxR = Math.Max(mMaxR, bank.RPower);
-			mMaxDisplayL = Math.Max(mMaxDisplayL, bank.LDisplay);
-			mMaxDisplayR = Math.Max(mMaxDisplayR, bank.RDisplay);
+			mMaxL = Math.Max(mMaxL, bank.LPowerDisp);
+			mMaxR = Math.Max(mMaxR, bank.RPowerDisp);
 		}
 	}
 }

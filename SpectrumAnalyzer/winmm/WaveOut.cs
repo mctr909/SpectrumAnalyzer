@@ -91,24 +91,30 @@ namespace WinMM {
 				switch (uMsg) {
 				case MM_WOM.OPEN:
 					AllocHeader();
+					mEnableCallback = true;
 					Enabled = true;
 					Console.WriteLine("waveOutOpen");
 					break;
 				case MM_WOM.CLOSE:
 					DisposeHeader();
 					mHandle = IntPtr.Zero;
+					mEnableCallback = false;
 					Enabled = false;
 					Console.WriteLine("waveOutClose");
 					break;
 				case MM_WOM.DONE:
+					if (mStop) {
+						mEnableCallback = false;
+						break;
+					}
 					lock (mLockBuffer) {
-						if (mStop) {
-							break;
-						}
+						var waveHdr = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
+						waveHdr.dwFlags &= ~WAVEHDR_FLAG.WHDR_INQUEUE;
+						Marshal.StructureToPtr(waveHdr, lpWaveHdr, false);
 						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
-						var header = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
-						header.dwFlags |= WAVEHDR_FLAG.WHDR_DONE;
-						Marshal.StructureToPtr(header, lpWaveHdr, true);
+						if (mProcessedBufferCount > 0) {
+							--mProcessedBufferCount;
+						}
 					}
 					break;
 				}
@@ -120,6 +126,7 @@ namespace WinMM {
 			mPause = false;
 			mTerminate = false;
 			mBufferPaused = false;
+			mProcessedBufferCount = 0;
 			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
 			if (MMRESULT.MMSYSERR_NOERROR != ret) {
 				return;
@@ -131,17 +138,21 @@ namespace WinMM {
 				waveOutWrite(mHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
 			}
 			Console.WriteLine("waveOutWrite");
+			int writeIndex = 0;
 			while (!mStop) {
 				var enableWait = false;
 				lock (mLockBuffer) {
-					int writeCount = 0;
-					foreach (var pHeader in mpWaveHeader) {
-						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
-						if ((header.dwFlags & WAVEHDR_FLAG.WHDR_DONE) == WAVEHDR_FLAG.WHDR_NONE) {
+					if (mProcessedBufferCount < mBufferCount) {
+						var lpWaveHdr = mpWaveHeader[writeIndex];
+						var waveHdr = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
+						writeIndex = ++writeIndex % mBufferCount;
+						if ((waveHdr.dwFlags & WAVEHDR_FLAG.WHDR_INQUEUE) == WAVEHDR_FLAG.WHDR_INQUEUE) {
 							continue;
 						}
+						waveHdr.dwFlags |= WAVEHDR_FLAG.WHDR_INQUEUE;
+						Marshal.StructureToPtr(waveHdr, lpWaveHdr, false);
 						if (mPause || mTerminate) {
-							Marshal.Copy(mMuteData, 0, header.lpData, mMuteData.Length);
+							Marshal.Copy(mMuteData, 0, waveHdr.lpData, mMuteData.Length);
 							mBufferPaused = true;
 							if (mTerminate) {
 								mPause = true;
@@ -150,17 +161,19 @@ namespace WinMM {
 							}
 						}
 						else {
-							WriteBuffer(header.lpData);
+							WriteBuffer(waveHdr.lpData);
 						}
-						header.dwFlags &= ~WAVEHDR_FLAG.WHDR_DONE;
-						Marshal.StructureToPtr(header, pHeader, true);
-						++writeCount;
+						++mProcessedBufferCount;
+					} else {
+						enableWait = true;
 					}
-					enableWait = writeCount < mBufferCount / 4;
 				}
 				if (enableWait) {
-					Thread.Sleep(10);
+					Thread.Sleep(1);
 				}
+			}
+			for (int i = 0; i < 40 && mEnableCallback; ++i) {
+				Thread.Sleep(50);
 			}
 			waveOutReset(mHandle);
 			for (int i = 0; i < mBufferCount; ++i) {

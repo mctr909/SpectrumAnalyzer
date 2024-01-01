@@ -4,23 +4,46 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.2.32526.322
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectrumAnalyzer", "SpectrumAnalyzer\SpectrumAnalyzer.csproj", "{9D6AD913-AC21-49C6-B225-F32271722D64}"
+	ProjectSection(ProjectDependencies) = postProject
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1} = {556E5A37-914E-4935-B4B9-33E4EF7426A1}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Spectrum", "Spectrum\Spectrum.vcxproj", "{556E5A37-914E-4935-B4B9-33E4EF7426A1}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
 		Release|Any CPU = Release|Any CPU
 		Release|x64 = Release|x64
+		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x64.ActiveCfg = Debug|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x64.Build.0 = Debug|x64
+		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x86.Build.0 = Debug|Any CPU
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|Any CPU.Build.0 = Release|Any CPU
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.ActiveCfg = Release|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.Build.0 = Release|x64
+		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x86.ActiveCfg = Release|Any CPU
+		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x86.Build.0 = Release|Any CPU
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|Any CPU.ActiveCfg = Debug|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|Any CPU.Build.0 = Debug|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|x64.ActiveCfg = Debug|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|x64.Build.0 = Debug|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|x86.ActiveCfg = Debug|Win32
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Debug|x86.Build.0 = Debug|Win32
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|Any CPU.ActiveCfg = Release|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|Any CPU.Build.0 = Release|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|x64.ActiveCfg = Release|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|x64.Build.0 = Release|x64
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|x86.ActiveCfg = Release|Win32
+		{556E5A37-914E-4935-B4B9-33E4EF7426A1}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

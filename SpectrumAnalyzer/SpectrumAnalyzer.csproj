@@ -78,7 +78,6 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="spectrum\BPFBank.cs" />
     <Compile Include="winmm\MmResult.cs" />
     <Compile Include="Record.cs" />
     <Compile Include="forms\Settings.cs">
