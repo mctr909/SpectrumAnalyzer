@@ -7,9 +7,6 @@ using SpectrumAnalyzer.Properties;
 
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
-		const int NOTE_COUNT = 125;
-		readonly double BASE_FREQ = 440 * Math.Pow(2.0, 3 / 12.0 - 5);
-
 		public Playback Playback;
 		public Record Record;
 
@@ -21,9 +18,8 @@ namespace SpectrumAnalyzer {
 
 		public MainForm() {
 			InitializeComponent();
-			Settings.Instance = new Settings(this);
-			Playback = new Playback(NOTE_COUNT, BASE_FREQ);
-			Record = new Record(44100, 256, NOTE_COUNT, BASE_FREQ);
+			Playback = new Playback(48000);
+			Record = new Record(48000);
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -53,12 +49,21 @@ namespace SpectrumAnalyzer {
 			if (!File.Exists(filePath)) {
 				return;
 			}
+			var enable = Playback.Enabled;
 			Playback.Close();
 			Playback.Position = 0;
-			Playback.LoadFile(filePath);
+			try {
+				Playback.LoadFile(filePath);
+			} catch (Exception ex) {
+				MessageBox.Show(ex.ToString());
+			}
 			TrkSeek.Minimum = 0;
-			TrkSeek.Maximum = Playback.Length / Playback.SampleRate;
+			TrkSeek.Maximum = 10 * Playback.Length / Playback.SampleRate;
+			TrkSeek.TickFrequency = TrkSeek.Maximum / 10;
 			TrkSeek.Value = 0;
+			if (enable) {
+				Playback.Open();
+			}
 		}
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
@@ -94,10 +99,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
-			if (!Settings.Instance.Visible) {
-				Settings.Instance.Visible = true;
-				Settings.Instance.Location = Location;
-			}
+			Settings.Open(this);
 		}
 
 		private void TrkSeek_MouseDown(object sender, MouseEventArgs e) {
@@ -105,7 +107,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
-			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
 			mGripSeekBar = false;
 		}
 
@@ -114,13 +116,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
-			Playback.Position = TrkSeek.Value * Playback.SampleRate;
+			Playback.Position = 0.1 * TrkSeek.Value * Playback.SampleRate;
 			mGripSeekBar = false;
 		}
 
 		private void timer1_Tick(object sender, EventArgs e) {
 			if (!mGripSeekBar) {
-				var temp = Playback.Position / Playback.SampleRate;
+				var temp = (int)(10 * Playback.Position / Playback.SampleRate);
 				if (temp <= TrkSeek.Maximum) {
 					TrkSeek.Value = temp;
 				}
@@ -177,16 +179,21 @@ namespace SpectrumAnalyzer {
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
+			var count = spectrum.L.Length;
+			if (Drawer.DisplayCurve) {
+				Drawer.Curve(g, spectrum.Curve, count, width, mGaugeHeight, Drawer.SLOPE);
+			} else {
+				Drawer.Surface(g, spectrum.Curve, count, width, mGaugeHeight);
+			}
 			if (Drawer.DisplayPeak) {
-				Drawer.Peak(g, spectrum.PeakL, width, mGaugeHeight);
+				Drawer.Peak(g, spectrum.Peak, count, width, mGaugeHeight);
+				Drawer.Scroll(bmp, spectrum.Peak, count, mGaugeHeight, mScrollHeight);
+			} else {
+				Drawer.Scroll(bmp, spectrum.Curve, count, mGaugeHeight, mScrollHeight);
 			}
 			if (Drawer.DisplayThreshold) {
-				Drawer.Slope(g, spectrum.ThresholdL, width, mGaugeHeight, Pens.Cyan);
+				Drawer.Curve(g, spectrum.Threshold, count, width, mGaugeHeight, Drawer.THRESHOLD);
 			}
-			if (Drawer.DisplaySlope) {
-				Drawer.Slope(g, spectrum.SlopeL, width, mGaugeHeight, Pens.Red);
-			}
-			Drawer.Scroll(bmp, spectrum.PeakL, mGaugeHeight, mScrollHeight);
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
 		}
@@ -199,10 +206,7 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			Drawer.Keyboard(g,
-				pictureBox1.Width, pictureBox1.Height, mGaugeHeight,
-				NOTE_COUNT, BASE_FREQ
-			);
+			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, Settings.NOTE_COUNT);
 			Drawer.Gauge(g, pictureBox1.Width, mGaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();

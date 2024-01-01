@@ -1,8 +1,20 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 namespace WINMM {
-	public abstract class WaveLib : IDisposable {
+	public abstract class Wave : IDisposable {
+		public enum BUFFER_TYPE {
+			INTEGER = 0,
+			I8 = INTEGER | 8,
+			I16 = INTEGER | 16,
+			I24 = INTEGER | 24,
+			I32 = INTEGER | 32,
+			BIT_MASK = 255,
+			FLOAT = 256,
+			F32 = FLOAT | 32,
+		}
+
 		protected enum WAVEHDR_FLAG : uint {
 			WHDR_NONE = 0,
 			WHDR_DONE = 0x00000001,
@@ -62,9 +74,15 @@ namespace WINMM {
 		protected IntPtr mHandle;
 		protected WAVEFORMATEX mWaveFormatEx;
 		protected IntPtr[] mpWaveHeader;
+		protected int mBufferSize;
 		protected int mBufferCount;
-		protected bool mDoStop = false;
-		protected bool mStopped = true;
+		protected int mProcessedBufferCount = 0;
+		protected int mStartedBufferCount = 0;
+		protected int mStoppedBufferCount = 0;
+		protected bool mStopBuffer = false;
+		protected bool mCallbackStopped = true;
+		protected object mLockBuffer = new object();
+		Thread mBufferThread;
 		#endregion
 
 		#region property
@@ -73,40 +91,39 @@ namespace WINMM {
 		public int SampleRate { get; private set; }
 		public int Channels { get; private set; }
 		public int BufferSamples { get; private set; }
-		public int BufferSize { get; private set; }
 		#endregion
 
-		protected WaveLib(int sampleRate, int channels, int bufferSamples, int bufferCount) {
-			var bytesPerSample = channels * 16 >> 3;
+		protected Wave(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount) {
+			var bits = (ushort)(type & BUFFER_TYPE.BIT_MASK);
+			var bytesPerSample = channels * bits >> 3;
 			SampleRate = sampleRate;
 			Channels = channels;
 			BufferSamples = bufferSamples;
-			BufferSize = bufferSamples * bytesPerSample;
+			mBufferSize = bufferSamples * bytesPerSample;
 			mBufferCount = bufferCount;
 			mWaveFormatEx = new WAVEFORMATEX() {
-				wFormatTag = 1,
+				wFormatTag = (ushort)((type & BUFFER_TYPE.FLOAT) > 0 ? 3 : 1),
 				nChannels = (ushort)channels,
 				nSamplesPerSec = (uint)sampleRate,
 				nAvgBytesPerSec = (uint)(sampleRate * bytesPerSample),
 				nBlockAlign = (ushort)bytesPerSample,
-				wBitsPerSample = 16,
+				wBitsPerSample = bits,
 				cbSize = 0
 			};
 		}
 
 		protected void AllocHeader() {
-			var defaultValue = new byte[BufferSize];
+			var defaultValue = new byte[mBufferSize];
 			mpWaveHeader = new IntPtr[mBufferCount];
 			for (int i = 0; i < mBufferCount; ++i) {
-				var hdr = new WAVEHDR()
-				{
+				var header = new WAVEHDR() {
 					dwFlags = WAVEHDR_FLAG.WHDR_NONE,
-					dwBufferLength = (uint)BufferSize
+					dwBufferLength = (uint)mBufferSize,
+					lpData = Marshal.AllocHGlobal(mBufferSize)
 				};
-				hdr.lpData = Marshal.AllocHGlobal((int)hdr.dwBufferLength);
-				Marshal.Copy(defaultValue, 0, hdr.lpData, BufferSize);
+				Marshal.Copy(defaultValue, 0, header.lpData, mBufferSize);
 				mpWaveHeader[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());
-				Marshal.StructureToPtr(hdr, mpWaveHeader[i], true);
+				Marshal.StructureToPtr(header, mpWaveHeader[i], true);
 			}
 		}
 
@@ -115,9 +132,9 @@ namespace WINMM {
 				if (mpWaveHeader[i] == IntPtr.Zero) {
 					continue;
 				}
-				var hdr = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[i]);
-				if (hdr.lpData != IntPtr.Zero) {
-					Marshal.FreeHGlobal(hdr.lpData);
+				var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[i]);
+				if (header.lpData != IntPtr.Zero) {
+					Marshal.FreeHGlobal(header.lpData);
 				}
 				Marshal.FreeHGlobal(mpWaveHeader[i]);
 				mpWaveHeader[i] = IntPtr.Zero;
@@ -137,8 +154,25 @@ namespace WINMM {
 			}
 		}
 
-		public abstract void Open();
+		public void Open() {
+			Close();
+			mBufferThread = new Thread(BufferTask) {
+				Priority = ThreadPriority.Highest
+			};
+			mBufferThread.Start();
+			for (int i = 0; i < 50 && mCallbackStopped; i++) {
+				Thread.Sleep(100);
+			}
+		}
 
-		public abstract void Close();
+		public void Close() {
+			if (IntPtr.Zero == mHandle) {
+				return;
+			}
+			mStopBuffer = true;
+			mBufferThread.Join();
+		}
+
+		protected abstract void BufferTask();
 	}
 }

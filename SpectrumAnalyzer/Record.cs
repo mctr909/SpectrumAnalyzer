@@ -1,14 +1,17 @@
 ﻿using System;
 using WINMM;
 
-public class Record : WaveIn {
-	public Spectrum FilterBank;
+namespace SpectrumAnalyzer {
+	public class Record : WaveIn {
+		public Spectrum FilterBank;
 
-	public Record(int sampleRate, int bufferSize, int notes, double baseFreq) : base(sampleRate, 1, bufferSize) {
-		FilterBank = new Spectrum(sampleRate, baseFreq, notes, BufferSamples, false);
-	}
+		public Record(int sampleRate)
+			: base(sampleRate, 1, BUFFER_TYPE.F32, sampleRate / 400, 30) {
+			FilterBank = new Spectrum(sampleRate, Settings.BASE_FREQ, Settings.NOTE_COUNT, BufferSamples, false);
+		}
 
-	protected override void ReadBuffer(IntPtr pInput) {
-		FilterBank.SetLevel(pInput, BufferSamples);
+		protected override void ReadBuffer(IntPtr pInput) {
+			FilterBank.SetValue(pInput, BufferSamples);
+		}
 	}
 }
