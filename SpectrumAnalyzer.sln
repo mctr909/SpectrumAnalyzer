@@ -5,8 +5,6 @@ VisualStudioVersion = 17.14.36121.58
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SpectrumAnalyzer", "SpectrumAnalyzer\SpectrumAnalyzer.csproj", "{9D6AD913-AC21-49C6-B225-F32271722D64}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WinAPI", "WinAPI\WinAPI.vcxproj", "{0883138E-CF72-45D4-A284-642E234C4A1B}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -17,10 +15,6 @@ Global
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Debug|x64.Build.0 = Debug|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.ActiveCfg = Release|x64
 		{9D6AD913-AC21-49C6-B225-F32271722D64}.Release|x64.Build.0 = Release|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Debug|x64.ActiveCfg = Debug|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Debug|x64.Build.0 = Debug|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Release|x64.ActiveCfg = Release|x64
-		{0883138E-CF72-45D4-A284-642E234C4A1B}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
