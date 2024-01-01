@@ -10,6 +10,7 @@ namespace SpectrumAnalyzer {
 	public class Playback : WaveOut {
 		public WavReader File = new WavReader();
 		public Spectrum.Spectrum Spectrum { get; private set; }
+		public WaveSynth Osc { get; private set; }
 		public string PlayingName { get; private set; } = "";
 
 		private int PlayFileIndex = 0;
@@ -19,7 +20,6 @@ namespace SpectrumAnalyzer {
 		private readonly int DivCount;
 		private readonly DOpened OnOpened;
 		delegate void DOpened(bool isOpened);
-		private readonly WaveSynth Osc;
 
 		public Playback(int sampleRate, double calcUnitTime, int divCount) : base(
 			sampleRate, 2, (int)(sampleRate * calcUnitTime) * divCount, divCount * 4
@@ -132,7 +132,7 @@ namespace SpectrumAnalyzer {
 				pDivBuffer += DivSize;
 			}
 			if (File.Position >= File.SampleCount) {
-				EndOfFile = true;
+				NotifyEndOfFile = true;
 			}
 		}
 	}

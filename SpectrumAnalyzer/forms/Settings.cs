@@ -13,27 +13,45 @@ namespace SpectrumAnalyzer.Forms {
 		public static bool DisplayThreshold = false;
 		public static bool DisplayScroll = false;
 		public static bool DisplayFreq = true;
+		public static bool EnableAutoGain { get; private set; } = false;
+		public static bool EnableNormalize { get; private set; } = false;
 
-		static Settings Instance;
+		private static Settings Instance;
 
-		Main ParentForm;
+		private Main MainForm;
+		private Spectrum.Spectrum Spectrum;
+		private Spectrum.WaveSynth WaveSynth;
 
-		Settings(Main form) {
+		private Settings(Main form) {
 			InitializeComponent();
-			ParentForm = form;
+			MainForm = form;
 		}
 
-		public static void Open(Main parent) {
-			if (null == Instance) {
-				Instance = new Settings(parent);
+		public static void SetInstance(Main form) {
+			if (Instance == null) {
+				Instance = new Settings(form);
 				Instance.Initialize();
 			}
+		}
+
+		public static void Open() {
 			if (Instance.Visible) {
 				return;
 			}
-			var key = Math.Log(parent.Playback.Spectrum.Pitch * Speed, 2.0) * 12;
+
+			var parent = Instance.MainForm;
+			var enablePlayback = parent.Playback.Playing;
+			var spectrum = enablePlayback ? parent.Playback.Spectrum : parent.Record.Spectrum;
+			Instance.Spectrum = spectrum;
+			EnableAutoGain = spectrum.EnableAutoGain;
+			EnableNormalize = spectrum.EnableNormalize;
+
+			var waveSynth = parent.Playback.Osc;
+			Instance.WaveSynth = waveSynth;
+
+			var key = Math.Log(waveSynth.Pitch * Speed, 2.0) * 12;
 			Instance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
-			Instance.GrbSpeed.Enabled = parent.Playback.Playing;
+			Instance.GrbSpeed.Enabled = enablePlayback;
 			Instance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * OCT_DIV);
 			Instance.TrkDispRange.Value = Drawer.MinDb;
 			Instance.TrkDispMax.Value = Drawer.OffsetDb;
@@ -79,25 +97,25 @@ namespace SpectrumAnalyzer.Forms {
 
 		private void ChkFreq_CheckedChanged(object sender, EventArgs e) {
 			DisplayFreq = ChkFreq.Checked;
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void ChkScroll_CheckedChanged(object sender, EventArgs e) {
 			DisplayScroll = ChkScroll.Checked;
 			TrkScrollSpeed.Enabled = DisplayScroll;
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void TrkDispRange_Scroll(object sender, EventArgs e) {
 			Drawer.MinDb = TrkDispRange.Value;
 			DispValue();
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void TrkDispMax_Scroll(object sender, EventArgs e) {
 			Drawer.OffsetDb = TrkDispMax.Value;
 			DispValue();
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void TrkScrollSpeed_Scroll(object sender, EventArgs e) {
@@ -106,33 +124,41 @@ namespace SpectrumAnalyzer.Forms {
 
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
 			EnableNormalize = RbNormGain.Checked;
+			Spectrum.EnableNormalize = EnableNormalize;
 			TrkDispMax.Enabled = false;
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
 			EnableAutoGain = RbAutoGain.Checked;
+			Spectrum.EnableAutoGain = EnableAutoGain;
 			TrkDispMax.Enabled = false;
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void RbGainNone_CheckedChanged(object sender, EventArgs e) {
 			TrkDispMax.Enabled = true;
-			ParentForm.DrawBackground();
+			MainForm.DrawBackground();
 		}
 
 		private void CmbOutput_SelectedIndexChanged(object sender, EventArgs e) {
-			ParentForm.Playback.SetDevice((uint)(CmbOutput.SelectedIndex - 1));
+			MainForm.Playback.SetDevice((uint)(CmbOutput.SelectedIndex - 1));
 		}
 
 		private void CmbInput_SelectedIndexChanged(object sender, EventArgs e) {
-			ParentForm.Record.SetDevice((uint)(CmbInput.SelectedIndex - 1));
+			MainForm.Record.SetDevice((uint)(CmbInput.SelectedIndex - 1));
 		}
 
-		void Initialize() {
+		private void Initialize() {
+			var enablePlayback = MainForm.Playback.Playing;
+			var spectrum = enablePlayback ? MainForm.Playback.Spectrum : MainForm.Record.Spectrum;
+			EnableAutoGain = spectrum.EnableAutoGain;
+			EnableNormalize = spectrum.EnableNormalize;
+
 			TrkSpeed.Minimum = -OCT_DIV;
 			TrkSpeed.Maximum = OCT_DIV;
 			TrkSpeed.TickFrequency = OCT_DIV;
+
 			CmbOutput.Items.Clear();
 			var outDevices = WaveOut.GetDeviceList();
 			if (0 == outDevices.Count) {
@@ -144,8 +170,10 @@ namespace SpectrumAnalyzer.Forms {
 				foreach (var caps in outDevices) {
 					CmbOutput.Items.Add(caps.szPname);
 				}
-				CmbOutput.SelectedIndex = (int)ParentForm.Playback.DeviceId + 1;
+				CmbOutput.SelectedIndex = (int)MainForm.Playback.DeviceId + 1;
 			}
+			CmbOutput.SelectedIndexChanged += new EventHandler(CmbOutput_SelectedIndexChanged);
+
 			CmbInput.Items.Clear();
 			var inDevices = WaveIn.GetDeviceList();
 			if (0 == inDevices.Count) {
@@ -157,24 +185,25 @@ namespace SpectrumAnalyzer.Forms {
 				foreach (var caps in inDevices) {
 					CmbInput.Items.Add(caps.szPname);
 				}
-				CmbInput.SelectedIndex = (int)ParentForm.Record.DeviceId + 1;
+				CmbInput.SelectedIndex = (int)MainForm.Record.DeviceId + 1;
 			}
+			CmbInput.SelectedIndexChanged += new EventHandler(CmbInput_SelectedIndexChanged);
 		}
 
-		void ChangeKeySpeed() {
+		private void ChangeKeySpeed() {
 			var transpose = (double)TrkSpeed.Value / HALFTONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
 			Speed = Math.Pow(2.0, transpose / 12.0);
-			ParentForm.Playback.File.Speed = Speed;
-			ParentForm.Playback.Spectrum.Transpose = -transpose;
-			ParentForm.Playback.Spectrum.Pitch = Math.Pow(2.0, pitchShift / 12.0);
-			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
-			ParentForm.DrawBackground();
+			MainForm.Playback.File.Speed = Speed;
+			MainForm.Playback.Spectrum.Transpose = -transpose;
+			WaveSynth.Pitch = Math.Pow(2.0, pitchShift / 12.0);
+			Drawer.KeyShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
+			MainForm.DrawBackground();
 			DispValue();
 		}
 
-		void DispValue() {
+		private void DispValue() {
 			GrbKey.Text = $"キー:{TrkKey.Value}半音";
 			GrbSpeed.Text = $"速さ:{Speed:0.0%}";
 			GrbDisplaySettings.Text = $"表示幅:{-TrkDispRange.Value}db";

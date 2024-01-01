@@ -70,9 +70,9 @@ namespace WinMM {
 		protected int BufferIndex;
 		protected bool DeviceEnabled;
 		protected bool CallbackEnabled;
-		protected bool Closing;
-		protected bool Pause;
-		protected bool Paused;
+		protected bool NotifyClose;
+		protected bool NotifyStop;
+		protected bool Stopped;
 		protected object LockBuffer;
 		protected byte[] MuteData;
 		Thread BufferThread;
@@ -80,7 +80,7 @@ namespace WinMM {
 		public int SampleRate { get; private set; }
 		public int Channels { get; private set; }
 		public uint DeviceId { get; private set; }
-		public bool Playing { get; private set; }
+		public bool Playing => DeviceEnabled && !Stopped;
 
 		protected Wave(int sampleRate, int channels, int bufferSamples, int bufferCount) {
 			var bits = (ushort)32;
@@ -134,8 +134,9 @@ namespace WinMM {
 		}
 
 		void ClearFlags() {
-			Closing = false;
-			Paused = false;
+			NotifyClose = false;
+			NotifyStop = false;
+			Stopped = true;
 			DeviceEnabled = false;
 			CallbackEnabled = false;
 		}
@@ -163,7 +164,7 @@ namespace WinMM {
 			if (IntPtr.Zero == DeviceHandle) {
 				return;
 			}
-			Closing = true;
+			NotifyClose = true;
 			BufferThread.Join();
 		}
 
@@ -181,17 +182,13 @@ namespace WinMM {
 		}
 
 		public void Start() {
-			Pause = false;
-			Paused = false;
-			Playing = DeviceEnabled;
+			Stopped = false;
 		}
 
 		public void Stop() {
-			Pause = true;
-			if (Playing) {
-				WaitEnable(ref Paused);
-				Playing = false;
-			}
+			NotifyStop = true;
+			WaitEnable(ref Stopped);
+			NotifyStop = false;
 		}
 
 		protected static void WaitEnable(ref bool flag) {
