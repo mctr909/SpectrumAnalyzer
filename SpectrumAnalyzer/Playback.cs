@@ -132,7 +132,7 @@ namespace SpectrumAnalyzer {
 				pDivBuffer += DivSize;
 			}
 			if (File.Position >= File.SampleCount) {
-				EndOfFile = true;
+				NotifyEndOfFile = true;
 			}
 		}
 	}

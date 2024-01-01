@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace WinMM {
 	public abstract class WaveOut : Wave {
@@ -47,7 +48,7 @@ namespace WinMM {
 		#endregion
 
 		protected DStateChanged OnEndOfFile = () => { };
-		protected bool EndOfFile = false;
+		protected bool NotifyEndOfFile = false;
 		private readonly DCallback Callback;
 		private int ProcessInterval = 0;
 		private const int PROCESS_TIMEOUT = 100;
@@ -66,7 +67,7 @@ namespace WinMM {
 				case MM_WOM.DONE:
 					CallbackEnabled = true;
 					ProcessInterval = 0;
-					if (Closing) {
+					if (NotifyClose) {
 						break;
 					}
 					lock (LockBuffer) {
@@ -136,15 +137,15 @@ namespace WinMM {
 
 		protected override void Task() {
 			int writeIndex = 0;
-			while (!Closing) {
+			while (!NotifyClose) {
 				bool enableWait;
 				lock (LockBuffer) {
 					var pHeader = WaveHeaders[writeIndex];
 					var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
 					if (0 == (header.dwUser & WHDR_FLAG.INQUEUE)) {
-						if (Pause || EndOfFile) {
+						if (NotifyStop || Stopped || NotifyEndOfFile) {
 							Marshal.Copy(MuteData, 0, header.lpData, MuteData.Length);
-							Paused = true;
+							Stopped = true;
 						} else {
 							WriteBuffer(header.lpData);
 						}
@@ -158,15 +159,17 @@ namespace WinMM {
 				}
 				if (enableWait) {
 					if (++ProcessInterval >= PROCESS_TIMEOUT) {
-						Closing = true;
+						NotifyClose = true;
 						break;
 					}
-					if (Paused && EndOfFile) {
-						EndOfFile = false;
-						Pause = true;
-						OnEndOfFile();
+					if (Stopped && NotifyEndOfFile) {
+						NotifyEndOfFile = false;
+						new Task(() => {
+							OnEndOfFile.Invoke();
+						}).Start();
+					} else {
+						Thread.Sleep(10);
 					}
-					Thread.Sleep(10);
 				}
 			}
 		}

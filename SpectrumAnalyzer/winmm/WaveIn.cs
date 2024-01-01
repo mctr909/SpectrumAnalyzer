@@ -60,7 +60,7 @@ namespace WinMM {
 					break;
 				case MM_WIM.DATA:
 					CallbackEnabled = true;
-					if (Closing) {
+					if (NotifyClose) {
 						break;
 					}
 					lock (LockBuffer) {
@@ -123,7 +123,7 @@ namespace WinMM {
 		}
 
 		protected override void Task() {
-			while (!Closing) {
+			while (!NotifyClose) {
 				for (var inqueues = BufferCount; inqueues != 0;) {
 					lock (LockBuffer) {
 						var pHeader = WaveHeaders[BufferIndex];
@@ -135,8 +135,8 @@ namespace WinMM {
 						}
 						header.dwFlags &= ~WHDR_FLAG.INQUEUE;
 						Marshal.StructureToPtr(header, pHeader, false);
-						if (Pause) {
-							Paused = true;
+						if (NotifyStop) {
+							Stopped = true;
 						}
 						else {
 							ReadBuffer(header.lpData);
