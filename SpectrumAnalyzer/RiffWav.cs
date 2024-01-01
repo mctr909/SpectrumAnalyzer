@@ -17,8 +17,6 @@ public abstract class RiffWav {
 	}
 
 	public struct FMT {
-		public uint Sign;
-		public uint Size;
 		public ushort FormatID;
 		public ushort Channel;
 		public uint SamplingFrequency;
@@ -78,23 +76,31 @@ public class WavReader : RiffWav, IDisposable {
 		if (Riff.Type != RIFF.TYPE_WAVE)
 			return;
 
-		Fmt.Sign = mBr.ReadUInt32();
-		Fmt.Size = mBr.ReadUInt32();
-		Fmt.FormatID = mBr.ReadUInt16();
-		Fmt.Channel = mBr.ReadUInt16();
-		Fmt.SamplingFrequency = mBr.ReadUInt32();
-		Fmt.BytePerSecond = mBr.ReadUInt32();
-		Fmt.BlockSize = mBr.ReadUInt16();
-		Fmt.BitPerSample = mBr.ReadUInt16();
-
-		if (Fmt.Sign != FMT.SIGN)
-			return;
-		if (Fmt.FormatID != FMT.TYPE_PCM && Fmt.FormatID != FMT.TYPE_PCM_FLOAT)
-			return;
-		if (Fmt.Size > 16)
-			mFs.Seek(Fmt.Size - 16, SeekOrigin.Current);
-		else if (Fmt.Size < 16)
-			return;
+		uint sign;
+		uint size;
+		while (true) {
+			sign = mBr.ReadUInt32();
+			size = mBr.ReadUInt32();
+			if (FMT.SIGN == sign) {
+				if (size < 16)
+					return;
+				Fmt.FormatID = mBr.ReadUInt16();
+				Fmt.Channel = mBr.ReadUInt16();
+				Fmt.SamplingFrequency = mBr.ReadUInt32();
+				Fmt.BytePerSecond = mBr.ReadUInt32();
+				Fmt.BlockSize = mBr.ReadUInt16();
+				Fmt.BitPerSample = mBr.ReadUInt16();
+				if (Fmt.FormatID != FMT.TYPE_PCM && Fmt.FormatID != FMT.TYPE_PCM_FLOAT)
+					return;
+				if (size > 16)
+					mFs.Seek(size - 16, SeekOrigin.Current);
+				continue;
+			}
+			if (DATA.SIGN == sign) {
+				break;
+			}
+			mFs.Seek(size, SeekOrigin.Current);
+		}
 
 		switch (Fmt.Channel) {
 		case 1:
@@ -140,12 +146,6 @@ public class WavReader : RiffWav, IDisposable {
 			Read = readInvalid;
 			break;
 		}
-
-		Data.Sign = mBr.ReadUInt32();
-		Data.Size = mBr.ReadUInt32();
-
-		if (Data.Sign != DATA.SIGN)
-			return;
 	}
 
 	public void Dispose() {

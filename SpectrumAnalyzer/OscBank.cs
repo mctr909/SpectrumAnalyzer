@@ -46,10 +46,10 @@ public class OscBank {
 		mBufferR = new double[BUFFER_LENGTH];
 	}
 
-	public void SetWave(
+	public unsafe void SetWave(
 		double gainL, double gainR,
 		double[] peaksL, double[] peaksR,
-		short[] output
+		IntPtr pOutput
 	) {
 		var loBankIndex = 0;
 		var loBankAmp = 0.0;
@@ -81,7 +81,7 @@ public class OscBank {
 				} else {
 					var hiBankAmp = 0.0;
 					var hiBankPhase = 0.0;
-					var hiBankEnd = Math.Min(b + 6, BANKS.Length);
+					var hiBankEnd = Math.Min(b + 12, BANKS.Length);
 					for (int h = b + 1; h < hiBankEnd; h++) {
 						var hiBank = BANKS[h];
 						hiBankAmp = Math.Max(hiBank.ampL, hiBank.ampR);
@@ -90,7 +90,7 @@ public class OscBank {
 							break;
 						}
 					}
-					if (6 < b - loBankIndex) {
+					if (12 < b - loBankIndex) {
 						loBankAmp = 0.0;
 					}
 					if (loBankAmp < hiBankAmp) {
@@ -107,7 +107,7 @@ public class OscBank {
 			peakL *= gainL;
 			peakR *= gainR;
 			delta *= Pitch;
-			const double declickSpeed = 0.05;
+			const double declickSpeed = 0.1;
 			for (int t = 0; t < BUFFER_LENGTH; t++) {
 				var indexD = bank.phase * TABLE_LENGTH;
 				var index = (int)indexD;
@@ -121,6 +121,7 @@ public class OscBank {
 				mBufferR[t] += wave * bank.ampR;
 			}
 		}
+		var output = (short*)pOutput;
 		for (int t = 0, i = 0; t < BUFFER_LENGTH; t++, i += 2) {
 			var l = mBufferL[t];
 			var r = mBufferR[t];

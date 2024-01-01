@@ -1,16 +1,18 @@
-﻿public class Playback : WaveOut {
+﻿using System;
+using System.Runtime.InteropServices;
+using WINMM;
+
+public class Playback : WaveOut {
 	short[] mWaveL;
 	short[] mWaveR;
-	short[] mDataL;
-	short[] mDataR;
+	IntPtr mData;
 	uint mLoopBegin;
 	uint mLoopEnd;
 	double mDelta;
 	double mTime;
 	OscBank mOscBank;
 
-	public Spectrum FilterBankL;
-	public Spectrum FilterBankR;
+	public Spectrum FilterBank;
 
 	public int Position {
 		get { return (int)mTime; }
@@ -28,11 +30,9 @@
 		mLoopEnd = 1;
 		mDelta = 0.0;
 		mTime = 0.0;
-		mDataL = new short[BufferSize / 2];
-		mDataR = new short[BufferSize / 2];
-		mOscBank = new OscBank(SampleRate, BufferSize / 2, notes, baseFreq);
-		FilterBankL = new Spectrum(SampleRate, baseFreq, notes);
-		FilterBankR = new Spectrum(SampleRate, baseFreq, notes);
+		mData = Marshal.AllocHGlobal(BufferSamples * 4);
+		mOscBank = new OscBank(SampleRate, BufferSamples, notes, baseFreq);
+		FilterBank = new Spectrum(SampleRate, baseFreq, notes, BufferSamples, true);
 	}
 
 	public void LoadFile(string filePath) {
@@ -63,8 +63,9 @@
 		mTime = 0.0;
 	}
 
-	protected override void WriteBuffer() {
-		for (int i = 0, j = 0; i < BufferSize; i += 2, j++) {
+	protected unsafe override void WriteBuffer(IntPtr pBuffer) {
+		var pData = (short*)mData;
+		for (int t = 0, i = 0; t < BufferSamples; t++, i += 2) {
 			var waveL = 0.0;
 			var waveR = 0.0;
 			for (int o = 0; o < 4; o++) {
@@ -81,15 +82,14 @@
 				waveL += mWaveL[idxA] * (1.0 - a2b) + mWaveL[idxB] * a2b;
 				waveR += mWaveR[idxA] * (1.0 - a2b) + mWaveR[idxB] * a2b;
 			}
-			mDataL[j] = (short)(waveL * 0.25);
-			mDataR[j] = (short)(waveR * 0.25);
+			pData[i] = (short)(waveL * 0.25);
+			pData[i + 1] = (short)(waveR * 0.25);
 		}
-		FilterBankL.SetLevel(mDataL);
-		FilterBankR.SetLevel(mDataR);
+		FilterBank.SetLevel(mData, BufferSamples);
 		mOscBank.SetWave(
-			FilterBankL.Gain, FilterBankR.Gain,
-			FilterBankL.Peak, FilterBankR.Peak,
-			mBuffer
+			FilterBank.GainL, FilterBank.GainR,
+			FilterBank.PeakL, FilterBank.PeakR,
+			pBuffer
 		);
 	}
 }

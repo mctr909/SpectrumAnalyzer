@@ -23,12 +23,15 @@ namespace SpectrumAnalyzer {
 		static readonly Pen GRID_MINOR1 = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen GRID_MINOR2 = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
 
-		public const int KEYBOARD_HEIGHT = 34;
+		public const int KEYBOARD_HEIGHT = 25;
 		public static byte[] ScrollCanvas;
-		public static int MinLevel = -30;
+		public static int MinLevel = -40;
 		public static int ShiftGain = 0;
 		public static int KeyboardShift = 0;
 		public static bool DisplayThreshold = false;
+		public static bool DisplayScroll = false;
+		public static bool DisplayPeak = false;
+		public static bool DisplaySlope = true;
 
 		static string ToString(double value) {
 			if (10000 <= value) {
@@ -146,15 +149,12 @@ namespace SpectrumAnalyzer {
 				Alignment = StringAlignment.Far,
 				LineAlignment = StringAlignment.Center
 			};
-			for (int n = -3; n < noteCount + 12; n += 12) {
+			for (int n = 0; n < noteCount + 12; n += 12) {
 				var note = n - KeyboardShift;
-				var px = width * (note + 0.5f) / noteCount - textOfsX;
+				var px = 6 + width * note / noteCount - textOfsX;
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
-				g.DrawString(
-					ToString(baseFreq * Math.Pow(2.0, n / 12.0)),
-					FONT, Brushes.Gray, textArea, stringFormat
-				);
+				g.DrawString("C" + n / 12, FONT, Brushes.Gray, textArea, stringFormat);
 				g.RotateTransform(90);
 				g.TranslateTransform(-px, -textBottom);
 			}
