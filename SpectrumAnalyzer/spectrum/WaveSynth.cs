@@ -6,6 +6,9 @@ namespace Spectrum {
 		private readonly Spectrum mp_spectrum;
 		private readonly OSC_BANK[] mp_osc_banks = new OSC_BANK[HALFTONE_COUNT];
 
+		/// <summary>ピッチ</summary>
+		public double Pitch = 1.0;
+
 		private class OSC_BANK {
 			public double delta;
 			public double phase;
@@ -60,7 +63,7 @@ namespace Spectrum {
 						p_osc.delta = spec.DELTA;
 					}
 				}
-				p_osc.delta *= mp_spectrum.Pitch;
+				p_osc.delta *= Pitch;
 				/* 閾値以下の振幅を0クリア */
 				if (p_osc.amp_l <= threshold) {
 					p_osc.amp_l = 0;
@@ -78,7 +81,7 @@ namespace Spectrum {
 				 * 最近低音側または最近高音側の振幅が大きい方の位相を取得して設定する */
 				if (p_osc.declicked_l == 0 && p_osc.declicked_r == 0) {
 					/* 最近低音側 */
-					var low_end = Math.Max(ixT - 7, 0);
+					var low_end = Math.Max(ixT - 3, 0);
 					var low_amp = threshold;
 					for (int t = ixT - 1; t >= low_end; --t) {
 						var low_osc = mp_osc_banks[t];
@@ -90,7 +93,7 @@ namespace Spectrum {
 						}
 					}
 					/* 最近高音側 */
-					var high_end = Math.Min(ixT + 7, HALFTONE_COUNT - 1);
+					var high_end = Math.Min(ixT + 3, HALFTONE_COUNT - 1);
 					for (int t = ixT + 1; t <= high_end; ++t) {
 						var high_osc = mp_osc_banks[t];
 						var amp = Math.Max(high_osc.declicked_l, high_osc.declicked_r);

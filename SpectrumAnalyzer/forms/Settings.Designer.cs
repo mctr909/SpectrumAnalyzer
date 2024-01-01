@@ -264,7 +264,6 @@
 			this.CmbOutput.Name = "CmbOutput";
 			this.CmbOutput.Size = new System.Drawing.Size(337, 23);
 			this.CmbOutput.TabIndex = 0;
-			this.CmbOutput.SelectedIndexChanged += new System.EventHandler(this.CmbOutput_SelectedIndexChanged);
 			// 
 			// GrbInput
 			// 
@@ -285,7 +284,6 @@
 			this.CmbInput.Name = "CmbInput";
 			this.CmbInput.Size = new System.Drawing.Size(337, 23);
 			this.CmbInput.TabIndex = 0;
-			this.CmbInput.SelectedIndexChanged += new System.EventHandler(this.CmbInput_SelectedIndexChanged);
 			// 
 			// TrkScrollSpeed
 			// 
