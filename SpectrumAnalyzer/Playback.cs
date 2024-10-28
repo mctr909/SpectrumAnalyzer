@@ -7,7 +7,7 @@ using Spectrum;
 
 namespace SpectrumAnalyzer {
 	public class Playback : WaveOut {
-		private const int DIV_COUNT = 4;
+		private readonly int DIV_COUNT;
 		private readonly int DIV_SAMPLES;
 		private readonly int DIV_SIZE;
 
@@ -25,9 +25,10 @@ namespace SpectrumAnalyzer {
 
 		delegate void DOpened(bool isOpened);
 
-		public Playback(int sampleRate, int bufferCount = 30)
-			: base(sampleRate, 2, EBufferType.FLOAT32, sampleRate / 480 * DIV_COUNT, bufferCount) {
-			DIV_SAMPLES = BufferSamples / DIV_COUNT;
+		public Playback(int sampleRate, double calcUnitTime, int divCount)
+			: base(sampleRate, 2, EBufferType.FLOAT32, (int)(sampleRate * calcUnitTime) * divCount, divCount * 2) {
+			DIV_COUNT = divCount;
+			DIV_SAMPLES = BufferSamples / divCount;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum.Spectrum(sampleRate);
 			OnOpened = (isOpen) => {
