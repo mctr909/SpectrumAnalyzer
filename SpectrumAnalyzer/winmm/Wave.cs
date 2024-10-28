@@ -133,6 +133,7 @@ namespace WinMM {
 				WaveHeaders[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());
 				Marshal.StructureToPtr(header, WaveHeaders[i], true);
 			}
+			BufferIndex = 0;
 		}
 
 		void DisposeHeader() {
@@ -149,21 +150,24 @@ namespace WinMM {
 			}
 		}
 
+		void ClearFlags() {
+			Closing = false;
+			Paused = false;
+			DeviceEnabled = false;
+			CallbackEnabled = false;
+		}
+
 		protected void OpenDevice() {
 			CloseDevice();
 			BufferThread = new Thread(() => {
 				AllocateHeader();
-				Closing = false;
-				Pause = false;
-				Paused = false;
-				DeviceEnabled = false;
-				CallbackEnabled = false;
-				BufferIndex = 0;
+				ClearFlags();
 				if (InitializeTask()) {
 					Task();
 					FinalizeTask();
 				}
 				DisposeHeader();
+				ClearFlags();
 				DeviceHandle = IntPtr.Zero;
 			}) {
 				Priority = ThreadPriority.Highest,
