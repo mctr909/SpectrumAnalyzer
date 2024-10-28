@@ -3,11 +3,11 @@
 namespace Spectrum {
 	[StructLayout(LayoutKind.Sequential)]
 	internal struct OscillatorBank {
-		public double Delta;
-		public double Phase;
-		public double LTarget;
-		public double LCurrent;
-		public double RTarget;
-		public double RCurrent;
+		public double delta;
+		public double phase;
+		public double amp_l;
+		public double amp_r;
+		public double declicked_l;
+		public double declicked_r;
 	}
 }

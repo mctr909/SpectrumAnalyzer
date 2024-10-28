@@ -35,9 +35,9 @@ namespace SpectrumAnalyzer.Forms {
 			Instance.ChkPeak.Checked = Drawer.DisplayPeak;
 			Instance.ChkScroll.Checked = Drawer.DisplayScroll;
 			Instance.ChkFreq.Checked = Drawer.DisplayFreq;
-			Instance.RbAutoGain.Checked = Drawer.AutoGain;
-			Instance.RbNormGain.Checked = Drawer.NormGain;
-			Instance.RbGainNone.Checked = !(Drawer.AutoGain || Drawer.NormGain);
+			Instance.RbAutoGain.Checked = EnableAutoGain;
+			Instance.RbNormGain.Checked = EnableNormalize;
+			Instance.RbGainNone.Checked = !(EnableAutoGain || EnableNormalize);
 			Instance.Visible = true;
 			Instance.Location = parent.Location;
 			Instance.DispValue();
@@ -87,13 +87,13 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
-			Drawer.NormGain = RbNormGain.Checked;
+			EnableNormalize = RbNormGain.Checked;
 			TrkDispMax.Enabled = false;
 			ParentForm.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			Drawer.AutoGain = RbAutoGain.Checked;
+			EnableAutoGain = RbAutoGain.Checked;
 			TrkDispMax.Enabled = false;
 			ParentForm.DrawBackground();
 		}
@@ -123,8 +123,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbOutput.Enabled = true;
 				CmbOutput.Items.Add("既定のデバイス");
-				foreach (var dev in outDevices) {
-					CmbOutput.Items.Add(dev);
+				foreach (var caps in outDevices) {
+					CmbOutput.Items.Add(caps.szPname);
 				}
 				CmbOutput.SelectedIndex = (int)ParentForm.Playback.DeviceId + 1;
 			}
@@ -136,8 +136,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbInput.Enabled = true;
 				CmbInput.Items.Add("既定のデバイス");
-				foreach (var dev in inDevices) {
-					CmbInput.Items.Add(dev);
+				foreach (var caps in inDevices) {
+					CmbInput.Items.Add(caps.szPname);
 				}
 				CmbInput.SelectedIndex = (int)ParentForm.Record.DeviceId + 1;
 			}
