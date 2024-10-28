@@ -187,15 +187,12 @@ namespace Spectrum {
 						thresholdRDisp += b.RPowerDisp;
 					}
 					width = width * 2 + 1;
-					thresholdL /= width;
-					thresholdR /= width;
-					thresholdLDisp /= width;
-					thresholdRDisp /= width;
 					/* パワー⇒リニア変換した値に閾値ゲインを掛ける */
-					thresholdL = Math.Sqrt(thresholdL * 2) * gain;
-					thresholdR = Math.Sqrt(thresholdR * 2) * gain;
-					thresholdLDisp = Math.Sqrt(thresholdLDisp * 2) * gain;
-					thresholdRDisp = Math.Sqrt(thresholdRDisp * 2) * gain;
+					var scale = 2.0 / width;
+					thresholdL = Math.Sqrt(thresholdL * scale) * gain;
+					thresholdR = Math.Sqrt(thresholdR * scale) * gain;
+					thresholdLDisp = Math.Sqrt(thresholdLDisp * scale) * gain;
+					thresholdRDisp = Math.Sqrt(thresholdRDisp * scale) * gain;
 				}
 				var bank = *(FilterBank*)mpFilterBanks[idxB];
 				/*** 波形合成用のピークを抽出 ***/

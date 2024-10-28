@@ -22,7 +22,7 @@ namespace SpectrumAnalyzer {
 		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(95, 255, 255, 255)).Brush;
 
 		/// <summary>ゲイン自動調整 最大[10^-(db/10)]</summary>
-		public const double AUTOGAIN_MAX = 3.981e-03;
+		public const double AUTOGAIN_MAX = 2.512E-04;
 		/// <summary>ゲイン自動調整 速度[秒]</summary>
 		public const double AUTOGAIN_SPEED = 3.0;
 
