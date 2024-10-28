@@ -123,13 +123,13 @@ namespace WinMM {
 
 		protected override void Task() {
 			while (!Closing) {
-				for (var nonQueueCount = 0; nonQueueCount < BufferCount;) {
+				for (var inqueues = BufferCount; inqueues != 0;) {
 					lock (LockBuffer) {
 						var pHeader = WaveHeaders[BufferIndex];
 						BufferIndex = ++BufferIndex % BufferCount;
 						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
 						if (0 == (header.dwFlags & WHDR_FLAG.INQUEUE)) {
-							++nonQueueCount;
+							--inqueues;
 							continue;
 						}
 						header.dwFlags &= ~WHDR_FLAG.INQUEUE;

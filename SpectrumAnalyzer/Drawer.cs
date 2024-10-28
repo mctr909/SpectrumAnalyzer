@@ -8,15 +8,15 @@ using static Spectrum.Spectrum;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		static readonly Font FONT = new Font("Meiryo UI", 10.5f);
-		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(171, 171, 127), 1.0f);
-		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
-		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
+		static readonly Font FONT = new Font("Meiryo UI", 11f);
+		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(95, 95, 71), 1.0f);
+		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(63, 63, 63), 1.0f);
+		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen LEVEL_MAJOR = new Pen(Color.FromArgb(127, 127, 0), 1.0f);
 		static readonly Pen LEVEL_MINOR = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
 		static readonly Pen FREQ_MAJOR = new Pen(Color.FromArgb(131, 131, 131), 1.0f);
-		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(111, 111, 111), 1.0f)
+		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f)
 		{
 			DashStyle = DashStyle.Custom,
 			DashPattern = new float[] { 1, 3 }
@@ -79,14 +79,14 @@ namespace SpectrumAnalyzer {
 							py = textTop;
 						}
 						g.TranslateTransform(0, py);
-						g.DrawString(db + "db", FONT, Brushes.Yellow, textArea, stringFormat);
+						g.DrawString($"{db}db", FONT, Brushes.Yellow, textArea, stringFormat);
 						g.TranslateTransform(0, -py);
 					}
 				}
 			}
 
 			void freqGauge() {
-				var shift = 1.5 - KeyboardShift * HALFTONE_DIV;
+				var shift = -1 - KeyboardShift * HALFTONE_DIV;
 				var textWidth = g.MeasureString("100", FONT).Width;
 				var textArea = new RectangleF(-textWidth * 0.5f, -1f, textWidth, keyboardHeight);
 				var stringFormat = new StringFormat() {
@@ -122,8 +122,8 @@ namespace SpectrumAnalyzer {
 			void pianoRoll() {
 				var keyDWidth = (double)width / noteCount;
 				for (int n = 0; n < noteCount; n++) {
-					var x0 = (int)(n * keyDWidth);
-					var x1 = (int)((n + 1) * keyDWidth);
+					var x0 = (float)(n * keyDWidth);
+					var x1 = (float)((n + 1) * keyDWidth);
 					var keyWidth = x1 - x0 + 1;
 					var px = x0 + ofsX;
 					var note = (n + KeyboardShift + 24) % 12;
@@ -169,12 +169,11 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Curve(Graphics g, double[] arr, int ofsX, int width, int height, Pen color) {
-			width -= ofsX;
 			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var left = ofsX - (float)width / BANK_COUNT;
 			var x0 = (float)ofsX;
 			var y0 = LinearToY(arr[0] * scale, height);
-			if (BANK_COUNT > width) {
+			if (width < BANK_COUNT) {
 				var ixA = 0;
 				for (int x = 0; x < width; x++) {
 					var ixB = x * BANK_COUNT / width;
@@ -212,7 +211,6 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Surface(Graphics g, double[] arr, int ofsX, int width, int height, Brush color) {
-			width -= ofsX;
 			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var left = ofsX - (float)width / BANK_COUNT;
 			var minValue = Math.Pow(10, MinDb / 20.0);
@@ -223,6 +221,7 @@ namespace SpectrumAnalyzer {
 					var x0 = (i - 0.5f) * dx;
 					var x1 = (i + 0.5f) * dx;
 					var y = LinearToY(value, height);
+					x0 = Math.Max(ofsX - left, x0);
 					var barWidth = x1 - x0;
 					var barHeight = height - y;
 					x0 += left;
@@ -231,8 +230,7 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		public static void Peak(Graphics g, double[] arr, int ofsX, int width, int height, Brush color) {
-			width -= ofsX;
+		public static void Peak(Graphics g, double[] arr, int ofsX, int width, int height, Pen color) {
 			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var left = ofsX - (float)width / BANK_COUNT;
 			var minValue = Math.Pow(10, MinDb / 20.0);
@@ -244,9 +242,9 @@ namespace SpectrumAnalyzer {
 					var x0 = (i - 0.5f) * dx - r;
 					var x1 = (i + 0.5f) * dx + r;
 					var y = LinearToY(value, height);
-					var barWidth = Math.Max(2, x1 - x0);
+					x0 += Math.Max(2, x1 - x0) / 2;
 					x0 += left;
-					g.FillEllipse(color, x0, y, barWidth, barWidth);
+					g.DrawLine(color, x0, y, x0, height);
 				}
 			}
 		}
@@ -309,9 +307,9 @@ namespace SpectrumAnalyzer {
 			return (int)(db * height / MinDb);
 		}
 
-		private static int LinearToY(double linear, int height) {
-			if (linear < 1e-8) {
-				linear = 1e-8;
+		private static float LinearToY(double linear, int height) {
+			if (linear < 1e-9) {
+				linear = 1e-9;
 			}
 			var db = 20 * Math.Log10(linear) / MinDb;
 			if (db < 0) {
@@ -320,12 +318,12 @@ namespace SpectrumAnalyzer {
 			if (db > 1) {
 				db = 1;
 			}
-			return (int)(db * height);
+			return (float)(db * height);
 		}
 
 		private static void SetHue(double value, int pos) {
-			if (value < 1e-8) {
-				value = 1e-8;
+			if (value < 1e-9) {
+				value = 1e-9;
 			}
 			var db = 20 * Math.Log10(value) / MinDb;
 			if (db < 0) {

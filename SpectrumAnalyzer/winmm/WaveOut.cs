@@ -50,8 +50,8 @@ namespace WinMM {
 		protected DStateChanged OnEndOfFile = () => { };
 		protected bool EndOfFile = false;
 		private readonly DCallback Callback;
-		private int ProcessCount = 0;
-		private const int PROCESS_LIMIT = 10;
+		private int ProcessInterval = 0;
+		private const int PROCESS_TIMEOUT = 100;
 
 		public WaveOut(int sampleRate, int channels, EBufferType bufferType, int bufferSamples, int bufferCount)
 			: base(sampleRate, channels, bufferType, bufferSamples, bufferCount) {
@@ -65,7 +65,7 @@ namespace WinMM {
 					break;
 				case MM_WOM.DONE:
 					CallbackEnabled = true;
-					ProcessCount = 0;
+					ProcessInterval = 0;
 					if (Closing) {
 						break;
 					}
@@ -116,7 +116,7 @@ namespace WinMM {
 		}
 
 		protected override void FinalizeTask() {
-			if (ProcessCount < PROCESS_LIMIT) {
+			if (ProcessInterval < PROCESS_TIMEOUT) {
 				waveOutReset(DeviceHandle);
 				Console.WriteLine($"[WaveOut] Reset Device");
 				foreach (var pHeader in WaveHeaders) {
@@ -133,13 +133,13 @@ namespace WinMM {
 
 		protected override void Task() {
 			while (!Closing) {
-				for (var inQueueCount = 0; inQueueCount < BufferCount;) {
+				for (var nonInqueues = BufferCount; nonInqueues != 0;) {
 					lock (LockBuffer) {
 						var pHeader = WaveHeaders[BufferIndex];
 						BufferIndex = ++BufferIndex % BufferCount;
 						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
 						if (0 != (header.dwFlags & WHDR_FLAG.INQUEUE)) {
-							++inQueueCount;
+							nonInqueues--;
 							continue;
 						}
 						header.dwFlags |= WHDR_FLAG.INQUEUE;
@@ -152,7 +152,7 @@ namespace WinMM {
 						}
 					}
 				}
-				if (++ProcessCount >= PROCESS_LIMIT) {
+				if (++ProcessInterval >= PROCESS_TIMEOUT) {
 					Closing = true;
 					break;
 				}

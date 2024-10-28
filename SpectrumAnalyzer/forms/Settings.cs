@@ -9,7 +9,7 @@ namespace SpectrumAnalyzer.Forms {
 		public static double Speed { get; set; } = 1.0;
 		public static int ScrollSpeed { get; set; } = 2;
 		public static bool DisplayPeak = true;
-		public static bool DisplayCurve = false;
+		public static bool DisplayCurve = true;
 		public static bool DisplayThreshold = false;
 		public static bool DisplayScroll = false;
 		public static bool DisplayFreq = true;

@@ -9,7 +9,6 @@ using System.Diagnostics;
 using SpectrumAnalyzer.Properties;
 using static Spectrum.Spectrum;
 using System.Drawing.Drawing2D;
-using System.Reflection.Emit;
 
 namespace SpectrumAnalyzer.Forms {
 	public partial class Main : Form {
@@ -26,22 +25,20 @@ namespace SpectrumAnalyzer.Forms {
 		int GaugeHeight;
 		int ScrollHeight;
 
-		const int DB_LABEL_WIDTH = 50;
+		const int DB_LABEL_WIDTH = 52;
 		const int KEYBOARD_HEIGHT = 24;
 		readonly double[] Peak = new double[BANK_COUNT];
 		readonly double[] Curve = new double[BANK_COUNT];
 		readonly double[] Threshold = new double[BANK_COUNT];
 
-		static readonly Pen CURVE = new Pen(Color.FromArgb(0, 255, 255), 1.0f);
-		static readonly Pen THRESHOLD = new Pen(Color.FromArgb(0, 211, 0), 1.0f);
-		static readonly Brush PEAK = new Pen(Color.FromArgb(255, 255, 0)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 95, 255, 95)).Brush;
-		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(95, 0, 255, 255)).Brush;
+		static readonly Pen PEAK = new Pen(Color.FromArgb(0, 191, 191), 1.0f);
+		static readonly Pen THRESHOLD = new Pen(Color.FromArgb(0, 221, 0), 1.0f);
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(57, 255, 255, 255)).Brush;
 
 		Graphics G;
 		public Main() {
 			InitializeComponent();
-			Playback = new Playback(48000);
+			Playback = new Playback(48000, 1e-3, 12);
 			Record = new Record(48000);
 			MinimumSize = new Size(DB_LABEL_WIDTH + HALFTONE_COUNT * 2 + 16, 192);
 			Size = MinimumSize;
@@ -245,24 +242,21 @@ namespace SpectrumAnalyzer.Forms {
 			var bmp = (Bitmap)pictureBox1.Image;
 			G.SmoothingMode = SmoothingMode.None;
 			G.Clear(Color.Transparent);
-			var width = pictureBox1.Width;
+			var plotWidth = pictureBox1.Width - DB_LABEL_WIDTH;
 			if (EnableAutoGain) {
-				Drawer.Level(G, spectrum.AutoGain, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE_H);
+				Drawer.Level(G, spectrum.AutoGain, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE);
 			}
 			if (EnableNormalize) {
-				Drawer.Level(G, spectrum.Max, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE_H);
+				Drawer.Level(G, spectrum.Max, 10, DB_LABEL_WIDTH - 20, GaugeHeight, SURFACE);
 			}
 			if (Settings.DisplayCurve) {
-				Drawer.Curve(G, Curve, DB_LABEL_WIDTH, width, GaugeHeight, CURVE);
-			} else {
-				var color = (Settings.DisplayPeak || Settings.DisplayThreshold) ? SURFACE_H : SURFACE;
-				Drawer.Surface(G, Curve, DB_LABEL_WIDTH, width, GaugeHeight, color);
+				Drawer.Surface(G, Curve, DB_LABEL_WIDTH, plotWidth, GaugeHeight, SURFACE);
 			}
 			if (Settings.DisplayThreshold) {
-				Drawer.Curve(G, Threshold, DB_LABEL_WIDTH, width, GaugeHeight, THRESHOLD);
+				Drawer.Curve(G, Threshold, DB_LABEL_WIDTH, plotWidth, GaugeHeight, THRESHOLD);
 			}
 			if (Settings.DisplayPeak) {
-				Drawer.Peak(G, Peak, DB_LABEL_WIDTH, width, GaugeHeight, PEAK);
+				Drawer.Peak(G, Peak, DB_LABEL_WIDTH, plotWidth, GaugeHeight, PEAK);
 				Drawer.Scroll(bmp, Peak, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
 			} else {
 				Drawer.Scroll(bmp, Curve, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
