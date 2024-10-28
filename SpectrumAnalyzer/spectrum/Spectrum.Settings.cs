@@ -27,6 +27,6 @@
 		/// <summary>中高音域 閾値幅[フィルタバンク数]</summary>
 		const int THRESHOLD_WIDTH_MID = HALFTONE_DIV * 3 / 2;
 		/// <summary>中高音域 閾値ゲイン[10^(db/20)]</summary>
-		const double THRESHOLD_GAIN_MID = 1.035;
+		const double THRESHOLD_GAIN_MID = 1.0;
 	}
 }

@@ -75,7 +75,7 @@ namespace SpectrumAnalyzer.Forms {
 					fileList.Add(filePath);
 				}
 			}
-			Playback.SetFiles(fileList);
+			Playback.SetFileList(fileList);
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
@@ -122,11 +122,11 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void TsbPrevious_Click(object sender, EventArgs e) {
-			Playback.Previous();
+			Playback.PreviousFile();
 		}
 
 		private void TsbNext_Click(object sender, EventArgs e) {
-			Playback.Next();
+			Playback.NextFile();
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
