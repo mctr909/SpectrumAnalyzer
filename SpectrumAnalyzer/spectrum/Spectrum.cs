@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.InteropServices;
+
 using static Spectrum.Settings;
 
 namespace Spectrum {
@@ -14,14 +15,15 @@ namespace Spectrum {
 
 		internal PeakBank[] PeakBanks { get; private set; }
 
+		public double Transpose { get; set; } = 0.0;
 		public double[] Peak { get; private set; }
 		public double[] Curve { get; private set; }
 		public double[] Threshold { get; private set; }
 
 		public Spectrum(int sampleRate, double baseFrequency) {
 			SAMPLE_RATE = sampleRate;
-			LOW_TONE = (int)(OCT_DIV * Math.Log(LOW_FREQ_MAX / baseFrequency, 2));
-			MID_TONE = (int)(OCT_DIV * Math.Log(MID_FREQ_MIN / baseFrequency, 2));
+			LOW_TONE = (int)(OCT_DIV * Math.Log(END_LOW_FREQ / baseFrequency, 2));
+			MID_TONE = (int)(OCT_DIV * Math.Log(BEGIN_MID_FREQ / baseFrequency, 2));
 			Peak = new double[BANK_COUNT];
 			Curve = new double[BANK_COUNT];
 			Threshold = new double[BANK_COUNT];
@@ -54,7 +56,7 @@ namespace Spectrum {
 			}
 			/* 表示値を自動調整する場合、最大値を減衰 */
 			if (AutoGain) {
-				var autoGainAttenuation = (double)sampleCount / SAMPLE_RATE;
+				var autoGainAttenuation = 4.0 * AUTOGAIN_SPEED / SAMPLE_RATE * sampleCount;
 				mAutoGainMaxL += (AUTOGAIN_MAX - mAutoGainMaxL) * autoGainAttenuation;
 				mAutoGainMaxR += (AUTOGAIN_MAX - mAutoGainMaxR) * autoGainAttenuation;
 			}
@@ -70,7 +72,7 @@ namespace Spectrum {
 		}
 
 		static double GetAlpha(double sampleRate, double frequency) {
-			var halfToneWidth = 1.0 + Math.Log(HALFTONE_WIDTH_AT_FREQ / frequency, 2.0);
+			var halfToneWidth = 1.0 + Math.Log(FREQ_AT_HALFTONE_WIDTH / frequency, 2.0);
 			if (halfToneWidth < 1.0) {
 				halfToneWidth = 1.0;
 			}
@@ -100,7 +102,7 @@ namespace Spectrum {
 			var limitFreq = frequency / 2;
 			var pBank = (FilterBank*)mpFilterBanks + index;
 			pBank->SIGMA = GetAlpha(sampleOmega, frequency);
-			pBank->SIGMA_DISP = GetAlpha(sampleOmega, (DISP_FREQ > limitFreq) ? limitFreq : DISP_FREQ);
+			pBank->SIGMA_DISP = GetAlpha(sampleOmega, (DISP_SPEED > limitFreq) ? limitFreq : DISP_SPEED);
 		}
 
 		unsafe void CalcPower(IntPtr pInput, int sampleCount) {

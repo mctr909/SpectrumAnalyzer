@@ -23,7 +23,7 @@ namespace SpectrumAnalyzer {
 			InitializeComponent();
 			Playback = new Playback(48000);
 			Record = new Record(48000);
-			MinimumSize = new Size(Spectrum.Settings.NOTE_COUNT * 3 + 16, 200);
+			MinimumSize = new Size(Spectrum.Settings.HALFTONE_COUNT * 3 + 16, 200);
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -215,7 +215,7 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, Spectrum.Settings.NOTE_COUNT);
+			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, Spectrum.Settings.HALFTONE_COUNT);
 			Drawer.Gauge(g, pictureBox1.Width, mGaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();

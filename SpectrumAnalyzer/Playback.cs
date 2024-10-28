@@ -12,8 +12,11 @@ namespace SpectrumAnalyzer {
 		readonly int DIV_SIZE;
 
 		public WavReader File = new WavReader();
-		public Spectrum.Spectrum Spectrum;
-		
+
+		public Spectrum.Spectrum Spectrum { get; private set; }
+
+		public WaveSynth Osc { get; private set; }
+
 		public string PlayingName { get; private set; } = "";
 
 		int PlayFileIndex = 0;
@@ -23,10 +26,9 @@ namespace SpectrumAnalyzer {
 
 		DOpened OnOpened;
 		float[] MuteData;
-		WaveSynth Osc;
 
 		public Playback(int sampleRate)
-			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV, 30) {
+			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV, 16) {
 			DIV_SAMPLES = BufferSamples / DIV;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum.Spectrum(sampleRate, SettingsForm.BASE_FREQ);

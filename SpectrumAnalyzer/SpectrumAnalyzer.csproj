@@ -79,6 +79,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
     <Compile Include="spectrum\FilterBank.cs" />
+    <Compile Include="spectrum\OscillatorBank.cs" />
     <Compile Include="spectrum\PeakBank.cs" />
     <Compile Include="spectrum\Settings.cs" />
     <Compile Include="winmm\MMResult.cs" />

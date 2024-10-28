@@ -1,44 +1,49 @@
 ﻿using System;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
+
 using static Spectrum.Settings;
 
 namespace Spectrum {
-	public class WaveSynth {
-		const double THRESHOLD = 0.0001; /* -80db */
-		const int TABLE_LENGTH = 96;
-		const int HALFTONE_DIV_CENTER = HALFTONE_DIV / 2;
-
+	public class WaveSynth : IDisposable {
+		const int TABLE_LENGTH = 48;
 		static readonly double[] TABLE = {
-			0.0000, 0.0654, 0.1305, 0.1951, 0.2588, 0.3214, 0.3827, 0.4423,
-			0.5000, 0.5556, 0.6088, 0.6593, 0.7071, 0.7518, 0.7934, 0.8315,
-			0.8660, 0.8969, 0.9239, 0.9469, 0.9659, 0.9808, 0.9914, 0.9979,
-			1.0000, 0.9979, 0.9914, 0.9808, 0.9659, 0.9469, 0.9239, 0.8969,
-			0.8660, 0.8315, 0.7934, 0.7518, 0.7071, 0.6593, 0.6088, 0.5556,
-			0.5000, 0.4423, 0.3827, 0.3214, 0.2588, 0.1951, 0.1305, 0.0654,
-			0.0000, -0.0654, -0.1305, -0.1951, -0.2588, -0.3214, -0.3827, -0.4423,
-			-0.5000, -0.5556, -0.6088, -0.6593, -0.7071, -0.7518, -0.7934, -0.8315,
-			-0.8660, -0.8969, -0.9239, -0.9469, -0.9659, -0.9808, -0.9914, -0.9979,
-			-1.0000, -0.9979, -0.9914, -0.9808, -0.9659, -0.9469, -0.9239, -0.8969,
-			-0.8660, -0.8315, -0.7934, -0.7518, -0.7071, -0.6593, -0.6088, -0.5556,
-			-0.5000, -0.4423, -0.3827, -0.3214, -0.2588, -0.1951, -0.1305, -0.0654,
-			0.0000
+			 0.0000, 0.1305, 0.2588, 0.3827, 0.5000, 0.6088,
+			 0.7071, 0.7934, 0.8660, 0.9239, 0.9659, 0.9914,
+			 1.0000, 0.9914, 0.9659, 0.9239, 0.8660, 0.7934,
+			 0.7071, 0.6088, 0.5000, 0.3827, 0.2588, 0.1305,
+			 0.0000,-0.1305,-0.2588,-0.3827,-0.5000,-0.6088,
+			-0.7071,-0.7934,-0.8660,-0.9239,-0.9659,-0.9914,
+			-1.0000,-0.9914,-0.9659,-0.9239,-0.8660,-0.7934,
+			-0.7071,-0.6088,-0.5000,-0.3827,-0.2588,-0.1305,
+			 0.0000
 		};
 
-		class OSCBank {
-			public double Phase;
-			public double L;
-			public double R;
-		}
-		OSCBank[] OSCBanks;
+		IntPtr[] mpOscillatorBanks;
+
 		PeakBank[] PeakBanks;
+
+		/// <summary>
+		/// 変更ピッチ
+		/// </summary>
+		public double Pitch { get; set; } = 1.0;
 
 		public WaveSynth(Spectrum spectrum) {
 			PeakBanks = spectrum.PeakBanks;
-			OSCBanks = new OSCBank[NOTE_COUNT];
+			mpOscillatorBanks = new IntPtr[HALFTONE_COUNT];
 			var random = new Random();
-			for (var idxT = 0; idxT < NOTE_COUNT; idxT++) {
-				OSCBanks[idxT] = new OSCBank() {
-					Phase = random.NextDouble(),
+			for (var idxT = 0; idxT < HALFTONE_COUNT; idxT++) {
+				mpOscillatorBanks[idxT] = Marshal.AllocHGlobal(Marshal.SizeOf<OscillatorBank>());
+				var osc = new OscillatorBank() {
+					Phase = random.NextDouble()
 				};
+				Marshal.StructureToPtr(osc, mpOscillatorBanks[idxT], true);
+			}
+		}
+
+		public void Dispose() {
+			foreach (var pOscillatorBank in mpOscillatorBanks) {
+				Marshal.FreeHGlobal(pOscillatorBank);
 			}
 		}
 
@@ -48,83 +53,93 @@ namespace Spectrum {
 		/// <param name="pOutput">出力バッファ</param>
 		/// <param name="sampleCount">出力バッファのサンプル数</param>
 		public unsafe void WriteBuffer(IntPtr pOutput, int sampleCount) {
-			var lowToneIdx = 0;
-			var lowToneAmp = 0.0;
-			var lowTonePhase = 0.0;
-			for (int idxT = 0, idxB = 0; idxT < OSCBanks.Length; ++idxT, idxB += HALFTONE_DIV) {
-				/* スペクトル中の半音に対応する範囲で最大振幅のバンクを採用する */
-				var specL = 0.0;
-				var specR = 0.0;
-				var specC = 0.0;
-				var delta = PeakBanks[idxB + HALFTONE_DIV_CENTER].DELTA;
-				for (int div = 0, divB = idxB; div < HALFTONE_DIV; ++div, ++divB) {
-					var spec = PeakBanks[divB];
-					if (specL < spec.L) {
-						specL = spec.L;
+			SetParameter();
+			/* 波形合成 */
+			Parallel.ForEach(mpOscillatorBanks, pOscillatorBank => {
+				var pOsc = (OscillatorBank*)pOscillatorBank;
+				if (pOsc->LTarget == 0 && pOsc->LCurrent == 0 &&
+					pOsc->RTarget == 0 && pOsc->RCurrent == 0) {
+					pOsc->Phase += pOsc->Delta * sampleCount;
+					pOsc->Phase -= (int)pOsc->Phase;
+					return;
+				}
+				var pWave = (float*)pOutput;
+				for (int s = 0; s < sampleCount; ++s) {
+					var indexD = pOsc->Phase * TABLE_LENGTH;
+					var indexI = (int)indexD;
+					var a2b = indexD - indexI;
+					pOsc->Phase += pOsc->Delta;
+					pOsc->Phase -= (int)pOsc->Phase;
+					pOsc->LCurrent += (pOsc->LTarget - pOsc->LCurrent) * pOsc->Declick;
+					pOsc->RCurrent += (pOsc->RTarget - pOsc->RCurrent) * pOsc->Declick;
+					var wave = TABLE[indexI] * (1.0 - a2b) + TABLE[indexI + 1] * a2b;
+					*pWave++ += (float)(wave * pOsc->LCurrent);
+					*pWave++ += (float)(wave * pOsc->RCurrent);
+				}
+			});
+		}
+
+		unsafe void SetParameter() {
+			for (int idxT = 0, idxS = 0; idxT < HALFTONE_COUNT; ++idxT, idxS += HALFTONE_DIV) {
+				/* 1半音分のスペクトルから最大振幅のものを取得する */
+				var pOsc = (OscillatorBank*)mpOscillatorBanks[idxT];
+				pOsc->Delta = PeakBanks[idxS + HALFTONE_CENTER].DELTA;
+				pOsc->LTarget = 0.0;
+				pOsc->RTarget = 0.0;
+				var max = 0.0;
+				for (int div = 0, divS = idxS; div < HALFTONE_DIV; ++div, ++divS) {
+					var spec = PeakBanks[divS];
+					if (spec.L > pOsc->LTarget) {
+						pOsc->LTarget = spec.L;
 					}
-					if (specR < spec.R) {
-						specR = spec.R;
+					if (spec.R > pOsc->RTarget) {
+						pOsc->RTarget = spec.R;
 					}
-					var peakC = Math.Max(spec.L, spec.R);
-					if (specC < peakC) {
-						specC = peakC;
-						delta = spec.DELTA;
+					var specC = Math.Max(spec.L, spec.R);
+					if (specC > max) {
+						max = specC;
+						pOsc->Delta = spec.DELTA;
 					}
 				}
-				delta *= Pitch;
-				/* 直前の振幅が閾値未満の場合、位相を設定する */
-				var oscBank = OSCBanks[idxT];
-				if (oscBank.L < THRESHOLD) {
-					oscBank.L = 0;
+				pOsc->Delta *= Pitch;
+				pOsc->Declick = Pitch * (idxT < SYNTH_BEGIN_MID_TONE ? SYNTH_DECLICK_LOW_SPEED : SYNTH_DECLICK_MID_SPEED);
+				if (pOsc->LTarget < SYNTH_THRESHOLD) {
+					pOsc->LTarget = 0;
 				}
-				if (oscBank.R < THRESHOLD) {
-					oscBank.R = 0;
+				if (pOsc->LCurrent < SYNTH_THRESHOLD) {
+					pOsc->LCurrent = 0;
 				}
-				if (oscBank.L == 0 && oscBank.R == 0) {
+				if (pOsc->RTarget < SYNTH_THRESHOLD) {
+					pOsc->RTarget = 0;
+				}
+				if (pOsc->RCurrent < SYNTH_THRESHOLD) {
+					pOsc->RCurrent = 0;
+				}
+				/* 現在の振幅が閾値未満の場合
+				 * 低音側または高音側の位相を取得して設定する */
+				if (pOsc->LCurrent == 0 && pOsc->RCurrent == 0) {
 					/* 低音側の振幅を確認して位相を設定 */
-					if (lowToneAmp < THRESHOLD || (idxT - lowToneIdx > 4)) {
-						lowToneAmp = THRESHOLD;
-					}
-					else {
-						oscBank.Phase = lowTonePhase;
-					}
-					/* 高音側の振幅を確認して位相を設定 */
-					var highToneEnd = Math.Min(idxT + 4, OSCBanks.Length);
-					for (int t = idxT + 1; t < highToneEnd; ++t) {
-						var highTone = OSCBanks[t];
-						var highToneAmp = Math.Max(highTone.L, highTone.R);
-						if (highToneAmp > lowToneAmp) {
-							oscBank.Phase = highTone.Phase;
+					var lowToneAmp = SYNTH_THRESHOLD;
+					var lowToneEnd = Math.Max(idxT - 4, 0);
+					for (int t = idxT - 1; t >= lowToneEnd; --t) {
+						var pLowTone = (OscillatorBank*)mpOscillatorBanks[t];
+						var amp = Math.Max(pLowTone->LCurrent, pLowTone->RCurrent);
+						if (amp > lowToneAmp) {
+							lowToneAmp = amp;
+							pOsc->Phase = pLowTone->Phase;
 							break;
 						}
 					}
-					/* スペクトルの振幅が閾値未満の場合、
-					 * 波形合成を行わずに位相を進めて次の半音へ移る */
-					if (specL < THRESHOLD && specR < THRESHOLD) {
-						oscBank.Phase += delta * sampleCount;
-						oscBank.Phase -= (int)oscBank.Phase;
-						continue;
+					/* 高音側の振幅を確認して位相を設定 */
+					var highToneEnd = Math.Min(idxT + 4, HALFTONE_COUNT - 1);
+					for (int t = idxT + 1; t <= highToneEnd; ++t) {
+						var pHighTone = (OscillatorBank*)mpOscillatorBanks[t];
+						var amp = Math.Max(pHighTone->LCurrent, pHighTone->RCurrent);
+						if (amp > lowToneAmp) {
+							pOsc->Phase = pHighTone->Phase;
+							break;
+						}
 					}
-				}
-				else {
-					lowToneIdx = idxT;
-					lowToneAmp = Math.Max(oscBank.L, oscBank.R);
-					lowTonePhase = oscBank.Phase;
-				}
-				/* 波形合成 */
-				var declickSpeed = Pitch * (idxT < DECLICK_MID_TONE ? DECLICK_LOW_SPEED : DECLICK_MID_SPEED);
-				var pWave = (float*)pOutput;
-				for (int s = 0; s < sampleCount; ++s) {
-					var indexD = oscBank.Phase * TABLE_LENGTH;
-					var indexI = (int)indexD;
-					var a2b = indexD - indexI;
-					oscBank.Phase += delta;
-					oscBank.Phase -= (int)oscBank.Phase;
-					oscBank.L += (specL - oscBank.L) * declickSpeed;
-					oscBank.R += (specR - oscBank.R) * declickSpeed;
-					var wave = TABLE[indexI] * (1.0 - a2b) + TABLE[indexI + 1] * a2b;
-					*pWave++ += (float)(wave * oscBank.L);
-					*pWave++ += (float)(wave * oscBank.R);
 				}
 			}
 		}

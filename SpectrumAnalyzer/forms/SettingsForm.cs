@@ -26,7 +26,7 @@ namespace SpectrumAnalyzer {
 			if (mInstance.Visible) {
 				return;
 			}
-			var key = Math.Log(Settings.Pitch * Speed, 2.0) * 12;
+			var key = Math.Log(parent.Playback.Osc.Pitch * Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
 			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * Settings.OCT_DIV);
@@ -143,10 +143,10 @@ namespace SpectrumAnalyzer {
 			var transpose = (double)TrkSpeed.Value / Settings.HALFTONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
-			Settings.Transpose = -transpose;
 			Speed = Math.Pow(2.0, transpose / 12.0);
 			mParent.Playback.File.Speed = Speed;
-			Settings.Pitch = Math.Pow(2.0, pitchShift / 12.0);
+			mParent.Playback.Spectrum.Transpose = -transpose;
+			mParent.Playback.Osc.Pitch = Math.Pow(2.0, pitchShift / 12.0);
 			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			mParent.DrawBackground();
 		}
