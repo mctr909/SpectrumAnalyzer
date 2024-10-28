@@ -5,9 +5,9 @@ namespace Spectrum {
 	internal struct OscillatorBank {
 		public double Delta;
 		public double Phase;
-		public double LTarget;
-		public double LCurrent;
-		public double RTarget;
-		public double RCurrent;
+		public double L;
+		public double DeclickedL;
+		public double R;
+		public double DeclickedR;
 	}
 }

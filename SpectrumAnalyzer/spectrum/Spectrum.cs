@@ -13,6 +13,12 @@ namespace Spectrum {
 		/// <summary>トランスポーズ[半音]</summary>
 		public double Transpose { get; set; } = 0.0;
 
+		/// <summary> 最大値 </summary>
+		public double Max { get; private set; } = 1.0;
+
+		/// <summary> 自動ゲイン </summary>
+		public double AutoGain { get; private set; } = 1.0;
+
 		/// <summary>表示用ピーク</summary>
 		public double[] Peak { get; private set; }
 
@@ -31,7 +37,7 @@ namespace Spectrum {
 			Curve = new double[BANK_COUNT];
 			PeakBanks = new PeakBank[BANK_COUNT];
 			mpFilterBanks = new IntPtr[BANK_COUNT];
-			BaseFreq = 442 * Math.Pow(2, HALFTONE_CENTER / OCT_DIV + 3/12.0 - 5);
+			BaseFreq = 442 * Math.Pow(2, HALFTONE_CENTER / OCT_DIV + 3 / 12.0 - 5);
 			for (int b = 0; b < BANK_COUNT; ++b) {
 				var frequency = BaseFreq * Math.Pow(2.0, (b - 0.5 * HALFTONE_DIV) / OCT_DIV);
 				PeakBanks[b] = new PeakBank() {
@@ -40,7 +46,6 @@ namespace Spectrum {
 				mpFilterBanks[b] = Marshal.AllocHGlobal(Marshal.SizeOf<FilterBank>());
 				SetBPF(b, frequency);
 			}
-			SetResponceSpeed(DISP_SPEED);
 		}
 
 		public void Dispose() {
@@ -61,19 +66,6 @@ namespace Spectrum {
 			ExtractPeak();
 		}
 
-		/// <summary>
-		/// 表示応答速度を設定
-		/// </summary>
-		/// <param name="responceSpeed">応答速度[Hz]</param>
-		public unsafe void SetResponceSpeed(double responceSpeed) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
-			for (int b = 0; b < BANK_COUNT; ++b) {
-				var pBank = (FilterBank*)mpFilterBanks[b];
-				var bankFreq = PeakBanks[b].DELTA * SampleRate;
-				pBank->SIGMA_DISP = GetAlpha(sampleOmega, (responceSpeed > bankFreq) ? bankFreq : responceSpeed);
-			}
-		}
-
 		static double GetAlpha(double sampleRate, double frequency) {
 			var halfToneWidth = 1.0 + Math.Log(FREQ_AT_HALFTONE_WIDTH / frequency, 2.0);
 			if (halfToneWidth < 1.0) {
@@ -83,14 +75,10 @@ namespace Spectrum {
 			var s = Math.Sin(omega);
 			var x = Math.Log(2) / 4 * halfToneWidth / 12.0 * omega / s;
 			var a = s * Math.Sinh(x);
-			if (a > 1) {
-				return 1;
-			}
 			return a;
 		}
 
 		unsafe void SetBPF(int index, double frequency) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
 			var omega = 2 * Math.PI * frequency / SampleRate;
 			var alpha = GetAlpha(SampleRate, frequency);
 			var a0 = 1.0 + alpha;
@@ -99,55 +87,70 @@ namespace Spectrum {
 			pBank->KB0 = alpha / a0;
 			pBank->KA1 = -2.0 * Math.Cos(omega) / a0;
 			pBank->KA2 = (1.0 - alpha) / a0;
-			pBank->SIGMA = GetAlpha(sampleOmega, frequency);
+			pBank->SIGMA = GetAlpha(SampleRate / Math.PI * 0.5, frequency);
 		}
 
-		unsafe void CalcPower(float *pInput, int sampleCount) {
+		unsafe void CalcPower(float* pInput, int sampleCount) {
 			Parallel.ForEach(mpFilterBanks, ptr => {
+				var pWave = pInput;
 				var pBank = (FilterBank*)ptr;
 				var KB0 = pBank->KB0;
 				var KA2 = pBank->KA2;
 				var KA1 = pBank->KA1;
 				var SIGMA = pBank->SIGMA;
-				var SIGMA_DISP = pBank->SIGMA_DISP;
-				var pWave = pInput;
 				for (int s = sampleCount; s != 0; --s) {
 					/*** 左チャンネル ***/
 					{
 						/* 帯域通過フィルタに通す */
-						var b0 = *pWave++;
-						var a0 = KB0;
-						a0 *= b0 - pBank->Lb2;
-						pBank->Lb2 = pBank->Lb1;
-						pBank->Lb1 = b0;
-						a0 -= KA2 * pBank->La2;
-						pBank->La2 = pBank->La1;
-						a0 -= KA1 * pBank->La1;
-						pBank->La1 = a0;
+						var b = *pWave++;
+						var a = b - pBank->lb2;
+						a *= KB0;
+						pBank->lb2 = pBank->lb1;
+						pBank->lb1 = b;
+						a -= KA2 * pBank->la2;
+						a -= KA1 * pBank->la1;
+						pBank->la2 = pBank->la1;
+						pBank->la1 = a;
 						/* パワースペクトルを得る */
-						a0 *= a0;
-						pBank->LPower += (a0 - pBank->LPower) * SIGMA;
-						pBank->LPowerDisp += (a0 - pBank->LPowerDisp) * SIGMA_DISP;
+						a *= a;
+						pBank->l += (a - pBank->l) * SIGMA;
 					}
 					/*** 右チャンネル ***/
 					{
 						/* 帯域通過フィルタに通す */
-						var b0 = *pWave++;
-						var a0 = KB0;
-						a0 *= b0 - pBank->Rb2;
-						pBank->Rb2 = pBank->Rb1;
-						pBank->Rb1 = b0;
-						a0 -= KA2 * pBank->Ra2;
-						pBank->Ra2 = pBank->Ra1;
-						a0 -= KA1 * pBank->Ra1;
-						pBank->Ra1 = a0;
+						var b = *pWave++;
+						var a = b - pBank->rb2;
+						a *= KB0;
+						pBank->rb2 = pBank->rb1;
+						pBank->rb1 = b;
+						a -= KA2 * pBank->ra2;
+						a -= KA1 * pBank->ra1;
+						pBank->ra2 = pBank->ra1;
+						pBank->ra1 = a;
 						/* パワースペクトルを得る */
-						a0 *= a0;
-						pBank->RPower += (a0 - pBank->RPower) * SIGMA;
-						pBank->RPowerDisp += (a0 - pBank->RPowerDisp) * SIGMA_DISP;
+						a *= a;
+						pBank->r += (a - pBank->r) * SIGMA;
 					}
 				}
 			});
+			/* 最大値を更新 */
+			Max = AUTOGAIN_MIN;
+			foreach (FilterBank* pBank in mpFilterBanks) {
+				var linear = Math.Sqrt(Math.Max(pBank->l, pBank->r) * 2);
+				Max = Math.Max(Max, linear);
+			}
+			/* 最大値に追随して自動ゲインを更新 */
+			var autoGainDelta = (double)sampleCount / SampleRate;
+			var diff = Max - AutoGain;
+			if (diff < 0) {
+				autoGainDelta /= AUTOGAIN_DOWN_SPEED;
+			} else {
+				autoGainDelta /= AUTOGAIN_UP_SPEED;
+			}
+			AutoGain += diff * autoGainDelta;
+			if (AutoGain < AUTOGAIN_MIN) {
+				AutoGain = AUTOGAIN_MIN;
+			}
 		}
 
 		unsafe void ExtractPeak() {
@@ -161,8 +164,6 @@ namespace Spectrum {
 				/*** ピーク抽出用の閾値を算出 ***/
 				var thresholdL = 0.0;
 				var thresholdR = 0.0;
-				var thresholdLDisp = 0.0;
-				var thresholdRDisp = 0.0;
 				{
 					/* 音域によって閾値幅と閾値ゲインを選択 */
 					int width;
@@ -171,13 +172,11 @@ namespace Spectrum {
 					if (transposedIdxB < END_LOW_BANK) {
 						width = THRESHOLD_WIDTH_LOW;
 						gain = THRESHOLD_GAIN_LOW;
-					}
-					else if (transposedIdxB < BEGIN_MID_BANK) {
+					} else if (transposedIdxB < BEGIN_MID_BANK) {
 						var a2b = (double)(transposedIdxB - END_LOW_BANK) / (BEGIN_MID_BANK - END_LOW_BANK);
 						width = (int)(THRESHOLD_WIDTH_MID * a2b + THRESHOLD_WIDTH_LOW * (1 - a2b));
 						gain = THRESHOLD_GAIN_MID * a2b + THRESHOLD_GAIN_LOW * (1 - a2b);
-					}
-					else {
+					} else {
 						width = THRESHOLD_WIDTH_MID;
 						gain = THRESHOLD_GAIN_MID;
 					}
@@ -185,18 +184,14 @@ namespace Spectrum {
 					for (int w = -width; w <= width; ++w) {
 						var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, idxB + w));
 						var b = *(FilterBank*)mpFilterBanks[bw];
-						thresholdL += b.LPower;
-						thresholdR += b.RPower;
-						thresholdLDisp += b.LPowerDisp;
-						thresholdRDisp += b.RPowerDisp;
+						thresholdL += b.l;
+						thresholdR += b.r;
 					}
 					width = width * 2 + 1;
 					/* パワー⇒リニア変換した値に閾値ゲインを掛ける */
 					var scale = 2.0 / width;
 					thresholdL = Math.Sqrt(thresholdL * scale) * gain;
 					thresholdR = Math.Sqrt(thresholdR * scale) * gain;
-					thresholdLDisp = Math.Sqrt(thresholdLDisp * scale) * gain;
-					thresholdRDisp = Math.Sqrt(thresholdRDisp * scale) * gain;
 				}
 				var bank = *(FilterBank*)mpFilterBanks[idxB];
 				/*** 波形合成用のピークを抽出 ***/
@@ -204,8 +199,8 @@ namespace Spectrum {
 					var peak = PeakBanks[idxB];
 					peak.L = 0.0;
 					peak.R = 0.0;
-					var linearL = Math.Sqrt(bank.LPower * 2);
-					var linearR = Math.Sqrt(bank.RPower * 2);
+					var linearL = Math.Sqrt(bank.l * 2);
+					var linearR = Math.Sqrt(bank.r * 2);
 					if (linearL < thresholdL) {
 						if (0 <= lastLIndex) {
 							PeakBanks[lastLIndex].L = lastL;
@@ -233,10 +228,18 @@ namespace Spectrum {
 				}
 				/*** 表示用のピークを抽出、曲線を設定 ***/
 				{
-					var linear = Math.Sqrt(Math.Max(bank.LPowerDisp, bank.RPowerDisp) * 2);
-					var threshold = Math.Max(thresholdLDisp, thresholdRDisp);
-					Peak[idxB] = 0.0;
+					var linear = Math.Sqrt(Math.Max(bank.l, bank.r) * 2);
+					var threshold = Math.Max(thresholdL, thresholdR);
+					if (EnableNormalize) {
+						linear /= Max;
+						threshold /= Max;
+					}
+					if (EnableAutoGain) {
+						linear /= AutoGain;
+						threshold /= AutoGain;
+					}
 					Curve[idxB] = linear;
+					Peak[idxB] = 0.0;
 					if (linear < threshold) {
 						if (0 <= lastDispIndex) {
 							Peak[lastDispIndex] = lastDisp;
