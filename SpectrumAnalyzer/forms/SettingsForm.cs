@@ -2,7 +2,7 @@
 using System.Windows.Forms;
 
 using WinMM;
-using Spectrum;
+using static Spectrum.Spectrum;
 
 namespace SpectrumAnalyzer {
 	public partial class SettingsForm : Form {
@@ -11,11 +11,6 @@ namespace SpectrumAnalyzer {
 		MainForm mParent;
 
 		public static double Speed { get; set; } = 1.0;
-
-		public static readonly double BASE_FREQ = 440 * Math.Pow(2.0, 3 / 12.0 - 5);
-
-		public const int OFS_DB = -12;
-		public const double OFS_GAIN = 3.981;
 
 		public static void Open(MainForm parent) {
 			if (null == mInstance) {
@@ -29,16 +24,16 @@ namespace SpectrumAnalyzer {
 			var key = Math.Log(parent.Playback.Osc.Pitch * Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
-			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * Settings.OCT_DIV);
-			mInstance.TrkMinLevel.Value = Drawer.MinLevel;
+			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * OCT_DIV);
+			mInstance.TrkDispRange.Value = Drawer.MinLevel;
+			mInstance.TrkDispMax.Value = Drawer.OffsetDb;
 			mInstance.ChkCurve.Checked = Drawer.DisplayCurve;
 			mInstance.ChkPeak.Checked = Drawer.DisplayPeak;
-			mInstance.ChkThreshold.Checked = Drawer.DisplayThreshold;
 			mInstance.ChkScroll.Checked = Drawer.DisplayScroll;
-			mInstance.RbAutoGain.Checked = Settings.AutoGain;
-			mInstance.RbNormGain.Checked = Settings.NormGain;
+			mInstance.RbAutoGain.Checked = Drawer.AutoGain;
+			mInstance.RbNormGain.Checked = Drawer.NormGain;
 			mInstance.RbGainNone.Checked = !mInstance.RbAutoGain.Checked && !mInstance.RbNormGain.Checked;
-			mInstance.RbGainNone.Text = "+" + -OFS_DB + "db";
+			mInstance.RbGainNone.Text = "最大値指定(" + (-Drawer.OffsetDb) + "db)";
 			mInstance.Visible = true;
 			mInstance.Location = parent.Location;
 			mInstance.DispValue();
@@ -72,32 +67,38 @@ namespace SpectrumAnalyzer {
 			Drawer.DisplayPeak = ChkPeak.Checked;
 		}
 
-		private void ChkThreshold_CheckedChanged(object sender, EventArgs e) {
-			Drawer.DisplayThreshold = ChkThreshold.Checked;
-		}
-
 		private void ChkScroll_CheckedChanged(object sender, EventArgs e) {
 			Drawer.DisplayScroll = ChkScroll.Checked;
 			mParent.SetLayout();
 		}
 
-		private void TrkMinLevel_Scroll(object sender, EventArgs e) {
-			Drawer.MinLevel = TrkMinLevel.Value;
+		private void TrkDispRange_Scroll(object sender, EventArgs e) {
+			Drawer.MinLevel = TrkDispRange.Value;
+			SetKeySpeed();
+			DispValue();
+		}
+
+		private void TrkDispMax_Scroll(object sender, EventArgs e) {
+			Drawer.OffsetDb = TrkDispMax.Value;
+			RbGainNone.Text = "最大値指定(" + (-TrkDispMax.Value) + "db)";
 			SetKeySpeed();
 			DispValue();
 		}
 
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
-			Settings.NormGain = RbNormGain.Checked;
+			Drawer.NormGain = RbNormGain.Checked;
+			TrkDispMax.Enabled = false;
 			mParent.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			Settings.AutoGain = RbAutoGain.Checked;
+			Drawer.AutoGain = RbAutoGain.Checked;
+			TrkDispMax.Enabled = false;
 			mParent.DrawBackground();
 		}
 
 		private void RbGainNone_CheckedChanged(object sender, EventArgs e) {
+			TrkDispMax.Enabled = true;
 			mParent.DrawBackground();
 		}
 
@@ -110,9 +111,9 @@ namespace SpectrumAnalyzer {
 		}
 
 		void Initialize() {
-			TrkSpeed.Minimum = -Settings.OCT_DIV;
-			TrkSpeed.Maximum = Settings.OCT_DIV;
-			TrkSpeed.TickFrequency = Settings.OCT_DIV;
+			TrkSpeed.Minimum = -OCT_DIV;
+			TrkSpeed.Maximum = OCT_DIV;
+			TrkSpeed.TickFrequency = OCT_DIV;
 			CmbOutput.Items.Clear();
 			var outDevices = WaveOut.GetDeviceList();
 			if (0 == outDevices.Count) {
@@ -140,7 +141,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		void SetKeySpeed() {
-			var transpose = (double)TrkSpeed.Value / Settings.HALFTONE_DIV;
+			var transpose = (double)TrkSpeed.Value / HALFTONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
 			Speed = Math.Pow(2.0, transpose / 12.0);
@@ -154,7 +155,7 @@ namespace SpectrumAnalyzer {
 		void DispValue() {
 			GrbKey.Text = string.Format("キー:{0}半音", TrkKey.Value);
 			GrbSpeed.Text = string.Format("速さ:{0}", Speed.ToString("0.0%"));
-			GrbMinLevel.Text = string.Format("表示範囲:{0}db", -TrkMinLevel.Value);
+			GrbDisplaySettings.Text = string.Format("表示幅:{0}db", -TrkDispRange.Value);
 		}
 	}
 }

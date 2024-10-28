@@ -4,7 +4,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Windows.Forms;
+using System.Diagnostics;
+
 using SpectrumAnalyzer.Properties;
+using static Spectrum.Spectrum;
 
 namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
@@ -15,15 +18,22 @@ namespace SpectrumAnalyzer {
 
 		const int SEEK_SEC_DIV = 10;
 
+		Stopwatch mSw;
+		long mPrevious_mSec = 0;
+
 		bool mGripSeekBar = false;
 		int mGaugeHeight;
 		int mScrollHeight;
+		double mAutoGainMax = Drawer.AUTOGAIN_MAX;
+		double[] mCurve = new double[BANK_COUNT];
+		double[] mPeak = new double[BANK_COUNT];
 
 		public MainForm() {
 			InitializeComponent();
 			Playback = new Playback(48000);
 			Record = new Record(48000);
-			MinimumSize = new Size(Spectrum.Settings.HALFTONE_COUNT * 3 + 16, 200);
+			MinimumSize = new Size(Drawer.DB_LABEL_WIDTH + HALFTONE_COUNT * 3 + 16, 200);
+			Size = MinimumSize;
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
@@ -32,6 +42,8 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
+			mSw = new Stopwatch();
+			mSw.Start();
 			TimerSeek.Interval = 1;
 			TimerSeek.Enabled = true;
 			TimerSeek.Start();
@@ -174,7 +186,12 @@ namespace SpectrumAnalyzer {
 				SetLayout();
 				DoSetLayout = false;
 			}
-			Draw();
+			var current_mSec = mSw.ElapsedMilliseconds;
+			var deltaTime = current_mSec - mPrevious_mSec;
+			if (deltaTime >= 1000 / 120.0) {
+				Draw();
+				mPrevious_mSec = current_mSec;
+			}
 		}
 
 		public void SetLayout() {
@@ -215,7 +232,7 @@ namespace SpectrumAnalyzer {
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
 			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
 			g.Clear(Color.Black);
-			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, Spectrum.Settings.HALFTONE_COUNT);
+			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, mGaugeHeight, HALFTONE_COUNT);
 			Drawer.Gauge(g, pictureBox1.Width, mGaugeHeight);
 			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
 			g.Dispose();
@@ -229,23 +246,43 @@ namespace SpectrumAnalyzer {
 			if (null == spectrum) {
 				spectrum = Playback.Spectrum;
 			}
+			/* 表示値を正規化する場合、最大値をクリア */
+			if (Drawer.NormGain) {
+				mAutoGainMax = Drawer.AUTOGAIN_MAX;
+			}
+			/* 表示値を自動調整する場合、最大値を減衰 */
+			if (Drawer.AutoGain) {
+				var autoGainAttenuation = 4.0 / Drawer.AUTOGAIN_SPEED / 120.0;
+				mAutoGainMax += (Drawer.AUTOGAIN_MAX - mAutoGainMax) * autoGainAttenuation;
+			}
+			for (int i = 0; i < BANK_COUNT; i++) {
+				mCurve[i] = spectrum.Curve[i];
+				mPeak[i] = spectrum.Peak[i];
+				mAutoGainMax = Math.Max(mAutoGainMax, mCurve[i]);
+			}
+			if (!(Drawer.AutoGain || Drawer.NormGain)) {
+				mAutoGainMax = 1;
+			}
+			for (int i = 0; i < BANK_COUNT; i++) {
+				mCurve[i] /= mAutoGainMax;
+				mPeak[i] /= mAutoGainMax;
+			}
+
 			var bmp = (Bitmap)pictureBox1.Image;
 			var g = Graphics.FromImage(bmp);
 			g.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
-			var count = spectrum.PeakBanks.Length;
 			if (Drawer.DisplayCurve) {
-				Drawer.Surface(g, spectrum.Curve, count, width, mGaugeHeight);
+				Drawer.Curve(g, mCurve, width, mGaugeHeight, Pens.Cyan);
+			} else {
+				Drawer.Surface(g, mCurve, width, mGaugeHeight);
 			}
 			if (Drawer.DisplayPeak) {
-				Drawer.Peak(g, spectrum.Peak, count, width, mGaugeHeight);
-				Drawer.Scroll(bmp, spectrum.Peak, count, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
+				Drawer.Peak(g, mPeak, width, mGaugeHeight);
+				Drawer.Scroll(bmp, mPeak, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
 			}
 			else {
-				Drawer.Scroll(bmp, spectrum.Curve, count, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
-			}
-			if (Drawer.DisplayThreshold) {
-				Drawer.Curve(g, spectrum.Threshold, count, width, mGaugeHeight, Drawer.THRESHOLD);
+				Drawer.Scroll(bmp, mCurve, mGaugeHeight + 1, mScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
 			}
 			pictureBox1.Image = pictureBox1.Image;
 			g.Dispose();
