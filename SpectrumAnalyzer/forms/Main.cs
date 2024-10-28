@@ -25,7 +25,7 @@ namespace SpectrumAnalyzer.Forms {
 		int ScrollHeight;
 
 		Graphics G;
-		double AutoGainMax = Drawer.AUTOGAIN_MAX;
+		double AutoGainMax = 1.0;
 		double[] Curve = new double[BANK_COUNT];
 		double[] Peak = new double[BANK_COUNT];
 
@@ -75,7 +75,7 @@ namespace SpectrumAnalyzer.Forms {
 					fileList.Add(filePath);
 				}
 			}
-			Playback.SetFiles(fileList);
+			Playback.SetFileList(fileList);
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
@@ -122,11 +122,11 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void TsbPrevious_Click(object sender, EventArgs e) {
-			Playback.Previous();
+			Playback.PreviousFile();
 		}
 
 		private void TsbNext_Click(object sender, EventArgs e) {
-			Playback.Next();
+			Playback.NextFile();
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
@@ -227,19 +227,24 @@ namespace SpectrumAnalyzer.Forms {
 			if (null == spectrum) {
 				spectrum = Playback.Spectrum;
 			}
-			/* 表示値を正規化する場合、最大値をクリア */
+			var gainMax = Drawer.AUTOGAIN_MAX;
+			for (int i = 0; i < BANK_COUNT; i++) {
+				Curve[i] = spectrum.Curve[i];
+				Peak[i] = spectrum.Peak[i];
+				gainMax = Math.Max(gainMax, Curve[i]);
+			}
+			/* 表示値を正規化 */
 			if (Drawer.NormGain) {
-				AutoGainMax = Drawer.AUTOGAIN_MAX;
+				AutoGainMax = gainMax;
 			}
 			/* 表示値を自動調整する場合、最大値を減衰 */
 			if (Drawer.AutoGain) {
 				var autoGainAttenuation = 4.0 / Drawer.AUTOGAIN_SPEED / 120.0;
-				AutoGainMax += (Drawer.AUTOGAIN_MAX - AutoGainMax) * autoGainAttenuation;
-			}
-			for (int i = 0; i < BANK_COUNT; i++) {
-				Curve[i] = spectrum.Curve[i];
-				Peak[i] = spectrum.Peak[i];
-				AutoGainMax = Math.Max(AutoGainMax, Curve[i]);
+				var diff = gainMax - AutoGainMax;
+				if (diff > 0) {
+					diff *= 4;
+				}
+				AutoGainMax += diff * autoGainAttenuation;
 			}
 			if (!(Drawer.AutoGain || Drawer.NormGain)) {
 				AutoGainMax = 1;

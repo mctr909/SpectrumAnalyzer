@@ -267,7 +267,8 @@ public class WavReader : RiffWav {
 			var a = SCALE_8BIT - b;
 			var p = pInput + indexI;
 			*pOutput = (*p++ - 128) * a + (*p - 128) * b;
-			*pOutput++ = *pOutput++;
+			*(pOutput + 1) = *pOutput;
+			pOutput += 2;
 		}
 		for (; s < OUTPUT_SAMPLES; ++s) {
 			*pOutput++ = 0;
@@ -315,7 +316,8 @@ public class WavReader : RiffWav {
 			var a = SCALE_16BIT - b;
 			var p = pInput + indexI;
 			*pOutput = *p++ * a + *p * b;
-			*pOutput++ = *pOutput++;
+			*(pOutput + 1) = *pOutput;
+			pOutput += 2;
 		}
 		for (; s < OUTPUT_SAMPLES; ++s) {
 			*pOutput++ = 0;
@@ -365,7 +367,8 @@ public class WavReader : RiffWav {
 			var m1 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p++ << 8);
 			var m2 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p << 8);
 			*pOutput = (int)m1 * a + (int)m2 * b;
-			*pOutput++ = *pOutput++;
+			*(pOutput + 1) = *pOutput;
+			pOutput += 2;
 		}
 		for (; s < OUTPUT_SAMPLES; ++s) {
 			*pOutput++ = 0;
@@ -413,7 +416,8 @@ public class WavReader : RiffWav {
 			var a = 1 - b;
 			var p = pInput + indexI;
 			*pOutput = *p++ * a + *p * b;
-			*pOutput++ = *pOutput++;
+			*(pOutput + 1) = *pOutput;
+			pOutput += 2;
 		}
 		for (; s < OUTPUT_SAMPLES; ++s) {
 			*pOutput++ = 0;
