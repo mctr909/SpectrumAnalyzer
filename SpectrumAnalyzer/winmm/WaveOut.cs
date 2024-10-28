@@ -37,12 +37,12 @@ namespace WinMM {
 		}
 
 		delegate void DCallback(IntPtr hwo, MM_WOM uMsg, int dwUser, IntPtr lpWaveHdr, int dwParam2);
-		DCallback mCallback;
+		DCallback Callback;
 
-		byte[] mMuteData;
+		byte[] MuteData;
 
 		public delegate void DTerminated();
-		protected DTerminated mOnTerminated = () => { };
+		protected DTerminated OnTerminated = () => { };
 
 		#region dll
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -79,42 +79,33 @@ namespace WinMM {
 			return list;
 		}
 
-		public WaveOut(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount)
+		public WaveOut(int sampleRate, int channels, VALUE_TYPE type, int bufferSamples, int bufferCount)
 			: base(sampleRate, channels, type, bufferSamples, bufferCount) {
-			mMuteData = new byte[WaveFormatEx.nBlockAlign * bufferSamples];
+			MuteData = new byte[WaveFormatEx.nBlockAlign * bufferSamples];
 			if (WaveFormatEx.wBitsPerSample == 8) {
-				for (int i = 0; i < mMuteData.Length; ++i) {
-					mMuteData[i] = 128;
+				for (int i = 0; i < MuteData.Length; ++i) {
+					MuteData[i] = 128;
 				}
 			}
-			mCallback = (hwo, uMsg, dwUser, lpWaveHdr, dwParam2) => {
+			Callback = (hwo, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WOM.OPEN:
 					AllocHeader();
-					mEnableCallback = true;
-					Enabled = true;
-					Console.WriteLine("waveOutOpen");
+					Console.WriteLine("WaveOut Device Opened");
 					break;
 				case MM_WOM.CLOSE:
 					DisposeHeader();
-					mHandle = IntPtr.Zero;
-					mEnableCallback = false;
-					Enabled = false;
-					Console.WriteLine("waveOutClose");
+					Console.WriteLine("WaveOut Device Closed");
 					break;
 				case MM_WOM.DONE:
-					if (mStop) {
-						mEnableCallback = false;
+					if (Closing) {
 						break;
 					}
-					lock (mLockBuffer) {
-						var waveHdr = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
-						waveHdr.dwFlags &= ~WAVEHDR_FLAG.WHDR_INQUEUE;
-						Marshal.StructureToPtr(waveHdr, lpWaveHdr, false);
+					lock (LockBuffer) {
+						var header = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
+						header.dwFlags &= ~WAVEHDR_FLAG.WHDR_INQUEUE;
+						Marshal.StructureToPtr(header, lpWaveHdr, false);
 						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
-						if (mProcessedBufferCount > 0) {
-							--mProcessedBufferCount;
-						}
 					}
 					break;
 				}
@@ -122,65 +113,60 @@ namespace WinMM {
 		}
 
 		protected override void BufferTask() {
-			mStop = false;
-			mPause = false;
-			mTerminate = false;
-			mBufferPaused = false;
-			mProcessedBufferCount = 0;
-			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
+			Closing = false;
+			Terminate = false;
+			Pause = false;
+			Paused = false;
+			DeviceEnabled = false;
+			var ret = waveOutOpen(ref DeviceHandle, DeviceId, ref WaveFormatEx, Callback, IntPtr.Zero, 0x00030000);
 			if (MMResult.MMSYSERR_NOERROR != ret) {
 				return;
 			}
-			foreach (var pHeader in mpWaveHeader) {
-				waveOutPrepareHeader(mHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
-			}
-			foreach (var pHeader in mpWaveHeader) {
-				waveOutWrite(mHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
-			}
-			Console.WriteLine("waveOutWrite");
-			int writeIndex = 0;
-			while (!mStop) {
-				var enableWait = false;
-				lock (mLockBuffer) {
-					if (mProcessedBufferCount < mBufferCount) {
-						var lpWaveHdr = mpWaveHeader[writeIndex];
-						var waveHdr = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
-						writeIndex = ++writeIndex % mBufferCount;
-						if ((waveHdr.dwFlags & WAVEHDR_FLAG.WHDR_INQUEUE) == WAVEHDR_FLAG.WHDR_INQUEUE) {
-							continue;
-						}
-						waveHdr.dwFlags |= WAVEHDR_FLAG.WHDR_INQUEUE;
-						Marshal.StructureToPtr(waveHdr, lpWaveHdr, false);
-						if (mPause || mTerminate) {
-							Marshal.Copy(mMuteData, 0, waveHdr.lpData, mMuteData.Length);
-							mBufferPaused = true;
-							if (mTerminate) {
-								mPause = true;
-								mTerminate = false;
-								new Task(() => { mOnTerminated(); }).Start();
-							}
-						}
-						else {
-							WriteBuffer(waveHdr.lpData);
-						}
-						++mProcessedBufferCount;
-					} else {
-						enableWait = true;
-					}
-				}
-				if (enableWait) {
-					Thread.Sleep(1);
-				}
-			}
-			for (int i = 0; i < 40 && mEnableCallback; ++i) {
+			for (int i = 0; i < 40 && !DeviceEnabled; ++i) {
 				Thread.Sleep(50);
 			}
-			waveOutReset(mHandle);
-			for (int i = 0; i < mBufferCount; ++i) {
-				waveOutUnprepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			foreach (var pHeader in mpWaveHeader) {
+				waveOutPrepareHeader(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
+				waveOutWrite(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
 			}
-			waveOutClose(mHandle);
-			for (int i = 0; i < 40 && Enabled; ++i) {
+			Console.WriteLine("WaveOut Header Prepared");
+			var bufferIndex = 0;
+			var sleepThreshold = BufferCount * 3 / 4;
+			while (!Closing) {
+				for (var inqueueCount = 0; inqueueCount < sleepThreshold;) {
+					lock (LockBuffer) {
+						var pHeader = mpWaveHeader[bufferIndex];
+						bufferIndex = ++bufferIndex % BufferCount;
+						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
+						if (0 != (header.dwFlags & WAVEHDR_FLAG.WHDR_INQUEUE)) {
+							++inqueueCount;
+							continue;
+						}
+						header.dwFlags |= WAVEHDR_FLAG.WHDR_INQUEUE;
+						Marshal.StructureToPtr(header, pHeader, false);
+						if (Terminate || Pause) {
+							Marshal.Copy(MuteData, 0, header.lpData, MuteData.Length);
+							Paused = true;
+						}
+						else {
+							WriteBuffer(header.lpData);
+						}
+					}
+				}
+				if (Terminate && Paused) {
+					Terminate = false;
+					Pause = true;
+					new Task(() => { OnTerminated(); }).Start();
+				}
+				Thread.Sleep(1);
+			}
+			waveOutReset(DeviceHandle);
+			for (int i = 0; i < BufferCount; ++i) {
+				waveOutUnprepareHeader(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			}
+			Console.WriteLine("WaveOut Header Unprepared");
+			waveOutClose(DeviceHandle);
+			for (int i = 0; i < 40 && DeviceEnabled; ++i) {
 				Thread.Sleep(50);
 			}
 		}

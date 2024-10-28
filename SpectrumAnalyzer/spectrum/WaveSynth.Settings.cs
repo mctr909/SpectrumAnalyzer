@@ -1,15 +1,11 @@
 ﻿namespace Spectrum {
 	public partial class WaveSynth {
 		/// <summary>対象閾値[10^(db/20)]</summary>
-		const double TERGET_THRESHOLD = 1.0 / 4096.0;
+		const double TERGET_THRESHOLD = 1.0 / 10000.0;
 		/// <summary>破棄閾値[10^(db/20)]</summary>
 		const double PURGE_THRESHOLD = 1.0 / 32768.0;
-		/// <summary>低音域デクリック速度</summary>
-		const double DECLICK_LOW_SPEED = 0.125;
-		/// <summary>中音域デクリック速度</summary>
-		const double DECLICK_MID_SPEED = 0.25;
-		/// <summary>高音域デクリック速度</summary>
-		const double DECLICK_HIGH_SPEED = 0.5;
+		/// <summary>デクリック速度</summary>
+		const double DECLICK_SPEED = 0.25;
 		/// <summary>中音域開始[半音]</summary>
 		const int BEGIN_MID_TONE = 36;
 		/// <summary>高音域開始[半音]</summary>

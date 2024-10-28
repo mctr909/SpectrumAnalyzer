@@ -35,7 +35,8 @@ namespace WinMM {
 		}
 
 		delegate void DCallback(IntPtr hwi, MM_WIM uMsg, int dwUser, IntPtr lpWaveHdr, int dwParam2);
-		DCallback mCallback;
+		DCallback Callback;
+		int ProcessedBufferCount = 0;
 
 		#region dll
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
@@ -74,27 +75,24 @@ namespace WinMM {
 			return list;
 		}
 
-		public WaveIn(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount)
+		public WaveIn(int sampleRate, int channels, VALUE_TYPE type, int bufferSamples, int bufferCount)
 			: base(sampleRate, channels, type, bufferSamples, bufferCount) {
-			mCallback = (hwi, uMsg, dwUser, lpWaveHdr, dwParam2) => {
+			Callback = (hwi, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WIM.OPEN:
 					AllocHeader();
-					Enabled = true;
 					break;
 				case MM_WIM.CLOSE:
 					DisposeHeader();
-					mHandle = IntPtr.Zero;
-					Enabled = false;
 					break;
 				case MM_WIM.DATA:
-					lock (mLockBuffer) {
-						if (mStop) {
+					lock (LockBuffer) {
+						if (Closing) {
 							break;
 						}
 						waveInAddBuffer(hwi, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
-						if (mProcessedBufferCount > 0) {
-							mProcessedBufferCount--;
+						if (ProcessedBufferCount > 0) {
+							ProcessedBufferCount--;
 						}
 					}
 					break;
@@ -103,35 +101,35 @@ namespace WinMM {
 		}
 
 		protected override void BufferTask() {
-			mStop = false;
-			mPause = false;
-			mBufferPaused = false;
-			mProcessedBufferCount = 0;
-			var mr = waveInOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero);
+			Closing = false;
+			Pause = false;
+			Paused = false;
+			ProcessedBufferCount = 0;
+			var mr = waveInOpen(ref DeviceHandle, DeviceId, ref WaveFormatEx, Callback, IntPtr.Zero);
 			if (MMResult.MMSYSERR_NOERROR != mr) {
 				return;
 			}
-			for (int i = 0; i < mBufferCount; ++i) {
-				waveInPrepareHeader(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-				waveInAddBuffer(mHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			for (int i = 0; i < BufferCount; ++i) {
+				waveInPrepareHeader(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+				waveInAddBuffer(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
-			waveInStart(mHandle);
+			waveInStart(DeviceHandle);
 			var readIndex = 0;
-			while (!mStop) {
+			while (!Closing) {
 				var enableWait = false;
-				lock (mLockBuffer) {
-					if (mBufferCount <= mProcessedBufferCount + 1) {
+				lock (LockBuffer) {
+					if (BufferCount <= ProcessedBufferCount + 1) {
 						enableWait = true;
 					}
 					else {
-						if (mPause) {
-							mBufferPaused = true;
+						if (Pause) {
+							Paused = true;
 						}
 						else {
 							var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[readIndex]);
 							ReadBuffer(header.lpData);
-							readIndex = (readIndex + 1) % mBufferCount;
-							mProcessedBufferCount++;
+							readIndex = (readIndex + 1) % BufferCount;
+							ProcessedBufferCount++;
 						}
 					}
 				}
@@ -139,12 +137,12 @@ namespace WinMM {
 					Thread.Sleep(1);
 				}
 			}
-			waveInReset(mHandle);
-			for (int i = 0; i < mBufferCount; ++i) {
-				waveInUnprepareHeader(mpWaveHeader[i], mHandle, Marshal.SizeOf<WAVEHDR>());
+			waveInReset(DeviceHandle);
+			for (int i = 0; i < BufferCount; ++i) {
+				waveInUnprepareHeader(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
 			}
-			waveInClose(mHandle);
-			for (int i = 0; i < 40 && Enabled; ++i) {
+			waveInClose(DeviceHandle);
+			for (int i = 0; i < 40 && DeviceEnabled; ++i) {
 				Thread.Sleep(50);
 			}
 		}

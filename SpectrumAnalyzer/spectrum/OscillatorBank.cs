@@ -9,6 +9,5 @@ namespace Spectrum {
 		public double LCurrent;
 		public double RTarget;
 		public double RCurrent;
-		public double Declick;
 	}
 }

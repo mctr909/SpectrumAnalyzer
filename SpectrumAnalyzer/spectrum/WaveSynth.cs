@@ -55,28 +55,21 @@ namespace Spectrum {
 				pOsc->RTarget = 0.0;
 				for (int i = HALFTONE_DIV, divSpec = idxSpec; i != 0; --i, ++divSpec) {
 					var spec = PeakBanks[divSpec];
-					var specC = Math.Max(spec.L, spec.R);
+					var specL = spec.L;
+					var specR = spec.R;
+					var specC = Math.Max(specL, specR);
 					if (specC > max) {
 						max = specC;
 						pOsc->Delta = spec.DELTA;
 					}
-					if (spec.L > pOsc->LTarget) {
-						pOsc->LTarget = spec.L;
+					if (specL > pOsc->LTarget) {
+						pOsc->LTarget = specL;
 					}
-					if (spec.R > pOsc->RTarget) {
-						pOsc->RTarget = spec.R;
+					if (specR > pOsc->RTarget) {
+						pOsc->RTarget = specR;
 					}
 				}
 				pOsc->Delta *= Pitch;
-				/* 音域によってデクリック速度を選択 */
-				var transeposedTone = idxTone + (12 * Math.Log(Pitch, 2));
-				if (transeposedTone < BEGIN_MID_TONE) {
-					pOsc->Declick = DECLICK_LOW_SPEED;
-				} else if (transeposedTone < BEGIN_HIGH_TONE) {
-					pOsc->Declick = DECLICK_MID_SPEED;
-				} else {
-					pOsc->Declick = DECLICK_HIGH_SPEED;
-				}
 				/* 対象閾値未満の振幅を0クリア */
 				if (pOsc->LTarget < TERGET_THRESHOLD) {
 					pOsc->LTarget = 0;
@@ -138,8 +131,8 @@ namespace Spectrum {
 					var a2b = indexD - indexI;
 					pOsc->Phase += pOsc->Delta;
 					pOsc->Phase -= (int)pOsc->Phase;
-					pOsc->LCurrent += (pOsc->LTarget - pOsc->LCurrent) * pOsc->Declick;
-					pOsc->RCurrent += (pOsc->RTarget - pOsc->RCurrent) * pOsc->Declick;
+					pOsc->LCurrent += (pOsc->LTarget - pOsc->LCurrent) * DECLICK_SPEED;
+					pOsc->RCurrent += (pOsc->RTarget - pOsc->RCurrent) * DECLICK_SPEED;
 					var wave = SIN_TABLE[indexI] * (1.0 - a2b) + SIN_TABLE[indexI + 1] * a2b;
 					*pWave++ += (float)(wave * pOsc->LCurrent);
 					*pWave++ += (float)(wave * pOsc->RCurrent);

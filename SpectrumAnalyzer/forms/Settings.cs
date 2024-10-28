@@ -34,6 +34,7 @@ namespace SpectrumAnalyzer.Forms {
 			Instance.ChkCurve.Checked = Drawer.DisplayCurve;
 			Instance.ChkPeak.Checked = Drawer.DisplayPeak;
 			Instance.ChkScroll.Checked = Drawer.DisplayScroll;
+			Instance.ChkFreq.Checked = Drawer.DisplayFreq;
 			Instance.RbAutoGain.Checked = Drawer.AutoGain;
 			Instance.RbNormGain.Checked = Drawer.NormGain;
 			Instance.RbGainNone.Checked = !(Drawer.AutoGain || Drawer.NormGain);
@@ -65,6 +66,11 @@ namespace SpectrumAnalyzer.Forms {
 
 		private void ChkScroll_CheckedChanged(object sender, EventArgs e) {
 			Drawer.DisplayScroll = ChkScroll.Checked;
+			ParentForm.DrawBackground();
+		}
+
+		private void ChkFreq_CheckedChanged(object sender, EventArgs e) {
+			Drawer.DisplayFreq = ChkFreq.Checked;
 			ParentForm.DrawBackground();
 		}
 

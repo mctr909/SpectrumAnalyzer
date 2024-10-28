@@ -28,6 +28,7 @@
 			this.GrbKey = new System.Windows.Forms.GroupBox();
 			this.GrbSpeed = new System.Windows.Forms.GroupBox();
 			this.GrbDisplaySettings = new System.Windows.Forms.GroupBox();
+			this.ChkFreq = new System.Windows.Forms.CheckBox();
 			this.TrkDispMax = new System.Windows.Forms.TrackBar();
 			this.RbNormGain = new System.Windows.Forms.RadioButton();
 			this.ChkCurve = new System.Windows.Forms.CheckBox();
@@ -99,6 +100,7 @@
 			// 
 			// GrbDisplaySettings
 			// 
+			this.GrbDisplaySettings.Controls.Add(this.ChkFreq);
 			this.GrbDisplaySettings.Controls.Add(this.TrkDispMax);
 			this.GrbDisplaySettings.Controls.Add(this.RbNormGain);
 			this.GrbDisplaySettings.Controls.Add(this.ChkCurve);
@@ -114,6 +116,17 @@
 			this.GrbDisplaySettings.TabIndex = 4;
 			this.GrbDisplaySettings.TabStop = false;
 			this.GrbDisplaySettings.Text = "表示";
+			// 
+			// ChkFreq
+			// 
+			this.ChkFreq.AutoSize = true;
+			this.ChkFreq.Location = new System.Drawing.Point(159, 132);
+			this.ChkFreq.Name = "ChkFreq";
+			this.ChkFreq.Size = new System.Drawing.Size(86, 19);
+			this.ChkFreq.TabIndex = 10;
+			this.ChkFreq.Text = "周波数表示";
+			this.ChkFreq.UseVisualStyleBackColor = true;
+			this.ChkFreq.CheckedChanged += new System.EventHandler(this.ChkFreq_CheckedChanged);
 			// 
 			// TrkDispMax
 			// 
@@ -157,7 +170,7 @@
 			// ChkPeak
 			// 
 			this.ChkPeak.AutoSize = true;
-			this.ChkPeak.Location = new System.Drawing.Point(119, 132);
+			this.ChkPeak.Location = new System.Drawing.Point(67, 132);
 			this.ChkPeak.Name = "ChkPeak";
 			this.ChkPeak.Size = new System.Drawing.Size(86, 19);
 			this.ChkPeak.TabIndex = 7;
@@ -180,7 +193,7 @@
 			// ChkScroll
 			// 
 			this.ChkScroll.AutoSize = true;
-			this.ChkScroll.Location = new System.Drawing.Point(240, 132);
+			this.ChkScroll.Location = new System.Drawing.Point(251, 132);
 			this.ChkScroll.Name = "ChkScroll";
 			this.ChkScroll.Size = new System.Drawing.Size(72, 19);
 			this.ChkScroll.TabIndex = 6;
@@ -307,5 +320,6 @@
 		private System.Windows.Forms.CheckBox ChkPeak;
 		private System.Windows.Forms.CheckBox ChkCurve;
 		private System.Windows.Forms.TrackBar TrkDispMax;
+		private System.Windows.Forms.CheckBox ChkFreq;
 	}
 }

@@ -7,6 +7,9 @@ namespace Spectrum {
 		/// <summary>サンプリング周波数[Hz]</summary>
 		readonly int SampleRate;
 
+		/// <summary>基本周波数(C0)[Hz]</summary>
+		public static double BaseFreq;
+
 		/// <summary>トランスポーズ[半音]</summary>
 		public double Transpose { get; set; } = 0.0;
 
@@ -28,8 +31,9 @@ namespace Spectrum {
 			Curve = new double[BANK_COUNT];
 			PeakBanks = new PeakBank[BANK_COUNT];
 			mpFilterBanks = new IntPtr[BANK_COUNT];
+			BaseFreq = 442 * Math.Pow(2, HALFTONE_CENTER / OCT_DIV + 3/12.0 - 5);
 			for (int b = 0; b < BANK_COUNT; ++b) {
-				var frequency = BASE_FREQ * Math.Pow(2.0, (b - 0.5 * HALFTONE_DIV) / OCT_DIV);
+				var frequency = BaseFreq * Math.Pow(2.0, (b - 0.5 * HALFTONE_DIV) / OCT_DIV);
 				PeakBanks[b] = new PeakBank() {
 					DELTA = frequency / SampleRate
 				};
@@ -187,15 +191,12 @@ namespace Spectrum {
 						thresholdRDisp += b.RPowerDisp;
 					}
 					width = width * 2 + 1;
-					thresholdL /= width;
-					thresholdR /= width;
-					thresholdLDisp /= width;
-					thresholdRDisp /= width;
 					/* パワー⇒リニア変換した値に閾値ゲインを掛ける */
-					thresholdL = Math.Sqrt(thresholdL * 2) * gain;
-					thresholdR = Math.Sqrt(thresholdR * 2) * gain;
-					thresholdLDisp = Math.Sqrt(thresholdLDisp * 2) * gain;
-					thresholdRDisp = Math.Sqrt(thresholdRDisp * 2) * gain;
+					var scale = 2.0 / width;
+					thresholdL = Math.Sqrt(thresholdL * scale) * gain;
+					thresholdR = Math.Sqrt(thresholdR * scale) * gain;
+					thresholdLDisp = Math.Sqrt(thresholdLDisp * scale) * gain;
+					thresholdRDisp = Math.Sqrt(thresholdRDisp * scale) * gain;
 				}
 				var bank = *(FilterBank*)mpFilterBanks[idxB];
 				/*** 波形合成用のピークを抽出 ***/

@@ -28,7 +28,7 @@ namespace SpectrumAnalyzer {
 		float[] MuteData;
 
 		public Playback(int sampleRate, int bufferCount = 20)
-			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV_COUNT, bufferCount) {
+			: base(sampleRate, 2, VALUE_TYPE.F32, sampleRate / 1000 * DIV_COUNT, bufferCount) {
 			DIV_SAMPLES = BufferSamples / DIV_COUNT;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum.Spectrum(sampleRate);
@@ -36,7 +36,7 @@ namespace SpectrumAnalyzer {
 				PlayingName = Path.GetFileNameWithoutExtension(FileList[PlayFileIndex]);
 				File.Speed = Forms.Settings.Speed;
 			};
-			mOnTerminated = () => {
+			OnTerminated = () => {
 				if (FileList.Count > 0) {
 					PlayFileIndex = ++PlayFileIndex % FileList.Count;
 					OpenFile(FileList[PlayFileIndex]);
@@ -83,7 +83,7 @@ namespace SpectrumAnalyzer {
 
 		void OpenFile(string filePath) {
 			var playing = Playing;
-			Pause();
+			Stop();
 			File.Dispose();
 			File = new WavReader(filePath, SampleRate, BufferSamples, 1.0);
 			OnOpened(File.IsOpened);
@@ -102,7 +102,7 @@ namespace SpectrumAnalyzer {
 				pDivBuffer += DIV_SIZE;
 			}
 			if (File.Position >= File.SampleCount) {
-				mTerminate = true;
+				Terminate = true;
 			}
 		}
 	}

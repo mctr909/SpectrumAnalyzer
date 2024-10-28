@@ -4,7 +4,7 @@ using System.Threading;
 
 namespace WinMM {
 	public abstract class Wave : IDisposable {
-		public enum BUFFER_TYPE {
+		public enum VALUE_TYPE {
 			INTEGER = 0,
 			I8 = INTEGER | 8,
 			I16 = INTEGER | 16,
@@ -46,8 +46,10 @@ namespace WinMM {
 			STEREO_16bit_96kHz = 0x80000
 		}
 
+		protected const uint WAVE_MAPPER = unchecked((uint)-1);
+
 		[StructLayout(LayoutKind.Sequential)]
-		public struct WAVEFORMATEX {
+		protected struct WAVEFORMATEX {
 			public ushort wFormatTag;
 			public ushort nChannels;
 			public uint nSamplesPerSec;
@@ -68,43 +70,35 @@ namespace WinMM {
 			public uint reserved;
 		}
 
-		protected const uint WAVE_MAPPER = unchecked((uint)-1);
-
-		#region dynamic variable
-		public WAVEFORMATEX WaveFormatEx;
-		protected IntPtr mHandle;
+		protected WAVEFORMATEX WaveFormatEx;
+		protected IntPtr DeviceHandle;
 		protected IntPtr[] mpWaveHeader;
-		protected int mBufferSize;
-		protected int mBufferCount;
-		protected int mProcessedBufferCount = 0;
-		protected bool mStop = false;
-		protected bool mPause = false;
-		protected bool mTerminate = false;
-		protected bool mBufferPaused = true;
-		protected bool mEnableCallback = true;
-		protected object mLockBuffer = new object();
-		Thread mBufferThread;
-		#endregion
+		protected int BufferSize;
+		protected int BufferCount;
+		protected bool Closing = false;
+		protected bool Pause = false;
+		protected bool Paused = true;
+		protected bool Terminate = false;
+		protected object LockBuffer = new object();
+		Thread BufferThread;
 
-		#region property
-		public bool Enabled { get; protected set; }
+		public bool DeviceEnabled { get; protected set; }
 		public bool Playing { get; protected set; }
 		public uint DeviceId { get; private set; } = WAVE_MAPPER;
 		public int SampleRate { get; private set; }
 		public int Channels { get; private set; }
 		public int BufferSamples { get; private set; }
-		#endregion
 
-		protected Wave(int sampleRate, int channels, BUFFER_TYPE type, int bufferSamples, int bufferCount) {
-			var bits = (ushort)(type & BUFFER_TYPE.BIT_MASK);
+		protected Wave(int sampleRate, int channels, VALUE_TYPE type, int bufferSamples, int bufferCount) {
+			var bits = (ushort)(type & VALUE_TYPE.BIT_MASK);
 			var bytesPerSample = channels * bits >> 3;
 			SampleRate = sampleRate;
 			Channels = channels;
 			BufferSamples = bufferSamples;
-			mBufferSize = bufferSamples * bytesPerSample;
-			mBufferCount = bufferCount;
+			BufferSize = bufferSamples * bytesPerSample;
+			BufferCount = bufferCount;
 			WaveFormatEx = new WAVEFORMATEX() {
-				wFormatTag = (ushort)((type & BUFFER_TYPE.FLOAT) > 0 ? 3 : 1),
+				wFormatTag = (ushort)((type & VALUE_TYPE.FLOAT) > 0 ? 3 : 1),
 				nChannels = (ushort)channels,
 				nSamplesPerSec = (uint)sampleRate,
 				nAvgBytesPerSec = (uint)(sampleRate * bytesPerSample),
@@ -115,22 +109,23 @@ namespace WinMM {
 		}
 
 		protected void AllocHeader() {
-			var defaultValue = new byte[mBufferSize];
-			mpWaveHeader = new IntPtr[mBufferCount];
-			for (int i = 0; i < mBufferCount; ++i) {
+			var defaultValue = new byte[BufferSize];
+			mpWaveHeader = new IntPtr[BufferCount];
+			for (int i = 0; i < BufferCount; ++i) {
 				var header = new WAVEHDR() {
 					dwFlags = WAVEHDR_FLAG.WHDR_BEGINLOOP | WAVEHDR_FLAG.WHDR_ENDLOOP,
-					dwBufferLength = (uint)mBufferSize,
-					lpData = Marshal.AllocHGlobal(mBufferSize),
+					dwBufferLength = (uint)BufferSize,
+					lpData = Marshal.AllocHGlobal(BufferSize),
 				};
-				Marshal.Copy(defaultValue, 0, header.lpData, mBufferSize);
+				Marshal.Copy(defaultValue, 0, header.lpData, BufferSize);
 				mpWaveHeader[i] = Marshal.AllocHGlobal(Marshal.SizeOf<WAVEHDR>());
 				Marshal.StructureToPtr(header, mpWaveHeader[i], true);
 			}
+			DeviceEnabled = true;
 		}
 
 		protected void DisposeHeader() {
-			for (int i = 0; i < mBufferCount; ++i) {
+			for (int i = 0; i < BufferCount; ++i) {
 				if (mpWaveHeader[i] == IntPtr.Zero) {
 					continue;
 				}
@@ -141,22 +136,24 @@ namespace WinMM {
 				Marshal.FreeHGlobal(mpWaveHeader[i]);
 				mpWaveHeader[i] = IntPtr.Zero;
 			}
+			DeviceEnabled = false;
+			DeviceHandle = IntPtr.Zero;
 		}
 
 		protected void OpenDevice() {
 			CloseDevice();
-			mBufferThread = new Thread(BufferTask) {
+			BufferThread = new Thread(BufferTask) {
 				Priority = ThreadPriority.Highest
 			};
-			mBufferThread.Start();
+			BufferThread.Start();
 		}
 
 		protected void CloseDevice() {
-			if (IntPtr.Zero == mHandle) {
+			if (IntPtr.Zero == DeviceHandle) {
 				return;
 			}
-			mStop = true;
-			mBufferThread.Join();
+			Closing = true;
+			BufferThread.Join();
 		}
 
 		public void Dispose() {
@@ -164,7 +161,7 @@ namespace WinMM {
 		}
 
 		public void SetDevice(uint deviceId) {
-			var enable = Enabled;
+			var enable = DeviceEnabled;
 			CloseDevice();
 			DeviceId = deviceId;
 			if (enable) {
@@ -172,20 +169,20 @@ namespace WinMM {
 			}
 		}
 
-		public void Pause() {
-			mPause = true;
-			if (Playing) {
-				for (int i = 0; i < 40 && !mBufferPaused; i++) {
-					Thread.Sleep(50);
-				}
-			}
-			Playing = false;
+		public void Start() {
+			Pause = false;
+			Paused = false;
+			Playing = DeviceEnabled;
 		}
 
-		public void Start() {
-			mPause = false;
-			mBufferPaused = false;
-			Playing = Enabled;
+		public void Stop() {
+			Pause = true;
+			if (Playing) {
+				for (int i = 0; i < 40 && !Paused; i++) {
+					Thread.Sleep(50);
+				}
+				Playing = false;
+			}
 		}
 
 		protected abstract void BufferTask();

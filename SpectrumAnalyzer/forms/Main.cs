@@ -80,12 +80,12 @@ namespace SpectrumAnalyzer.Forms {
 
 		private void TsbRec_Click(object sender, EventArgs e) {
 			if (Record.Playing) {
-				Record.Pause();
+				Record.Stop();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 			}
 			else {
-				Playback.Pause();
+				Playback.Stop();
 				Record.Start();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
@@ -100,11 +100,11 @@ namespace SpectrumAnalyzer.Forms {
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
 			if (Playback.Playing) {
-				Playback.Pause();
+				Playback.Stop();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 			} else {
-				Record.Pause();
+				Record.Stop();
 				Playback.Start();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
@@ -281,12 +281,7 @@ namespace SpectrumAnalyzer.Forms {
 				pictureBox1.BackgroundImage = null;
 			}
 			pictureBox1.BackgroundImage = new Bitmap(pictureBox1.Width, pictureBox1.Height, PixelFormat.Format32bppArgb);
-			var g = Graphics.FromImage(pictureBox1.BackgroundImage);
-			g.Clear(Color.Black);
-			Drawer.Keyboard(g, pictureBox1.Width, pictureBox1.Height, GaugeHeight, HALFTONE_COUNT);
-			Drawer.Gauge(g, pictureBox1.Width, GaugeHeight);
-			pictureBox1.BackgroundImage = pictureBox1.BackgroundImage;
-			g.Dispose();
+			Drawer.Background(pictureBox1, GaugeHeight, HALFTONE_COUNT);
 		}
 	}
 }
