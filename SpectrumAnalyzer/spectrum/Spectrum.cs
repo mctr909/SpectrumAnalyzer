@@ -66,7 +66,7 @@ namespace Spectrum {
 		/// </summary>
 		/// <param name="responceSpeed">応答速度[Hz]</param>
 		public unsafe void SetResponceSpeed(double responceSpeed) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
+			var sampleOmega = SampleRate / Math.PI;
 			for (int b = 0; b < BANK_COUNT; ++b) {
 				var pBank = (FilterBank*)mpFilterBanks[b];
 				var bankFreq = PeakBanks[b].DELTA * SampleRate;
@@ -90,7 +90,7 @@ namespace Spectrum {
 		}
 
 		unsafe void SetBPF(int index, double frequency) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
+			var sampleOmega = SampleRate / Math.PI;
 			var omega = 2 * Math.PI * frequency / SampleRate;
 			var alpha = GetAlpha(SampleRate, frequency);
 			var a0 = 1.0 + alpha;

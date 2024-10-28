@@ -13,23 +13,23 @@ namespace SpectrumAnalyzer {
 		static readonly Font FONT_DB = new Font("Meiryo UI", 11f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(171, 171, 127), 1.0f);
 		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
-		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(51, 51, 51), 1.0f);
+		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(41, 41, 41), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen GAUGE = new Pen(Color.FromArgb(167, 147, 0), 1.0f);
 		static readonly Pen FREQ_MAJOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f);
-		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(95, 95, 95), 1.0f) {
+		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(111, 111, 111), 1.0f) {
 			DashStyle = System.Drawing.Drawing2D.DashStyle.Custom,
-			DashPattern = new float[] { 2, 3 }
+			DashPattern = new float[] { 1, 3 }
 		};
 
 		static readonly Brush PEAK_TOP = new Pen(Color.FromArgb(63, 255, 63)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 63, 255, 63)).Brush;
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 95, 255, 95)).Brush;
 		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(95, 255, 255, 255)).Brush;
 
 		/// <summary>ゲイン自動調整 最大[10^-(db/10)]</summary>
 		public const double AUTOGAIN_MAX = 2.512E-04;
 		/// <summary>ゲイン自動調整 速度[秒]</summary>
-		public const double AUTOGAIN_SPEED = 3.0;
+		public const double AUTOGAIN_SPEED = 4.0;
 
 		static double mOffsetGain = 3.981;
 		public static int OffsetDb {
@@ -40,7 +40,7 @@ namespace SpectrumAnalyzer {
 		public const int DB_LABEL_WIDTH = 50;
 		public const int KEYBOARD_HEIGHT = 24;
 		public static byte[] ScrollCanvas;
-		public static int MinDb = -36;
+		public static int MinDb = -24;
 		public static int KeyboardShift = 0;
 
 		public static bool DisplayScroll = false;
@@ -207,7 +207,7 @@ namespace SpectrumAnalyzer {
 
 		static void DrawFreqGauge(Graphics g, int width, int height, int labelY) {
 			var bottom = height - 1;
-			var shift = -KeyboardShift * HALFTONE_DIV;
+			var shift = 1.5 - KeyboardShift * HALFTONE_DIV;
 			var textWidth = g.MeasureString("100", FONT_OCT).Width;
 			var textArea = new RectangleF(-textWidth*0.5f, -1f, textWidth, KEYBOARD_HEIGHT);
 			var stringFormat = new StringFormat() {
@@ -331,7 +331,8 @@ namespace SpectrumAnalyzer {
 			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
 			var minValue = Math.Pow(10, MinDb / 20.0);
 			var dx = (double)width / BANK_COUNT;
-			var ox = HALFTONE_CENTER * dx;
+			var ox = HALFTONE_CENTER * dx - 0.5;
+			ox = Math.Max(1, ox);
 			for (int i = 0; i < BANK_COUNT; i++) {
 				var value = arr[i] * scale;
 				if (value > minValue) {
@@ -353,7 +354,8 @@ namespace SpectrumAnalyzer {
 			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
 			if (DisplayPeak) {
 				var dx = (float)width / BANK_COUNT;
-				var ox = HALFTONE_DIV * dx * 0.5f;
+				var ox = HALFTONE_CENTER * dx - 0.5;
+				ox = Math.Max(1, ox);
 				var minValue = Math.Pow(10, MinDb / 20.0);
 				for (int i = 0; i < BANK_COUNT; i++) {
 					var value = arr[i] * scale;

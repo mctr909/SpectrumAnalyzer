@@ -123,8 +123,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbOutput.Enabled = true;
 				CmbOutput.Items.Add("既定のデバイス");
-				foreach (var dev in outDevices) {
-					CmbOutput.Items.Add(dev);
+				foreach (var caps in outDevices) {
+					CmbOutput.Items.Add(caps.szPname);
 				}
 				CmbOutput.SelectedIndex = (int)ParentForm.Playback.DeviceId + 1;
 			}
@@ -136,8 +136,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbInput.Enabled = true;
 				CmbInput.Items.Add("既定のデバイス");
-				foreach (var dev in inDevices) {
-					CmbInput.Items.Add(dev);
+				foreach (var caps in inDevices) {
+					CmbInput.Items.Add(caps.szPname);
 				}
 				CmbInput.SelectedIndex = (int)ParentForm.Record.DeviceId + 1;
 			}

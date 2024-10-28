@@ -12,21 +12,21 @@
 		public const int HALFTONE_CENTER = HALFTONE_DIV / 2;
 
 		/// <summary>表示応答速度[Hz]</summary>
-		const double DISP_SPEED = 90;
+		const double DISP_SPEED = 120;
 		/// <summary>フィルタ遮断幅が1半音に至る周波数[Hz]</summary>
-		const double FREQ_AT_HALFTONE_WIDTH = 660.0;
+		const double FREQ_AT_HALFTONE_WIDTH = 500.0;
 
 		/// <summary>低音域 終了バンク</summary>
-		const int END_LOW_BANK = HALFTONE_DIV * 32;
+		const int END_LOW_BANK = HALFTONE_DIV * 36;
 		/// <summary>低音域 閾値幅[フィルタバンク数]</summary>
-		const int THRESHOLD_WIDTH_LOW = HALFTONE_DIV * 8;
+		const int THRESHOLD_WIDTH_LOW = HALFTONE_DIV * 9;
 		/// <summary>低音域 閾値ゲイン[10^(db/20)]</summary>
 		const double THRESHOLD_GAIN_LOW = 1.122;
 		/// <summary>中高音域 開始バンク</summary>
-		const int BEGIN_MID_BANK = HALFTONE_DIV * 44;
+		const int BEGIN_MID_BANK = HALFTONE_DIV * 48;
 		/// <summary>中高音域 閾値幅[フィルタバンク数]</summary>
 		const int THRESHOLD_WIDTH_MID = HALFTONE_DIV * 3 / 2;
 		/// <summary>中高音域 閾値ゲイン[10^(db/20)]</summary>
-		const double THRESHOLD_GAIN_MID = 1.035;
+		const double THRESHOLD_GAIN_MID = 1.0;
 	}
 }
