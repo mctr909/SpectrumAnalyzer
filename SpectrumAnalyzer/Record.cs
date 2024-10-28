@@ -3,11 +3,11 @@ using WinMM;
 
 namespace SpectrumAnalyzer {
 	public class Record : WaveIn {
-		public Spectrum Spectrum;
+		public Spectrum.Spectrum Spectrum;
 
 		public Record(int sampleRate)
-			: base(sampleRate, 1, BUFFER_TYPE.F32, sampleRate / 400, 30) {
-			Spectrum = new Spectrum(sampleRate, Settings.BASE_FREQ, Settings.NOTE_COUNT, false);
+			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 400, 30) {
+			Spectrum = new Spectrum.Spectrum(sampleRate, SettingsForm.BASE_FREQ);
 		}
 
 		public void Open() {
@@ -18,8 +18,8 @@ namespace SpectrumAnalyzer {
 			CloseDevice();
 		}
 
-		protected unsafe override void ReadBuffer(IntPtr pInput) {
-			Spectrum.Calc((float*)pInput, BufferSamples);
+		protected override void ReadBuffer(IntPtr pInput) {
+			Spectrum.Update(pInput, BufferSamples);
 		}
 	}
 }

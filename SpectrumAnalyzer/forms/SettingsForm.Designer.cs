@@ -1,5 +1,5 @@
 ﻿namespace SpectrumAnalyzer {
-	partial class Settings {
+	partial class SettingsForm {
 		/// <summary>
 		/// Required designer variable.
 		/// </summary>
@@ -36,22 +36,18 @@
 			this.RbAutoGain = new System.Windows.Forms.RadioButton();
 			this.TrkMinLevel = new System.Windows.Forms.TrackBar();
 			this.ChkThreshold = new System.Windows.Forms.CheckBox();
-			this.TrkResponce = new System.Windows.Forms.TrackBar();
 			this.GrbOutput = new System.Windows.Forms.GroupBox();
 			this.CmbOutput = new System.Windows.Forms.ComboBox();
 			this.GrbInput = new System.Windows.Forms.GroupBox();
 			this.CmbInput = new System.Windows.Forms.ComboBox();
-			this.GrbResponce = new System.Windows.Forms.GroupBox();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSpeed)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.TrkKey)).BeginInit();
 			this.GrbKey.SuspendLayout();
 			this.GrbSpeed.SuspendLayout();
 			this.GrbMinLevel.SuspendLayout();
 			((System.ComponentModel.ISupportInitialize)(this.TrkMinLevel)).BeginInit();
-			((System.ComponentModel.ISupportInitialize)(this.TrkResponce)).BeginInit();
 			this.GrbOutput.SuspendLayout();
 			this.GrbInput.SuspendLayout();
-			this.GrbResponce.SuspendLayout();
 			this.SuspendLayout();
 			// 
 			// TrkSpeed
@@ -111,7 +107,7 @@
 			this.GrbMinLevel.Controls.Add(this.TrkMinLevel);
 			this.GrbMinLevel.Controls.Add(this.ChkThreshold);
 			this.GrbMinLevel.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbMinLevel.Location = new System.Drawing.Point(5, 159);
+			this.GrbMinLevel.Location = new System.Drawing.Point(5, 106);
 			this.GrbMinLevel.Name = "GrbMinLevel";
 			this.GrbMinLevel.Size = new System.Drawing.Size(326, 93);
 			this.GrbMinLevel.TabIndex = 4;
@@ -215,26 +211,11 @@
 			this.ChkThreshold.UseVisualStyleBackColor = true;
 			this.ChkThreshold.CheckedChanged += new System.EventHandler(this.ChkThreshold_CheckedChanged);
 			// 
-			// TrkResponce
-			// 
-			this.TrkResponce.AutoSize = false;
-			this.TrkResponce.LargeChange = 10;
-			this.TrkResponce.Location = new System.Drawing.Point(6, 15);
-			this.TrkResponce.Maximum = 42;
-			this.TrkResponce.Minimum = 12;
-			this.TrkResponce.Name = "TrkResponce";
-			this.TrkResponce.RightToLeft = System.Windows.Forms.RightToLeft.No;
-			this.TrkResponce.Size = new System.Drawing.Size(314, 24);
-			this.TrkResponce.TabIndex = 9;
-			this.TrkResponce.TickFrequency = 6;
-			this.TrkResponce.Value = 20;
-			this.TrkResponce.Scroll += new System.EventHandler(this.TrkResponce_Scroll);
-			// 
 			// GrbOutput
 			// 
 			this.GrbOutput.Controls.Add(this.CmbOutput);
 			this.GrbOutput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbOutput.Location = new System.Drawing.Point(5, 258);
+			this.GrbOutput.Location = new System.Drawing.Point(5, 205);
 			this.GrbOutput.Name = "GrbOutput";
 			this.GrbOutput.Size = new System.Drawing.Size(326, 47);
 			this.GrbOutput.TabIndex = 5;
@@ -255,7 +236,7 @@
 			// 
 			this.GrbInput.Controls.Add(this.CmbInput);
 			this.GrbInput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbInput.Location = new System.Drawing.Point(5, 311);
+			this.GrbInput.Location = new System.Drawing.Point(5, 258);
 			this.GrbInput.Name = "GrbInput";
 			this.GrbInput.Size = new System.Drawing.Size(326, 47);
 			this.GrbInput.TabIndex = 6;
@@ -272,23 +253,11 @@
 			this.CmbInput.TabIndex = 0;
 			this.CmbInput.SelectedIndexChanged += new System.EventHandler(this.CmbInput_SelectedIndexChanged);
 			// 
-			// GrbResponce
-			// 
-			this.GrbResponce.Controls.Add(this.TrkResponce);
-			this.GrbResponce.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbResponce.Location = new System.Drawing.Point(5, 106);
-			this.GrbResponce.Name = "GrbResponce";
-			this.GrbResponce.Size = new System.Drawing.Size(326, 47);
-			this.GrbResponce.TabIndex = 10;
-			this.GrbResponce.TabStop = false;
-			this.GrbResponce.Text = "応答速度";
-			// 
 			// Settings
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(336, 362);
-			this.Controls.Add(this.GrbResponce);
+			this.ClientSize = new System.Drawing.Size(336, 310);
 			this.Controls.Add(this.GrbInput);
 			this.Controls.Add(this.GrbOutput);
 			this.Controls.Add(this.GrbMinLevel);
@@ -307,10 +276,8 @@
 			this.GrbMinLevel.ResumeLayout(false);
 			this.GrbMinLevel.PerformLayout();
 			((System.ComponentModel.ISupportInitialize)(this.TrkMinLevel)).EndInit();
-			((System.ComponentModel.ISupportInitialize)(this.TrkResponce)).EndInit();
 			this.GrbOutput.ResumeLayout(false);
 			this.GrbInput.ResumeLayout(false);
-			this.GrbResponce.ResumeLayout(false);
 			this.ResumeLayout(false);
 
 		}
@@ -334,7 +301,5 @@
 		private System.Windows.Forms.CheckBox ChkScroll;
 		private System.Windows.Forms.CheckBox ChkPeak;
 		private System.Windows.Forms.CheckBox ChkCurve;
-		private System.Windows.Forms.TrackBar TrkResponce;
-		private System.Windows.Forms.GroupBox GrbResponce;
 	}
 }

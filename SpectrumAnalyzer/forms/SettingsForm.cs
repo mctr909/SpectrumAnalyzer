@@ -2,46 +2,49 @@
 using System.Windows.Forms;
 
 using WinMM;
+using Spectrum;
 
 namespace SpectrumAnalyzer {
-	public partial class Settings : Form {
-		static Settings mInstance;
+	public partial class SettingsForm : Form {
+		static SettingsForm mInstance;
 
 		MainForm mParent;
 
 		public static double Speed { get; set; } = 1.0;
 
-		public const int NOTE_COUNT = 126;
 		public static readonly double BASE_FREQ = 440 * Math.Pow(2.0, 3 / 12.0 - 5);
+
+		public const int OFS_DB = -12;
+		public const double OFS_GAIN = 3.981;
 
 		public static void Open(MainForm parent) {
 			if (null == mInstance) {
-				mInstance = new Settings(parent);
+				mInstance = new SettingsForm(parent);
 				mInstance.Initialize();
 				mInstance.SetKeySpeed();
 			}
 			if (mInstance.Visible) {
 				return;
 			}
-			var key = Math.Log(parent.Playback.Spectrum.Pitch * Speed, 2.0) * 12;
+			var key = Math.Log(Settings.Pitch * Speed, 2.0) * 12;
 			mInstance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
-			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * Spectrum.OCT_DIV);
+			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * Settings.OCT_DIV);
 			mInstance.TrkMinLevel.Value = Drawer.MinLevel;
-			mInstance.TrkResponce.Value = (int)(mInstance.TrkResponce.TickFrequency * Math.Log(parent.Playback.Spectrum.GetResponceSpeed(), 2) + 0.5);
 			mInstance.ChkCurve.Checked = Drawer.DisplayCurve;
 			mInstance.ChkPeak.Checked = Drawer.DisplayPeak;
 			mInstance.ChkThreshold.Checked = Drawer.DisplayThreshold;
 			mInstance.ChkScroll.Checked = Drawer.DisplayScroll;
-			mInstance.RbAutoGain.Checked = Spectrum.AutoGain;
-			mInstance.RbNormGain.Checked = Spectrum.NormGain;
+			mInstance.RbAutoGain.Checked = Settings.AutoGain;
+			mInstance.RbNormGain.Checked = Settings.NormGain;
 			mInstance.RbGainNone.Checked = !mInstance.RbAutoGain.Checked && !mInstance.RbNormGain.Checked;
+			mInstance.RbGainNone.Text = "+" + -OFS_DB + "db";
 			mInstance.Visible = true;
 			mInstance.Location = parent.Location;
 			mInstance.DispValue();
 		}
 
-		Settings(MainForm fm) {
+		SettingsForm(MainForm fm) {
 			InitializeComponent();
 			mParent = fm;
 		}
@@ -84,28 +87,13 @@ namespace SpectrumAnalyzer {
 			DispValue();
 		}
 
-		private void TrkResponce_Scroll(object sender, EventArgs e) {
-			Spectrum spectrum = null;
-			if (mParent.Playback.Playing) {
-				spectrum = mParent.Playback.Spectrum;
-			}
-			if (mParent.Record.Playing) {
-				spectrum = mParent.Record.Spectrum;
-			}
-			if (null == spectrum) {
-				return;
-			}
-			spectrum.SetResponceSpeed(Math.Pow(2, (double)TrkResponce.Value / TrkResponce.TickFrequency));
-			DispValue();
-		}
-
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
-			Spectrum.NormGain = RbNormGain.Checked;
+			Settings.NormGain = RbNormGain.Checked;
 			mParent.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			Spectrum.AutoGain = RbAutoGain.Checked;
+			Settings.AutoGain = RbAutoGain.Checked;
 			mParent.DrawBackground();
 		}
 
@@ -122,9 +110,9 @@ namespace SpectrumAnalyzer {
 		}
 
 		void Initialize() {
-			TrkSpeed.Minimum = -Spectrum.OCT_DIV;
-			TrkSpeed.Maximum = Spectrum.OCT_DIV;
-			TrkSpeed.TickFrequency = Spectrum.OCT_DIV;
+			TrkSpeed.Minimum = -Settings.OCT_DIV;
+			TrkSpeed.Maximum = Settings.OCT_DIV;
+			TrkSpeed.TickFrequency = Settings.OCT_DIV;
 			CmbOutput.Items.Clear();
 			var outDevices = WaveOut.GetDeviceList();
 			if (0 == outDevices.Count) {
@@ -152,13 +140,13 @@ namespace SpectrumAnalyzer {
 		}
 
 		void SetKeySpeed() {
-			var transpose = (double)TrkSpeed.Value / Spectrum.TONE_DIV;
+			var transpose = (double)TrkSpeed.Value / Settings.HALFTONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
-			mParent.Playback.Spectrum.Transpose = -transpose;
+			Settings.Transpose = -transpose;
 			Speed = Math.Pow(2.0, transpose / 12.0);
 			mParent.Playback.File.Speed = Speed;
-			mParent.Playback.Spectrum.Pitch = Math.Pow(2.0, pitchShift / 12.0);
+			Settings.Pitch = Math.Pow(2.0, pitchShift / 12.0);
 			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			mParent.DrawBackground();
 		}
@@ -166,7 +154,6 @@ namespace SpectrumAnalyzer {
 		void DispValue() {
 			GrbKey.Text = string.Format("キー:{0}半音", TrkKey.Value);
 			GrbSpeed.Text = string.Format("速さ:{0}", Speed.ToString("0.0%"));
-			GrbResponce.Text = string.Format("応答速度:{0}Hz", mParent.Playback.Spectrum.GetResponceSpeed().ToString("g3"));
 			GrbMinLevel.Text = string.Format("表示範囲:{0}db", -TrkMinLevel.Value);
 		}
 	}

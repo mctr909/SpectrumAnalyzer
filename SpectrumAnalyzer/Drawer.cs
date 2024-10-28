@@ -2,12 +2,11 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
+using Spectrum;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
-		const int SCROLL_SPEED = 2;
-		const int OFS_DB = -15;
-		const double OFS_GAIN = 5.62;
+		const int SCROLL_SPEED = 3;
 
 		static readonly Font FONT = new Font("Meiryo UI", 8f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(167, 167, 167), 1.0f);
@@ -15,10 +14,10 @@ namespace SpectrumAnalyzer {
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(71, 71, 71), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(147, 147, 0), 1.0f);
-		static readonly Pen GRID_MINOR = new Pen(Color.FromArgb(111, 111, 111), 1.0f);
+		static readonly Pen GRID_MINOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f);
 
 		static readonly Brush PEAK = new Pen(Color.FromArgb(255, 0, 0)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(167, 63, 255, 63)).Brush;
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(147, 63, 255, 63)).Brush;
 
 		public static readonly Pen THRESHOLD = Pens.Cyan;
 
@@ -65,36 +64,35 @@ namespace SpectrumAnalyzer {
 				db = 1;
 			}
 			var v = (1.0 - db) * 1279;
-			double a, r, g, b;
+			var a = v / 4.5;
+			if (a > 255) {
+				a = 255;
+			}
+			double r, g, b;
 			if (v < 256) {
 				b = 255;
 				g = 0;
 				r = 0;
-				a = v * 0.24;
 			}
 			else if (v < 512) {
 				b = 255;
 				g = v - 256;
 				r = 0;
-				a = 0.25 + v * 0.24;
 			}
 			else if (v < 768) {
 				b = 255 - (v - 512);
 				g = 255;
 				r = 0;
-				a = 0.5 + v * 0.24;
 			}
 			else if (v < 1024) {
 				b = 0;
 				g = 255;
 				r = v - 768;
-				a = 0.75 + v * 0.24;
 			}
 			else {
 				b = 0;
 				g = 255 - (v - 1024);
 				r = 255;
-				a = 255;
 			}
 			for (int x = 0, p = offset; x < width; x++, p += 4) {
 				ScrollCanvas[p + 0] = (byte)b;
@@ -158,7 +156,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Gauge(Graphics g, int width, int height) {
-			var dbOfs = Spectrum.AutoGain || Spectrum.NormGain ? 0 : OFS_DB;
+			var dbOfs = Settings.AutoGain || Settings.NormGain ? 0 : SettingsForm.OFS_DB;
 			var dbMin = MinLevel + dbOfs;
 			var right = width - 1;
 			for (var db = dbOfs; dbMin <= db; --db) {
@@ -194,7 +192,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Surface(Graphics g, double[] arr, int count, int width, int height) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
+			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
 			var minValue = Math.Pow(10, MinLevel / 20.0);
 			for (int x = 0, i = 0; x < count; x++, i++) {
 				var val = arr[i] * scale;
@@ -209,7 +207,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Curve(Graphics g, double[] arr, int count, int width, int height, Pen color) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
+			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
 			var idxA = 0;
 			var preX = 0;
 			var preY = AmpToY(arr[idxA] * scale, height);
@@ -242,10 +240,11 @@ namespace SpectrumAnalyzer {
 		}
 
 		public static void Peak(Graphics g, double[] arr, int count, int width, int height) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
+			var color = DisplayCurve ? PEAK : SURFACE;
+			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
 			var minValue = Math.Pow(10, MinLevel / 20.0);
 			var dx = (double)width / count;
-			var ox = Spectrum.TONE_DIV * dx * 0.5;
+			var ox = Settings.HALFTONE_DIV * dx * 0.5;
 			for (int x = 0, i = 0; x < count; x++, i++) {
 				var val = arr[i] * scale;
 				if (val > minValue) {
@@ -253,13 +252,13 @@ namespace SpectrumAnalyzer {
 					var barB = (int)(x*dx + ox);
 					var barY = AmpToY(val, height);
 					var barHeight = height - barY;
-					g.FillRectangle(PEAK, barA, barY, barB - barA, barHeight);
+					g.FillRectangle(color, barA, barY, barB - barA, barHeight);
 				}
 			}
 		}
 
 		public static void Scroll(Bitmap bmp, double[] arr, int count, int top, int scrollHeight, int keyboardHeight) {
-			var scale = Spectrum.AutoGain || Spectrum.NormGain ? 1 : OFS_GAIN;
+			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
 			var width = bmp.Width;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = pix.Stride * top;
@@ -267,7 +266,7 @@ namespace SpectrumAnalyzer {
 			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
 			if (DisplayPeak) {
 				var dx = (double)width / count;
-				var ox = Spectrum.TONE_DIV * dx * 0.5;
+				var ox = Settings.HALFTONE_DIV * dx * 0.5;
 				for (int x = 0, i = 0; x < count; x++, i++) {
 					if (arr[i] * scale > minValue) {
 						var barA = (int)(x*dx - ox) + 1;
@@ -280,7 +279,7 @@ namespace SpectrumAnalyzer {
 				for (int x = 0, i = 0; x < count; x++, i++) {
 					if (arr[i] * scale > minValue) {
 						var barA = x * width / count;
-						var barB = (x + Spectrum.TONE_DIV) * width / count;
+						var barB = (x + Settings.HALFTONE_DIV) * width / count;
 						SetHue(arr[i] * scale, offsetY0 + barA * 4, barB - barA);
 					}
 				}

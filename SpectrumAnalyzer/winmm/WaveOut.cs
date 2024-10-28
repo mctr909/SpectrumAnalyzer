@@ -48,19 +48,19 @@ namespace WinMM {
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		static extern uint waveOutGetNumDevs();
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutGetDevCaps(uint uDeviceID, ref WAVEOUTCAPS pwoc, int size);
+		static extern MMResult waveOutGetDevCaps(uint uDeviceID, ref WAVEOUTCAPS pwoc, int size);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutOpen(ref IntPtr hwo, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, uint dwFlags);
+		static extern MMResult waveOutOpen(ref IntPtr hwo, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, uint dwFlags);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutClose(IntPtr hwo);
+		static extern MMResult waveOutClose(IntPtr hwo);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutPrepareHeader(IntPtr hwo, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveOutPrepareHeader(IntPtr hwo, IntPtr lpWaveHdr, int size);
 		[DllImport("winmm.dll")]
-		static extern MMRESULT waveOutUnprepareHeader(IntPtr hwo, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveOutUnprepareHeader(IntPtr hwo, IntPtr lpWaveHdr, int size);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutReset(IntPtr hwo);
+		static extern MMResult waveOutReset(IntPtr hwo);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveOutWrite(IntPtr hwo, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveOutWrite(IntPtr hwo, IntPtr lpWaveHdr, int size);
 		#endregion
 
 		public static List<string> GetDeviceList() {
@@ -69,7 +69,7 @@ namespace WinMM {
 			for (uint i = 0; i < deviceCount; i++) {
 				var caps = new WAVEOUTCAPS();
 				var ret = waveOutGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
-				if (MMRESULT.MMSYSERR_NOERROR == ret) {
+				if (MMResult.MMSYSERR_NOERROR == ret) {
 					list.Add(caps.szPname);
 				}
 				else {
@@ -128,7 +128,7 @@ namespace WinMM {
 			mBufferPaused = false;
 			mProcessedBufferCount = 0;
 			var ret = waveOutOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero, 0x00030000);
-			if (MMRESULT.MMSYSERR_NOERROR != ret) {
+			if (MMResult.MMSYSERR_NOERROR != ret) {
 				return;
 			}
 			foreach (var pHeader in mpWaveHeader) {
