@@ -25,7 +25,7 @@ namespace SpectrumAnalyzer.Forms {
 			if (Instance.Visible) {
 				return;
 			}
-			var key = Math.Log(parent.Playback.Osc.Pitch * Speed, 2.0) * 12;
+			var key = Math.Log(parent.Playback.Spectrum.Pitch * Speed, 2.0) * 12;
 			Instance.TrkKey.Value = (int)(key + 0.5 * Math.Sign(key));
 			Instance.GrbSpeed.Enabled = parent.Playback.Playing;
 			Instance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * OCT_DIV);
@@ -33,11 +33,12 @@ namespace SpectrumAnalyzer.Forms {
 			Instance.TrkDispMax.Value = Drawer.OffsetDb;
 			Instance.ChkCurve.Checked = Drawer.DisplayCurve;
 			Instance.ChkPeak.Checked = Drawer.DisplayPeak;
-			Instance.ChkScroll.Checked = Drawer.DisplayScroll;
+			Instance.ChkThreshold.Checked = Drawer.DisplayThreshold;
 			Instance.ChkFreq.Checked = Drawer.DisplayFreq;
-			Instance.RbAutoGain.Checked = Drawer.AutoGain;
-			Instance.RbNormGain.Checked = Drawer.NormGain;
-			Instance.RbGainNone.Checked = !(Drawer.AutoGain || Drawer.NormGain);
+			Instance.ChkScroll.Checked = Drawer.DisplayScroll;
+			Instance.RbAutoGain.Checked = EnableAutoGain;
+			Instance.RbNormGain.Checked = EnableNormalize;
+			Instance.RbGainNone.Checked = !(EnableAutoGain || EnableNormalize);
 			Instance.Visible = true;
 			Instance.Location = parent.Location;
 			Instance.DispValue();
@@ -64,13 +65,17 @@ namespace SpectrumAnalyzer.Forms {
 			Drawer.DisplayPeak = ChkPeak.Checked;
 		}
 
-		private void ChkScroll_CheckedChanged(object sender, EventArgs e) {
-			Drawer.DisplayScroll = ChkScroll.Checked;
-			ParentForm.DrawBackground();
+		private void ChkThreshold_CheckedChanged(object sender, EventArgs e) {
+			Drawer.DisplayThreshold = ChkThreshold.Checked;
 		}
 
 		private void ChkFreq_CheckedChanged(object sender, EventArgs e) {
 			Drawer.DisplayFreq = ChkFreq.Checked;
+			ParentForm.DrawBackground();
+		}
+
+		private void ChkScroll_CheckedChanged(object sender, EventArgs e) {
+			Drawer.DisplayScroll = ChkScroll.Checked;
 			ParentForm.DrawBackground();
 		}
 
@@ -87,13 +92,13 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void RbNormGain_CheckedChanged(object sender, EventArgs e) {
-			Drawer.NormGain = RbNormGain.Checked;
+			EnableNormalize = RbNormGain.Checked;
 			TrkDispMax.Enabled = false;
 			ParentForm.DrawBackground();
 		}
 
 		private void RbAutoGain_CheckedChanged(object sender, EventArgs e) {
-			Drawer.AutoGain = RbAutoGain.Checked;
+			EnableAutoGain = RbAutoGain.Checked;
 			TrkDispMax.Enabled = false;
 			ParentForm.DrawBackground();
 		}
@@ -123,8 +128,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbOutput.Enabled = true;
 				CmbOutput.Items.Add("既定のデバイス");
-				foreach (var dev in outDevices) {
-					CmbOutput.Items.Add(dev);
+				foreach (var caps in outDevices) {
+					CmbOutput.Items.Add(caps.szPname);
 				}
 				CmbOutput.SelectedIndex = (int)ParentForm.Playback.DeviceId + 1;
 			}
@@ -136,8 +141,8 @@ namespace SpectrumAnalyzer.Forms {
 			else {
 				CmbInput.Enabled = true;
 				CmbInput.Items.Add("既定のデバイス");
-				foreach (var dev in inDevices) {
-					CmbInput.Items.Add(dev);
+				foreach (var caps in inDevices) {
+					CmbInput.Items.Add(caps.szPname);
 				}
 				CmbInput.SelectedIndex = (int)ParentForm.Record.DeviceId + 1;
 			}
@@ -150,7 +155,7 @@ namespace SpectrumAnalyzer.Forms {
 			Speed = Math.Pow(2.0, transpose / 12.0);
 			ParentForm.Playback.File.Speed = Speed;
 			ParentForm.Playback.Spectrum.Transpose = -transpose;
-			ParentForm.Playback.Osc.Pitch = Math.Pow(2.0, pitchShift / 12.0);
+			ParentForm.Playback.Spectrum.Pitch = Math.Pow(2.0, pitchShift / 12.0);
 			Drawer.KeyboardShift = (int)(pitchShift + 0.5 * Math.Sign(pitchShift));
 			ParentForm.DrawBackground();
 			DispValue();

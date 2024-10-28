@@ -8,6 +8,8 @@ using System.Diagnostics;
 
 using SpectrumAnalyzer.Properties;
 using static Spectrum.Spectrum;
+using System.Drawing.Drawing2D;
+using System.Reflection.Emit;
 
 namespace SpectrumAnalyzer.Forms {
 	public partial class Main : Form {
@@ -23,17 +25,16 @@ namespace SpectrumAnalyzer.Forms {
 		bool GripSeekBar = false;
 		int GaugeHeight;
 		int ScrollHeight;
+		readonly double[] Peak = new double[BANK_COUNT];
+		readonly double[] Curve = new double[BANK_COUNT];
+		readonly double[] Threshold = new double[BANK_COUNT];
 
 		Graphics G;
-		double AutoGainMax = Drawer.AUTOGAIN_MAX;
-		double[] Curve = new double[BANK_COUNT];
-		double[] Peak = new double[BANK_COUNT];
-
 		public Main() {
 			InitializeComponent();
-			Playback = new Playback(48000);
+			Playback = new Playback(96000);
 			Record = new Record(48000);
-			MinimumSize = new Size(Drawer.DB_LABEL_WIDTH + HALFTONE_COUNT * 3 + 16, 200);
+			MinimumSize = new Size(Drawer.DB_LABEL_WIDTH + HALFTONE_COUNT * 2 + 16, 192);
 			Size = MinimumSize;
 		}
 
@@ -75,7 +76,7 @@ namespace SpectrumAnalyzer.Forms {
 					fileList.Add(filePath);
 				}
 			}
-			Playback.SetFiles(fileList);
+			Playback.SetFileList(fileList);
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
@@ -83,8 +84,7 @@ namespace SpectrumAnalyzer.Forms {
 				Record.Stop();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
-			}
-			else {
+			} else {
 				Playback.Stop();
 				Record.Start();
 				TsbPlay.Text = "再生";
@@ -122,11 +122,11 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void TsbPrevious_Click(object sender, EventArgs e) {
-			Playback.Previous();
+			Playback.PreviousFile();
 		}
 
 		private void TsbNext_Click(object sender, EventArgs e) {
-			Playback.Next();
+			Playback.NextFile();
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
@@ -227,41 +227,34 @@ namespace SpectrumAnalyzer.Forms {
 			if (null == spectrum) {
 				spectrum = Playback.Spectrum;
 			}
-			/* 表示値を正規化する場合、最大値をクリア */
-			if (Drawer.NormGain) {
-				AutoGainMax = Drawer.AUTOGAIN_MAX;
+			if (null == spectrum) {
+				return;
 			}
-			/* 表示値を自動調整する場合、最大値を減衰 */
-			if (Drawer.AutoGain) {
-				var autoGainAttenuation = 4.0 / Drawer.AUTOGAIN_SPEED / 120.0;
-				AutoGainMax += (Drawer.AUTOGAIN_MAX - AutoGainMax) * autoGainAttenuation;
-			}
-			for (int i = 0; i < BANK_COUNT; i++) {
-				Curve[i] = spectrum.Curve[i];
-				Peak[i] = spectrum.Peak[i];
-				AutoGainMax = Math.Max(AutoGainMax, Curve[i]);
-			}
-			if (!(Drawer.AutoGain || Drawer.NormGain)) {
-				AutoGainMax = 1;
-			}
-			for (int i = 0; i < BANK_COUNT; i++) {
-				Curve[i] /= AutoGainMax;
-				Peak[i] /= AutoGainMax;
-			}
-
+			Array.Copy(spectrum.Peak, Peak, BANK_COUNT);
+			Array.Copy(spectrum.Curve, Curve, BANK_COUNT);
+			Array.Copy(spectrum.Threshold, Threshold, BANK_COUNT);
 			var bmp = (Bitmap)pictureBox1.Image;
+			G.SmoothingMode = SmoothingMode.None;
 			G.Clear(Color.Transparent);
 			var width = pictureBox1.Width;
+			if (EnableAutoGain) {
+				Drawer.Level(G, spectrum.AutoGain, GaugeHeight);
+			}
+			if (EnableNormalize) {
+				Drawer.Level(G, spectrum.Max, GaugeHeight);
+			}
 			if (Drawer.DisplayCurve) {
-				Drawer.Curve(G, Curve, width, GaugeHeight, Pens.Cyan);
+				Drawer.Curve(G, Curve, width, GaugeHeight, Drawer.CURVE);
 			} else {
 				Drawer.Surface(G, Curve, width, GaugeHeight);
+			}
+			if (Drawer.DisplayThreshold) {
+				Drawer.Curve(G, Threshold, width, GaugeHeight, Drawer.THRESHOLD);
 			}
 			if (Drawer.DisplayPeak) {
 				Drawer.Peak(G, Peak, width, GaugeHeight);
 				Drawer.Scroll(bmp, Peak, GaugeHeight + 1, ScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
-			}
-			else {
+			} else {
 				Drawer.Scroll(bmp, Curve, GaugeHeight + 1, ScrollHeight - 1, Drawer.KEYBOARD_HEIGHT - 1);
 			}
 			pictureBox1.Image = pictureBox1.Image;
@@ -271,8 +264,7 @@ namespace SpectrumAnalyzer.Forms {
 			if (Drawer.DisplayScroll) {
 				GaugeHeight = pictureBox1.Height / 2;
 				ScrollHeight = pictureBox1.Height - GaugeHeight - Drawer.KEYBOARD_HEIGHT;
-			}
-			else {
+			} else {
 				GaugeHeight = pictureBox1.Height - Drawer.KEYBOARD_HEIGHT;
 				ScrollHeight = 0;
 			}
