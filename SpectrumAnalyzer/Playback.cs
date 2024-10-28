@@ -4,10 +4,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using WinMM;
 using Spectrum;
+using System.Xml;
 
 namespace SpectrumAnalyzer {
 	public class Playback : WaveOut {
-		private const int DIV_COUNT = 4;
+		private readonly int DIV_COUNT;
 		private readonly int DIV_SAMPLES;
 		private readonly int DIV_SIZE;
 
@@ -25,9 +26,10 @@ namespace SpectrumAnalyzer {
 
 		delegate void DOpened(bool isOpened);
 
-		public Playback(int sampleRate, int bufferCount = 30)
-			: base(sampleRate, 2, EBufferType.FLOAT32, sampleRate / 480 * DIV_COUNT, bufferCount) {
-			DIV_SAMPLES = BufferSamples / DIV_COUNT;
+		public Playback(int sampleRate, double calcUnitTime, int divCount)
+			: base(sampleRate, 2, EBufferType.FLOAT32, (int)(sampleRate * calcUnitTime) * divCount, divCount * 2) {
+			DIV_COUNT = divCount;
+			DIV_SAMPLES = BufferSamples / divCount;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum.Spectrum(sampleRate);
 			OnOpened = (isOpen) => {
@@ -50,6 +52,41 @@ namespace SpectrumAnalyzer {
 
 		public void Close() {
 			CloseDevice();
+		}
+
+		public void Save(string path) {
+			var xml = new XmlDocument();
+			var root = xml.CreateElement("playlist");
+			foreach (var filePath in FileList) {
+				var elm = xml.CreateElement("file");
+				elm.InnerText = filePath;
+				root.AppendChild(elm);
+			}
+			xml.AppendChild(xml.CreateXmlDeclaration("1.0", "utf-8", null));
+			xml.AppendChild(root);
+			xml.Save(Path.Combine(Path.GetDirectoryName(path), "playlist.xml"));
+		}
+
+		public void Load(string path) {
+			var listFile = Path.Combine(Path.GetDirectoryName(path), "playlist.xml");
+			if (!System.IO.File.Exists(listFile)) {
+				return;
+			}
+			var xml = new XmlDocument();
+			xml.Load(listFile);
+			var list = new List<string>();
+			foreach (var root in xml.ChildNodes) {
+				if (root is XmlElement playlist && playlist.Name == "playlist") {
+					foreach (var child in playlist.ChildNodes) {
+						if (child is XmlElement elm) {
+							if (elm.Name == "file") {
+								list.Add(elm.InnerText);
+							}
+						}
+					}
+				}
+			}
+			SetFileList(list);
 		}
 
 		public void SetFileList(List<string> fileList) {
