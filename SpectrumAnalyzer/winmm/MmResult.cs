@@ -1,5 +1,5 @@
 ﻿namespace WinMM {
-	public enum MMRESULT {
+	public enum MMResult {
 		MMSYSERR_NOERROR = 0,
 		MMSYSERR_ERROR = 1,
 		MMSYSERR_BADDEVICEID = 2,

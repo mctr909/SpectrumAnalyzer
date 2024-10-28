@@ -1,10 +1,10 @@
 import math
 
 class _BPFBank:
-    SIGMA: float
     KB0: float
     KA1: float
     KA2: float
+    SIGMA: float
 
     a1: float = 0.0
     a2: float = 0.0
@@ -16,14 +16,14 @@ class _BPFBank:
         alpha = self.__GetAlpha(sampleRate, freq)
         omega = 2 * math.pi * freq / sampleRate
         a0 = 1.0 + alpha
-        self.SIGMA = self.__GetAlpha(sampleRate / 2, freq)
         self.KB0 = alpha / a0
         self.KA1 = -2.0 * math.cos(omega) / a0
         self.KA2 = (1.0 - alpha) / a0
+        self.SIGMA = self.__GetAlpha(sampleRate / 2, freq)
 
     def __GetAlpha(self, sampleRate: int, freq: float):
         MIN_WIDTH = 1.0
-        MIN_WIDTH_AT_FREQ = 660
+        MIN_WIDTH_AT_FREQ = 1000
         halfToneWidth = MIN_WIDTH + math.log(MIN_WIDTH_AT_FREQ / freq, 2.0)
         if (halfToneWidth < MIN_WIDTH):
             halfToneWidth = MIN_WIDTH
@@ -41,13 +41,14 @@ class Spectrum:
 
     __AMP_MIN: float = math.pow(10, DB_MIN/20)
     __BASE_FREQ: float = 13.75
-    __LOW_FREQ: int = 80
-    __MID_FREQ: int = 350
-    __LOW_TONE: int
-    __MID_TONE: int
-    __THRESHOLD_WIDE: int
-    __THRESHOLD_NARROW: int
-    __THRESHOLD_OFFSET: float = 0.5
+    __LOW_FREQ_MAX: int = 80
+    __MID_FREQ_MIN: int = 220
+    __LOW_TONE_MAX: int
+    __MID_TONE_MIN: int
+    __LOW_TONE_GAIN: float = 2.0
+    __MID_TONE_GAIN: float = 1.0
+    __LOW_TONE_WIDTH: int
+    __MID_TONE_WIDTH: int
 
     __BPFBanks: list[_BPFBank] = []
 
@@ -62,10 +63,10 @@ class Spectrum:
         self.BUFFER_SAMPLES = bufferLength
         self.BANK_COUNT = bankCount
         self.OCT_DIV = octDiv
-        self.__THRESHOLD_WIDE = int(octDiv * 7 / 12)
-        self.__THRESHOLD_NARROW = int(octDiv * 2 / 12)
-        self.__LOW_TONE = int(octDiv * math.log(self.__LOW_FREQ / self.__BASE_FREQ, 2))
-        self.__MID_TONE = int(octDiv * math.log(self.__MID_FREQ / self.__BASE_FREQ, 2))
+        self.__LOW_TONE_WIDTH = int(octDiv * 5 / 12)
+        self.__MID_TONE_WIDTH = int(octDiv * 1 / 12)
+        self.__LOW_TONE_MAX = int(octDiv * math.log(self.__LOW_FREQ_MAX / self.__BASE_FREQ, 2))
+        self.__MID_TONE_MIN = int(octDiv * math.log(self.__MID_FREQ_MIN / self.__BASE_FREQ, 2))
         # 入力バッファを作成
         for i in range(bufferLength):
             self.InputBuffer.append(0)
@@ -80,29 +81,35 @@ class Spectrum:
     def __calcThreshold(self):
         lastAmp = self.DB_MIN
         lastAmpIndex = -1
-        for b in range(self.BANK_COUNT):
-            # 閾値の幅
+        for idxB in range(self.BANK_COUNT):
+            # 閾値幅と閾値ゲインを設定
+            gain: float
             width: int
-            if (b < self.__LOW_TONE):
-                width = self.__THRESHOLD_WIDE
-            elif (b < self.__MID_TONE):
-                a2b = (b - self.__LOW_TONE) / (self.__MID_TONE - self.__LOW_TONE)
-                width = int(self.__THRESHOLD_NARROW * a2b + self.__THRESHOLD_WIDE * (1 - a2b))
+            if (idxB < self.__LOW_TONE_MAX):
+                gain = self.__LOW_TONE_GAIN
+                width = self.__LOW_TONE_WIDTH
+            elif (idxB < self.__MID_TONE_MIN):
+                a2b = (idxB - self.__LOW_TONE_MAX) / (self.__MID_TONE_MIN - self.__LOW_TONE_MAX)
+                gain = self.__MID_TONE_GAIN * a2b + self.__LOW_TONE_GAIN * (1 - a2b)
+                width = int(self.__MID_TONE_WIDTH * a2b + self.__LOW_TONE_WIDTH * (1 - a2b))
             else:
-                width = self.__THRESHOLD_NARROW
-            # 閾値
+                gain = self.__MID_TONE_GAIN
+                width = self.__MID_TONE_WIDTH
+            # 閾値幅で指定される範囲の平均値を閾値にする
             threshold: float = 0.0
-            for w in range(-width, width):
-                bw = min(self.BANK_COUNT - 1, max(0, b + w))
-                threshold += self.__BPFBanks[bw].power
-            threshold = math.sqrt(threshold / (width*2 + 1))
+            for divB in range(-width, width):
+                bd = min(self.BANK_COUNT - 1, max(0, idxB + divB))
+                threshold += self.__BPFBanks[bd].power
+            threshold /= width*2 + 1
+            # パワー⇒リニア⇒db変換後、閾値ゲインを掛ける
+            threshold = math.sqrt(threshold)
             if (threshold < self.__AMP_MIN):
                 threshold = self.__AMP_MIN
-            threshold = self.__THRESHOLD_OFFSET + 20*math.log10(threshold)
-            self.Threshold[b] = threshold
+            threshold = 20*math.log10(threshold) + gain
+            self.Threshold[idxB] = threshold
             # ピークを抽出
-            self.Peak[b] = self.DB_MIN
-            amp = self.Amp[b]
+            self.Peak[idxB] = self.DB_MIN
+            amp = self.Amp[idxB]
             if (amp < threshold):
                 if (0 <= lastAmpIndex):
                     self.Peak[lastAmpIndex] = lastAmp
@@ -111,27 +118,27 @@ class Spectrum:
                 lastAmpIndex = -1
             if (lastAmp < amp):
                 lastAmp = amp
-                lastAmpIndex = b
+                lastAmpIndex = idxB
         if (0 <= lastAmpIndex):
             self.Peak[lastAmpIndex] = lastAmp
 
     def exec(self):
-        for b in range(self.BANK_COUNT):
-            bpf = self.__BPFBanks[b]
-            for i in range(self.BUFFER_SAMPLES):
-                # BPFを通す
-                b0 = self.InputBuffer[i]
-                a0 = bpf.KB0 * b0 - bpf.KB0 * bpf.b2 - bpf.KA1 * bpf.a1 - bpf.KA2 * bpf.a2
-                bpf.a2 = bpf.a1
-                bpf.a1 = a0
-                bpf.b2 = bpf.b1
-                bpf.b1 = b0
-                # 振幅の2乗の平均
-                bpf.power += (a0 * a0 - bpf.power) * bpf.SIGMA
-            # 振幅(db)を格納
-            amp = math.sqrt(bpf.power)
+        for idxB in range(self.BANK_COUNT):
+            bank = self.__BPFBanks[idxB]
+            for idxT in range(self.BUFFER_SAMPLES):
+                # 帯域通過フィルタに通す
+                b0 = self.InputBuffer[idxT]
+                a0 = bank.KB0 * b0 - bank.KB0 * bank.b2 - bank.KA1 * bank.a1 - bank.KA2 * bank.a2
+                bank.a2 = bank.a1
+                bank.a1 = a0
+                bank.b2 = bank.b1
+                bank.b1 = b0
+                # パワースペクトルを得る
+                bank.power += (a0 * a0 - bank.power) * bank.SIGMA
+            # パワー⇒リニア⇒db変換
+            amp = math.sqrt(bank.power)
             if (amp < self.__AMP_MIN):
                 amp = self.__AMP_MIN
-            self.Amp[b] = 20*math.log10(amp)
+            self.Amp[idxB] = 20*math.log10(amp)
         # 閾値を格納
         self.__calcThreshold()

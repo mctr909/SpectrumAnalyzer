@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using WinMM;
 
@@ -10,22 +12,36 @@ namespace SpectrumAnalyzer {
 
 		public WavReader File = new WavReader();
 		public Spectrum Spectrum;
+		
+		public string PlayingName { get; private set; } = "";
 
-		public delegate void DOpened(bool isOpened);
+		int PlayFileIndex = 0;
+		List<string> FileList = new List<string>();
 
-		DOpened mOnOpened;
-		float[] mMuteData;
-		OscBank mOsc;
+		delegate void DOpened(bool isOpened);
 
-		public Playback(int sampleRate, DOpened onOpened, DTerminated onTerminated)
+		DOpened OnOpened;
+		float[] MuteData;
+		WaveSynth Osc;
+
+		public Playback(int sampleRate)
 			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV, 10) {
 			DIV_SAMPLES = BufferSamples / DIV;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum(sampleRate, Settings.BASE_FREQ, Settings.NOTE_COUNT, true);
-			mOnOpened = onOpened;
-			mOnTerminated = onTerminated;
-			mMuteData = new float[DIV_SAMPLES * 2];
-			mOsc = new OscBank(Settings.NOTE_COUNT, Spectrum);
+			OnOpened = (isOpen) => {
+				PlayingName = Path.GetFileNameWithoutExtension(FileList[PlayFileIndex]);
+				File.Speed = Settings.Speed;
+			};
+			mOnTerminated = () => {
+				if (FileList.Count > 0) {
+					PlayFileIndex = ++PlayFileIndex % FileList.Count;
+					OpenFile(FileList[PlayFileIndex]);
+					Start();
+				}
+			};
+			MuteData = new float[DIV_SAMPLES * 2];
+			Osc = new WaveSynth(Spectrum);
 		}
 
 		public void Open() {
@@ -36,23 +52,53 @@ namespace SpectrumAnalyzer {
 			CloseDevice();
 		}
 
-		public void OpenFile(string filePath) {
+		public void SetFiles(List<string> fileList) {
+			if (fileList == null || fileList.Count == 0) {
+				return;
+			}
+			PlayFileIndex = 0;
+			FileList.Clear();
+			FileList.AddRange(fileList);
+			OpenFile(FileList[PlayFileIndex]);
+		}
+
+		public void Previous() {
+			if (FileList.Count == 0) {
+				return;
+			}
+			PlayFileIndex = (FileList.Count + PlayFileIndex - 1) % FileList.Count;
+			OpenFile(FileList[PlayFileIndex]);
+		}
+
+		public void Next() {
+			if (FileList.Count == 0) {
+				return;
+			}
+			PlayFileIndex = ++PlayFileIndex % FileList.Count;
+			OpenFile(FileList[PlayFileIndex]);
+		}
+
+		void OpenFile(string filePath) {
+			var playing = Playing;
 			Pause();
 			File.Dispose();
 			File = new WavReader(filePath, SampleRate, BufferSamples, 1.0);
-			mOnOpened(File.IsOpened);
+			OnOpened(File.IsOpened);
+			if (playing) {
+				Start();
+			}
 		}
 
-		protected unsafe override void WriteBuffer(IntPtr pBuffer) {
+		protected override void WriteBuffer(IntPtr pBuffer) {
 			File.Read(pBuffer);
 			var pDivBuffer = pBuffer;
 			for (int d = 0; d < DIV; ++d) {
-				Spectrum.Calc((float*)pDivBuffer, DIV_SAMPLES);
-				Marshal.Copy(mMuteData, 0, pDivBuffer, mMuteData.Length);
-				mOsc.WriteBuffer((float*)pDivBuffer, DIV_SAMPLES);
+				Spectrum.Update(pDivBuffer, DIV_SAMPLES);
+				Marshal.Copy(MuteData, 0, pDivBuffer, MuteData.Length);
+				Osc.WriteBuffer(pDivBuffer, DIV_SAMPLES);
 				pDivBuffer += DIV_SIZE;
 			}
-			if (File.Position >= File.Length) {
+			if (File.Position >= File.SampleCount) {
 				mTerminate = true;
 			}
 		}

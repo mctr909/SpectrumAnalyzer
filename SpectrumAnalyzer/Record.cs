@@ -18,8 +18,8 @@ namespace SpectrumAnalyzer {
 			CloseDevice();
 		}
 
-		protected unsafe override void ReadBuffer(IntPtr pInput) {
-			Spectrum.Calc((float*)pInput, BufferSamples);
+		protected override void ReadBuffer(IntPtr pInput) {
+			Spectrum.Update(pInput, BufferSamples);
 		}
 	}
 }

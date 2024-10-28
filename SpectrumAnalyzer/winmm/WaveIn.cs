@@ -41,21 +41,21 @@ namespace WinMM {
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
 		static extern uint waveInGetNumDevs();
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInGetDevCaps(uint uDeviceID, ref WAVEINCAPS pwic, int size);
+		static extern MMResult waveInGetDevCaps(uint uDeviceID, ref WAVEINCAPS pwic, int size);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInOpen(ref IntPtr hwi, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, uint dwFlags = 0x00030000);
+		static extern MMResult waveInOpen(ref IntPtr hwi, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, uint dwFlags = 0x00030000);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInClose(IntPtr hwi);
+		static extern MMResult waveInClose(IntPtr hwi);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInPrepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveInPrepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
 		[DllImport("winmm.dll")]
-		static extern MMRESULT waveInUnprepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveInUnprepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInReset(IntPtr hwi);
+		static extern MMResult waveInReset(IntPtr hwi);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInAddBuffer(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		static extern MMResult waveInAddBuffer(IntPtr hwi, IntPtr lpWaveHdr, int size);
 		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMRESULT waveInStart(IntPtr hwi);
+		static extern MMResult waveInStart(IntPtr hwi);
 		#endregion
 
 		public static List<string> GetDeviceList() {
@@ -64,7 +64,7 @@ namespace WinMM {
 			for (uint i = 0; i < deviceCount; i++) {
 				var caps = new WAVEINCAPS();
 				var ret = waveInGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
-				if (MMRESULT.MMSYSERR_NOERROR == ret) {
+				if (MMResult.MMSYSERR_NOERROR == ret) {
 					list.Add(caps.szPname);
 				}
 				else {
@@ -108,7 +108,7 @@ namespace WinMM {
 			mBufferPaused = false;
 			mProcessedBufferCount = 0;
 			var mr = waveInOpen(ref mHandle, DeviceId, ref WaveFormatEx, mCallback, IntPtr.Zero);
-			if (MMRESULT.MMSYSERR_NOERROR != mr) {
+			if (MMResult.MMSYSERR_NOERROR != mr) {
 				return;
 			}
 			for (int i = 0; i < mBufferCount; ++i) {

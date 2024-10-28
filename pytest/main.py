@@ -1,11 +1,10 @@
-import math
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 
 from spectrum import Spectrum
 
 #==========[ 定数宣言 ]==========
-OCT_DIV: int = 36
+OCT_DIV: int = 48
 OCT_COUNT: float = 8.0
 
 #==========[ 変数宣言 ]==========

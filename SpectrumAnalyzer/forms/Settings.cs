@@ -28,7 +28,6 @@ namespace SpectrumAnalyzer {
 			mInstance.GrbSpeed.Enabled = parent.Playback.Playing;
 			mInstance.TrkSpeed.Value = (int)(Math.Log(Speed, 2.0) * Spectrum.OCT_DIV);
 			mInstance.TrkMinLevel.Value = Drawer.MinLevel;
-			mInstance.TrkResponce.Value = (int)(mInstance.TrkResponce.TickFrequency * Math.Log(parent.Playback.Spectrum.GetResponceSpeed(), 2) + 0.5);
 			mInstance.ChkCurve.Checked = Drawer.DisplayCurve;
 			mInstance.ChkPeak.Checked = Drawer.DisplayPeak;
 			mInstance.ChkThreshold.Checked = Drawer.DisplayThreshold;
@@ -81,21 +80,6 @@ namespace SpectrumAnalyzer {
 		private void TrkMinLevel_Scroll(object sender, EventArgs e) {
 			Drawer.MinLevel = TrkMinLevel.Value;
 			SetKeySpeed();
-			DispValue();
-		}
-
-		private void TrkResponce_Scroll(object sender, EventArgs e) {
-			Spectrum spectrum = null;
-			if (mParent.Playback.Playing) {
-				spectrum = mParent.Playback.Spectrum;
-			}
-			if (mParent.Record.Playing) {
-				spectrum = mParent.Record.Spectrum;
-			}
-			if (null == spectrum) {
-				return;
-			}
-			spectrum.SetResponceSpeed(Math.Pow(2, (double)TrkResponce.Value / TrkResponce.TickFrequency));
 			DispValue();
 		}
 
@@ -152,7 +136,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		void SetKeySpeed() {
-			var transpose = (double)TrkSpeed.Value / Spectrum.TONE_DIV;
+			var transpose = (double)TrkSpeed.Value / Spectrum.HALFTONE_DIV;
 			var key = TrkKey.Value;
 			var pitchShift = key - transpose;
 			mParent.Playback.Spectrum.Transpose = -transpose;
@@ -166,7 +150,6 @@ namespace SpectrumAnalyzer {
 		void DispValue() {
 			GrbKey.Text = string.Format("キー:{0}半音", TrkKey.Value);
 			GrbSpeed.Text = string.Format("速さ:{0}", Speed.ToString("0.0%"));
-			GrbResponce.Text = string.Format("応答速度:{0}Hz", mParent.Playback.Spectrum.GetResponceSpeed().ToString("g3"));
 			GrbMinLevel.Text = string.Format("表示範囲:{0}db", -TrkMinLevel.Value);
 		}
 	}

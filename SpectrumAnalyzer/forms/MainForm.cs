@@ -10,7 +10,6 @@ namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
 		public Playback Playback;
 		public Record Record;
-		public SpectrumDll Spectrum;
 
 		public bool DoSetLayout { get; set; } = true;
 
@@ -19,23 +18,10 @@ namespace SpectrumAnalyzer {
 		bool mGripSeekBar = false;
 		int mGaugeHeight;
 		int mScrollHeight;
-		int mPlayFileIndex = 0;
-		string mPlayingName = "";
-		List<string> mFileList = new List<string>();
 
 		public MainForm() {
 			InitializeComponent();
-			//Spectrum = new SpectrumDll();
-			Playback = new Playback(48000, (isOpened) => {
-				mPlayingName = Path.GetFileNameWithoutExtension(mFileList[mPlayFileIndex]);
-				Playback.File.Speed = Settings.Speed;
-			}, () => {
-				if (mFileList.Count > 0) {
-					mPlayFileIndex = ++mPlayFileIndex % mFileList.Count;
-					Playback.OpenFile(mFileList[mPlayFileIndex]);
-					Playback.Start();
-				}
-			});
+			Playback = new Playback(48000);
 			Record = new Record(48000);
 			MinimumSize = new Size(Settings.NOTE_COUNT * 3 + 16, 200);
 		}
@@ -44,16 +30,12 @@ namespace SpectrumAnalyzer {
 			if(null != Playback) {
 				Playback.Dispose();
 			}
-			//if (null != Spectrum) {
-			//	Spectrum.Dispose();
-			//}
 			if (null != Record) {
 				Record.Dispose();
 			}
 		}
 
 		private void Form1_Load(object sender, EventArgs e) {
-			mPlayingName = Text;
 			TimerSeek.Interval = 1;
 			TimerSeek.Enabled = true;
 			TimerSeek.Start();
@@ -84,22 +66,7 @@ namespace SpectrumAnalyzer {
 					fileList.Add(filePath);
 				}
 			}
-			if (fileList.Count == 0) {
-				return;
-			}
-
-			mPlayFileIndex = 0;
-			mFileList.Clear();
-			mFileList.AddRange(fileList);
-			//Spectrum.SetFiles(fileList);
-
-			var playing = Playback.Playing;
-			//var playing = Spectrum.Playing;
-			Playback.OpenFile(mFileList[mPlayFileIndex]);
-			if (playing) {
-				Playback.Start();
-				//Spectrum.Start();
-			}
+			Playback.SetFiles(fileList);
 		}
 
 		private void TsbRec_Click(object sender, EventArgs e) {
@@ -110,7 +77,6 @@ namespace SpectrumAnalyzer {
 			}
 			else {
 				Playback.Pause();
-				//Spectrum.Pause();
 				Record.Start();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
@@ -125,15 +91,12 @@ namespace SpectrumAnalyzer {
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
 			if (Playback.Playing) {
-			//if (Spectrum.Playing) {
 				Playback.Pause();
-				//Spectrum.Pause();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 			} else {
 				Record.Pause();
 				Playback.Start();
-				//Spectrum.Start();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 				TsbPlay.Text = "停止";
@@ -147,39 +110,14 @@ namespace SpectrumAnalyzer {
 
 		private void TsbRestart_Click(object sender, EventArgs e) {
 			Playback.File.Position = 0;
-			//Spectrum.Position = 0;
 		}
 
 		private void TsbPrevious_Click(object sender, EventArgs e) {
-			//Spectrum.Previous();
-			if (mFileList.Count == 0) {
-				return;
-			}
-			var play = Playback.Playing;
-			if (play) {
-				Playback.Pause();
-			}
-			mPlayFileIndex = (mFileList.Count + mPlayFileIndex - 1) % mFileList.Count;
-			Playback.OpenFile(mFileList[mPlayFileIndex]);
-			if (play) {
-				Playback.Start();
-			}
+			Playback.Previous();
 		}
 
 		private void TsbNext_Click(object sender, EventArgs e) {
-			//Spectrum.Next();
-			if (mFileList.Count == 0) {
-				return;
-			}
-			var play = Playback.Playing;
-			if (play) {
-				Playback.Pause();
-			}
-			mPlayFileIndex = ++mPlayFileIndex % mFileList.Count;
-			Playback.OpenFile(mFileList[mPlayFileIndex]);
-			if (play) {
-				Playback.Start();
-			}
+			Playback.Next();
 		}
 
 		private void TsbSetting_Click(object sender, EventArgs e) {
@@ -192,7 +130,6 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
 			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
-			//Spectrum.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
 			mGripSeekBar = false;
 		}
 
@@ -202,12 +139,11 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
 			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
-			//Spectrum.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
 			mGripSeekBar = false;
 		}
 
 		private void TimerSeek_Tick(object sender, EventArgs e) {
-			var maxSec = (double)Playback.File.Length / Playback.File.Format.SampleRate;
+			var maxSec = (double)Playback.File.SampleCount / Playback.File.Format.SampleRate;
 			var max = (int)(SEEK_SEC_DIV * maxSec);
 			if (TrkSeek.Maximum != max) {
 				TrkSeek.Value = 0;
@@ -234,7 +170,7 @@ namespace SpectrumAnalyzer {
 			var min = ((int)(posSec / 60)).ToString("00");
 			var sec = isec.ToString("00");
 			var csec = ((int)((fsec - isec) * 100)).ToString("00");
-			Text = $"[{min}:{sec}.{csec}] {mPlayingName}";
+			Text = $"[{min}:{sec}.{csec}] {Playback.PlayingName}";
 		}
 
 		private void TimerDisplay_Tick(object sender, EventArgs e) {

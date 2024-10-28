@@ -23,28 +23,28 @@ public abstract class RiffWav : IDisposable {
 	}
 
 	public FMT Format = new FMT() { SampleRate = 44100 };
-	public int Length { get; protected set; } = 0;
+	public int SampleCount { get; protected set; } = 0;
 	public int Cursor { get; protected set; } = 0;
 
-	protected FileStream mFs;
-	protected long mDataSize;
-	protected long mDataBegin;
+	protected FileStream Fs;
+	protected long DataSize;
+	protected long DataBegin;
 
 	public virtual void Dispose() {
-		if (null == mFs) {
+		if (null == Fs) {
 			return;
 		}
-		mFs.Close();
-		mFs.Dispose();
+		Fs.Close();
+		Fs.Dispose();
 	}
 
 	public void SeekCurrent(int samples) {
-		mFs.Seek(Format.BlockSize * samples, SeekOrigin.Current);
+		Fs.Seek(Format.BlockSize * samples, SeekOrigin.Current);
 		Cursor += samples;
 	}
 
 	public void SeekBegin(int samples) {
-		mFs.Seek(mDataBegin + Format.BlockSize * samples, SeekOrigin.Begin);
+		Fs.Seek(DataBegin + Format.BlockSize * samples, SeekOrigin.Begin);
 		Cursor = samples;
 	}
 }
@@ -63,49 +63,54 @@ public class WavReader : RiffWav {
 	readonly int BUFFER_SIZE;
 	readonly double DELTA;
 
-	BinaryReader mBr;
-	IntPtr mBuffer;
-	byte[] mMuteData;
-	int mOffset;
+	BinaryReader Br;
+	IntPtr Buffer;
+	byte[] MuteData;
+	int Offset;
 
 	const float SCALE_8BIT = 1.0f / (1<<7);
 	const float SCALE_16BIT = 1.0f / (1<<15);
 	const float SCALE_32BIT = 1.0f / (1<<31);
 
 	public WavReader() {
-		Length = 1;
+		SampleCount = 1;
 	}
 
 	public WavReader(string filePath, int sampleRate = 44100, int outputSamples = 1024, double bufferUnitSec = 0.1) {
 		IsOpened = false;
 		try {
-			mFs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+			Fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
 		}
 		catch {
 			return;
 		}
-		mBr = new BinaryReader(mFs);
+		Br = new BinaryReader(Fs);
 		if (!ReadHeader()) {
 			return;
 		}
 		if (!CheckFormat()) {
 			return;
 		}
-		Length = (int)(mDataSize / Format.BlockSize);
+		SampleCount = (int)(DataSize / Format.BlockSize);
 		OUTPUT_SAMPLES = outputSamples;
 		BUFFER_SAMPLES = (int)(Format.SampleRate * bufferUnitSec);
 		BUFFER_SIZE = Format.BlockSize * (BUFFER_SAMPLES + 1);
 		DELTA = (double)Format.SampleRate / sampleRate;
-		mBuffer = Marshal.AllocHGlobal(BUFFER_SIZE);
-		mMuteData = new byte[BUFFER_SIZE];
-		mOffset = 0;
+		Buffer = Marshal.AllocHGlobal(BUFFER_SIZE);
+		MuteData = new byte[BUFFER_SIZE];
+		if (Format.BitsPerSample == 8) {
+			for (int i = 0; i < BUFFER_SIZE; ++i) {
+				MuteData[i] = 128;
+			}
+		}
+		Offset = 0;
 		SetBuffer();
 		IsOpened = true;
 	}
 
 	public override void Dispose() {
 		base.Dispose();
-		Marshal.FreeHGlobal(mBuffer);
+		Marshal.FreeHGlobal(Buffer);
 	}
 
 	public bool CheckFormat() {
@@ -115,10 +120,10 @@ public class WavReader : RiffWav {
 			case 8:
 				switch (Format.Channel) {
 				case 1:
-					Read = ReadI8Mono;
+					Read = ReadI8M;
 					break;
 				case 2:
-					Read = ReadI8Stereo;
+					Read = ReadI8S;
 					break;
 				default:
 					return false;
@@ -127,10 +132,10 @@ public class WavReader : RiffWav {
 			case 16:
 				switch (Format.Channel) {
 				case 1:
-					Read = ReadI16Mono;
+					Read = ReadI16M;
 					break;
 				case 2:
-					Read = ReadI16Stereo;
+					Read = ReadI16S;
 					break;
 				default:
 					return false;
@@ -139,10 +144,10 @@ public class WavReader : RiffWav {
 			case 24:
 				switch (Format.Channel) {
 				case 1:
-					Read = ReadI24Mono;
+					Read = ReadI24M;
 					break;
 				case 2:
-					Read = ReadI24Stereo;
+					Read = ReadI24S;
 					break;
 				default:
 					return false;
@@ -157,10 +162,10 @@ public class WavReader : RiffWav {
 			case 32:
 				switch (Format.Channel) {
 				case 1:
-					Read = ReadF32Mono;
+					Read = ReadF32M;
 					break;
 				case 2:
-					Read = ReadF32Stereo;
+					Read = ReadF32S;
 					break;
 				default:
 					return false;
@@ -178,77 +183,77 @@ public class WavReader : RiffWav {
 	}
 
 	bool ReadHeader() {
-		if (mFs.Length < 12)
+		if (Fs.Length < 12)
 			return false;
 
-		var fileSign = mBr.ReadUInt32();
+		var fileSign = Br.ReadUInt32();
 		if (fileSign != SIGN_RIFF)
 			return false;
 
-		var fileSize = mBr.ReadUInt32();
-		var fileType = mBr.ReadUInt32();
+		var fileSize = Br.ReadUInt32();
+		var fileType = Br.ReadUInt32();
 		if (fileType != TYPE_WAVE)
 			return false;
 
 		uint chunkSign;
 		uint chunkSize;
-		while (mFs.Position < fileSize) {
-			chunkSign = mBr.ReadUInt32();
-			chunkSize = mBr.ReadUInt32();
+		while (Fs.Position < fileSize) {
+			chunkSign = Br.ReadUInt32();
+			chunkSize = Br.ReadUInt32();
 			switch (chunkSign) {
 			case SIGN_FMT_:
-				Format.FormatID = (FMT.TYPE)mBr.ReadUInt16();
-				Format.Channel = mBr.ReadUInt16();
-				Format.SampleRate = mBr.ReadUInt32();
-				Format.BytesPerSecond = mBr.ReadUInt32();
-				Format.BlockSize = mBr.ReadUInt16();
-				Format.BitsPerSample = mBr.ReadUInt16();
+				Format.FormatID = (FMT.TYPE)Br.ReadUInt16();
+				Format.Channel = Br.ReadUInt16();
+				Format.SampleRate = Br.ReadUInt32();
+				Format.BytesPerSecond = Br.ReadUInt32();
+				Format.BlockSize = Br.ReadUInt16();
+				Format.BitsPerSample = Br.ReadUInt16();
 				if (chunkSize > 16)
-					mFs.Seek(chunkSize - 16, SeekOrigin.Current);
+					Fs.Seek(chunkSize - 16, SeekOrigin.Current);
 				break;
 			case SIGN_DATA:
-				mDataSize = chunkSize;
-				mDataBegin = mFs.Position;
-				mFs.Seek(chunkSize, SeekOrigin.Current);
+				DataSize = chunkSize;
+				DataBegin = Fs.Position;
+				Fs.Seek(chunkSize, SeekOrigin.Current);
 				break;
 			default:
-				mFs.Seek(chunkSize, SeekOrigin.Current);
+				Fs.Seek(chunkSize, SeekOrigin.Current);
 				break;
 			}
 		}
 
-		mFs.Seek(mDataBegin, SeekOrigin.Begin);
+		Fs.Seek(DataBegin, SeekOrigin.Begin);
 		return true;
 	}
 
 	void SetBuffer() {
-		if (Length - Cursor <= BUFFER_SAMPLES) {
-			var readSize = (Length - Cursor) * Format.BlockSize;
-			Marshal.Copy(mMuteData, 0, mBuffer, BUFFER_SIZE);
-			Marshal.Copy(mBr.ReadBytes(readSize), 0, mBuffer, readSize);
-			Cursor = Length;
+		if (SampleCount - Cursor <= BUFFER_SAMPLES) {
+			var readSize = (SampleCount - Cursor) * Format.BlockSize;
+			Marshal.Copy(MuteData, 0, Buffer, BUFFER_SIZE);
+			Marshal.Copy(Br.ReadBytes(readSize), 0, Buffer, readSize);
+			Cursor = SampleCount;
 		}
 		else {
-			Marshal.Copy(mBr.ReadBytes(BUFFER_SIZE), 0, mBuffer, BUFFER_SIZE);
-			mFs.Seek(Format.BlockSize * -1, SeekOrigin.Current);
+			Marshal.Copy(Br.ReadBytes(BUFFER_SIZE), 0, Buffer, BUFFER_SIZE);
+			Fs.Seek(Format.BlockSize * -1, SeekOrigin.Current);
 			Cursor += BUFFER_SAMPLES;
 		}
 	}
 
-	unsafe void ReadI8Mono(IntPtr output) {
+	unsafe void ReadI8M(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (byte*)mBuffer;
+		var pInput = (byte*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_8BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_8BIT;
 			var a = SCALE_8BIT - b;
 			var p = pInput + indexI;
 			*pOutput = (*p++ - 128) * a + (*p - 128) * b;
@@ -259,21 +264,20 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadI8Stereo(IntPtr output) {
+	unsafe void ReadI8S(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (byte*)mBuffer;
+		var pInput = (byte*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_8BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_8BIT;
 			var a = SCALE_8BIT - b;
 			var p = pInput + (indexI << 1);
 			var l = (*p++ - 128) * a;
@@ -288,21 +292,20 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadI16Mono(IntPtr output) {
+	unsafe void ReadI16M(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (short*)mBuffer;
+		var pInput = (short*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_16BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_16BIT;
 			var a = SCALE_16BIT - b;
 			var p = pInput + indexI;
 			*pOutput = *p++ * a + *p * b;
@@ -313,21 +316,20 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadI16Stereo(IntPtr output) {
+	unsafe void ReadI16S(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (short*)mBuffer;
+		var pInput = (short*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_16BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_16BIT;
 			var a = SCALE_16BIT - b;
 			var p = pInput + (indexI << 1);
 			var l = *p++ * a;
@@ -342,21 +344,20 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadI24Mono(IntPtr output) {
+	unsafe void ReadI24M(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (byte*)mBuffer;
+		var pInput = (byte*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_32BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_32BIT;
 			var a = SCALE_32BIT - b;
 			var p = pInput + indexI * 3;
 			var m1 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p++ << 8);
@@ -369,23 +370,22 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadI24Stereo(IntPtr output) {
+	unsafe void ReadI24S(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (byte*)mBuffer;
+		var pInput = (byte*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = (indexF - indexI) * SCALE_32BIT;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI) * SCALE_32BIT;
 			var a = SCALE_32BIT - b;
-			var p = pInput + (indexI * 6);
+			var p = pInput + indexI * 6;
 			var l1 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p++ << 8);
 			var r1 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p++ << 8);
 			var l2 = ((uint)*p++ << 16) | ((uint)*p++ << 24) | ((uint)*p++ << 8);
@@ -398,21 +398,20 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadF32Mono(IntPtr output) {
+	unsafe void ReadF32M(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (float*)mBuffer;
+		var pInput = (float*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = indexF - indexI;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI);
 			var a = 1 - b;
 			var p = pInput + indexI;
 			*pOutput = *p++ * a + *p * b;
@@ -423,23 +422,22 @@ public class WavReader : RiffWav {
 			*pOutput++ = 0;
 		}
 	}
-
-	unsafe void ReadF32Stereo(IntPtr output) {
+	unsafe void ReadF32S(IntPtr output) {
 		var pOutput = (float*)output;
-		var pInput = (float*)mBuffer;
+		var pInput = (float*)Buffer;
 		int s;
-		for (s = 0; s < OUTPUT_SAMPLES && Position < Length; ++s, Position += DELTA * Speed) {
-			var remain = Position - mOffset;
+		for (s = 0; s < OUTPUT_SAMPLES && Position < SampleCount; ++s, Position += DELTA * Speed) {
+			var remain = Position - Offset;
 			if (remain >= BUFFER_SAMPLES || remain <= -1) {
-				mOffset += (int)(remain + Math.Sign(remain - (int)remain));
-				SeekBegin(mOffset);
+				Offset += (int)(remain + Math.Sign(remain - (int)remain));
+				SeekBegin(Offset);
 				SetBuffer();
 			}
-			var indexF = (float)(Position - mOffset);
-			var indexI = (int)indexF;
-			var b = indexF - indexI;
+			var indexD = Position - Offset;
+			var indexI = (int)indexD;
+			var b = (float)(indexD - indexI);
 			var a = 1 - b;
-			var p = pInput + (indexI << 1);
+			var p = pInput + indexI * 2;
 			var l = *p++ * a;
 			var r = *p++ * a;
 			l += *p++ * b;
@@ -461,32 +459,32 @@ public class WavWriter : RiffWav {
 		Format.FormatID = enableFloat ? FMT.TYPE.PCM_FLOAT : FMT.TYPE.PCM_INT;
 		Format.Channel = (ushort)ch;
 		Format.SampleRate = (uint)sampleRate;
-		Format.BitsPerSample = (ushort)(enableFloat ? 32 : bits);
+		Format.BitsPerSample = (ushort)bits;
 		Format.BlockSize = (ushort)(Format.Channel * Format.BitsPerSample >> 3);
 		Format.BytesPerSecond = Format.BlockSize * Format.SampleRate;
 
-		mFs = new FileStream(filePath, FileMode.OpenOrCreate);
-		mBw = new BinaryWriter(mFs);
+		Fs = new FileStream(filePath, FileMode.OpenOrCreate);
+		mBw = new BinaryWriter(Fs);
 		WriteHeader(mBw);
-		mDataBegin = mFs.Position;
-		Length = 0;
+		DataBegin = Fs.Position;
+		SampleCount = 0;
 	}
 
 	public void Save() {
-		var currentPos = mFs.Position;
+		var currentPos = Fs.Position;
 
-		mFs.Seek(4, SeekOrigin.Begin);
-		mBw.Write((uint)(Format.BlockSize * Length + 36));
+		Fs.Seek(4, SeekOrigin.Begin);
+		mBw.Write((uint)(Format.BlockSize * SampleCount + 36));
 
-		mFs.Seek(mDataBegin - 4, SeekOrigin.Begin);
-		mBw.Write((uint)(Format.BlockSize * Length));
+		Fs.Seek(DataBegin - 4, SeekOrigin.Begin);
+		mBw.Write((uint)(Format.BlockSize * SampleCount));
 
-		mFs.Seek(currentPos, SeekOrigin.Begin);
+		Fs.Seek(currentPos, SeekOrigin.Begin);
 	}
 
 	public void WriteBuffer(byte[] buffer, int begin, int samples) {
 		mBw.Write(buffer, begin * Format.BlockSize, samples * Format.BlockSize);
-		Length += samples;
+		SampleCount += samples;
 	}
 
 	protected void WriteHeader(BinaryWriter bw) {
