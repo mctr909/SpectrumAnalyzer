@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
@@ -13,23 +14,18 @@ namespace SpectrumAnalyzer {
 		static readonly Font FONT_DB = new Font("Meiryo UI", 11f);
 		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(171, 171, 127), 1.0f);
 		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
-		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(51, 51, 51), 1.0f);
+		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
-		static readonly Pen GAUGE = new Pen(Color.FromArgb(167, 147, 0), 1.0f);
+		static readonly Pen GAUGE = new Pen(Color.FromArgb(147, 127, 0), 1.0f);
 		static readonly Pen FREQ_MAJOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f);
-		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(95, 95, 95), 1.0f) {
-			DashStyle = System.Drawing.Drawing2D.DashStyle.Custom,
-			DashPattern = new float[] { 2, 3 }
+		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(111, 111, 111), 1.0f) {
+			DashStyle = DashStyle.Custom,
+			DashPattern = new float[] { 1, 3 }
 		};
 
 		static readonly Brush PEAK_TOP = new Pen(Color.FromArgb(63, 255, 63)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 63, 255, 63)).Brush;
-		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(95, 255, 255, 255)).Brush;
-
-		/// <summary>ゲイン自動調整 最大[10^-(db/10)]</summary>
-		public const double AUTOGAIN_MAX = 2.512E-04;
-		/// <summary>ゲイン自動調整 速度[秒]</summary>
-		public const double AUTOGAIN_SPEED = 3.0;
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 95, 255, 95)).Brush;
+		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(63, 255, 255, 255)).Brush;
 
 		static double mOffsetGain = 3.981;
 		public static int OffsetDb {
@@ -38,18 +34,15 @@ namespace SpectrumAnalyzer {
 		}
 
 		public const int DB_LABEL_WIDTH = 50;
-		public const int KEYBOARD_HEIGHT = 24;
+		public const int KEYBOARD_HEIGHT = 40;
 		public static byte[] ScrollCanvas;
-		public static int MinDb = -36;
+		public static int MinDb = -24;
 		public static int KeyboardShift = 0;
 
 		public static bool DisplayScroll = false;
 		public static bool DisplayPeak = false;
 		public static bool DisplayCurve = false;
 		public static bool DisplayFreq = true;
-
-		public static bool AutoGain = true;
-		public static bool NormGain = false;
 
 		static int DbToY(double db, int height) {
 			if (db < MinDb) {
@@ -176,14 +169,14 @@ namespace SpectrumAnalyzer {
 		}
 
 		static void DrawDbGauge(Graphics g, int width, int height) {
-			var dbOfs = AutoGain || NormGain ? 0 : -OffsetDb;
+			var dbOfs = EnableAutoGain || EnableNormalize ? 0 : -OffsetDb;
 			var dbMin = MinDb + dbOfs;
 			var left = DB_LABEL_WIDTH;
 			var right = left + width - 1;
 			for (var db = dbOfs; dbMin <= db; --db) {
 				var py = DbToY(db - dbOfs, height);
 				if (db % 6 == 0) {
-					g.DrawLine(GAUGE, left - 4, py, right, py);
+					g.DrawLine(GAUGE, 0, py, right, py);
 				}
 			}
 			var textSize = g.MeasureString("-12db", FONT_DB);
@@ -207,7 +200,7 @@ namespace SpectrumAnalyzer {
 
 		static void DrawFreqGauge(Graphics g, int width, int height, int labelY) {
 			var bottom = height - 1;
-			var shift = -KeyboardShift * HALFTONE_DIV;
+			var shift = 1.5 - KeyboardShift * HALFTONE_DIV;
 			var textWidth = g.MeasureString("100", FONT_OCT).Width;
 			var textArea = new RectangleF(-textWidth*0.5f, -1f, textWidth, KEYBOARD_HEIGHT);
 			var stringFormat = new StringFormat() {
@@ -247,6 +240,7 @@ namespace SpectrumAnalyzer {
 			var right = left + width;
 			var keyboardBottom = keyboardTop + KEYBOARD_HEIGHT - 1;
 			using (var g = Graphics.FromImage(pictureBox.BackgroundImage)) {
+				g.SmoothingMode = SmoothingMode.None;
 				g.Clear(Color.Black);
 				if (DisplayFreq) {
 					DrawFreqGauge(g, width, pictureBox.Height, keyboardTop);
@@ -265,7 +259,7 @@ namespace SpectrumAnalyzer {
 
 		public static void Curve(Graphics g, double[] arr, int width, int height, Pen color) {
 			width -= DB_LABEL_WIDTH;
-			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var px0 = DB_LABEL_WIDTH;
 			var py0 = LinearToY(arr[0] * scale, height);
 			if (BANK_COUNT > width) {
@@ -309,7 +303,7 @@ namespace SpectrumAnalyzer {
 		public static void Surface(Graphics g, double[] arr, int width, int height) {
 			width -= DB_LABEL_WIDTH;
 			var color = DisplayPeak ? SURFACE_H : SURFACE;
-			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var minValue = Math.Pow(10, MinDb / 20.0);
 			var dx = (double)width / BANK_COUNT;
 			for (int i = 0; i < BANK_COUNT; i++) {
@@ -326,34 +320,41 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
+		public static void Level(Graphics g, double val, int height) {
+			var h = LinearToY(val, height);
+			g.FillRectangle(SURFACE_H, 10, 0, DB_LABEL_WIDTH - 20, h);
+		}
+
 		public static void Peak(Graphics g, double[] arr, int width, int height) {
 			width -= DB_LABEL_WIDTH;
-			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var minValue = Math.Pow(10, MinDb / 20.0);
 			var dx = (double)width / BANK_COUNT;
-			var ox = HALFTONE_CENTER * dx;
+			var ox = HALFTONE_CENTER * dx - 0.5;
+			ox = Math.Max(1, ox);
 			for (int i = 0; i < BANK_COUNT; i++) {
 				var value = arr[i] * scale;
 				if (value > minValue) {
-					var px0 = (int)(i*dx - ox);
-					var px1 = (int)(i*dx + ox);
+					var px0 = (int)(i * dx - ox);
+					var px1 = (int)(i * dx + ox);
 					var py = LinearToY(value, height);
-					var barWidth = px1 - px0;
+					var barWidth = px1 - px0 + 2;
 					px0 += DB_LABEL_WIDTH;
-					g.FillRectangle(PEAK_TOP, px0, py, barWidth, barWidth);
+					g.FillEllipse(PEAK_TOP, px0-1, py, barWidth, barWidth);
 				}
 			}
 		}
 
 		public static void Scroll(Bitmap bmp, double[] arr, int top, int scrollHeight, int keyboardHeight) {
-			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
 			var width = bmp.Width - DB_LABEL_WIDTH;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = pix.Stride * top;
 			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
 			if (DisplayPeak) {
 				var dx = (float)width / BANK_COUNT;
-				var ox = HALFTONE_DIV * dx * 0.5f;
+				var ox = HALFTONE_CENTER * dx - 0.5;
+				ox = Math.Max(1, ox);
 				var minValue = Math.Pow(10, MinDb / 20.0);
 				for (int i = 0; i < BANK_COUNT; i++) {
 					var value = arr[i] * scale;

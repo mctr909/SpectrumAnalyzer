@@ -106,7 +106,8 @@
     <Compile Include="Playback.cs" />
     <Compile Include="Record.cs" />
     <Compile Include="RiffWav.cs" />
-    <Compile Include="WinMM\MMResult.cs" />
+    <Compile Include="WinMM\MMCallback.cs" />
+    <Compile Include="WinMM\MMSysErr.cs" />
     <Compile Include="WinMM\WaveIn.cs" />
     <Compile Include="WinMM\Wave.cs" />
     <Compile Include="WinMM\WaveOut.cs" />

@@ -4,6 +4,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using WinMM;
 using Spectrum;
+using System.Windows.Forms;
 
 namespace SpectrumAnalyzer {
 	public class Playback : WaveOut {
@@ -25,10 +26,9 @@ namespace SpectrumAnalyzer {
 		delegate void DOpened(bool isOpened);
 
 		DOpened OnOpened;
-		float[] MuteData;
 
 		public Playback(int sampleRate, int bufferCount = 20)
-			: base(sampleRate, 2, VALUE_TYPE.F32, sampleRate / 1000 * DIV_COUNT, bufferCount) {
+			: base(sampleRate, 2, EBufferType.FLOAT32, sampleRate / 1000 * DIV_COUNT, bufferCount) {
 			DIV_SAMPLES = BufferSamples / DIV_COUNT;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
 			Spectrum = new Spectrum.Spectrum(sampleRate);
@@ -43,7 +43,6 @@ namespace SpectrumAnalyzer {
 					Start();
 				}
 			};
-			MuteData = new float[DIV_SAMPLES * 2];
 			Osc = new WaveSynth(Spectrum);
 		}
 
@@ -55,7 +54,7 @@ namespace SpectrumAnalyzer {
 			CloseDevice();
 		}
 
-		public void SetFiles(List<string> fileList) {
+		public void SetFileList(List<string> fileList) {
 			if (fileList == null || fileList.Count == 0) {
 				return;
 			}
@@ -65,7 +64,7 @@ namespace SpectrumAnalyzer {
 			OpenFile(FileList[PlayFileIndex]);
 		}
 
-		public void Previous() {
+		public void PreviousFile() {
 			if (FileList.Count == 0) {
 				return;
 			}
@@ -73,7 +72,7 @@ namespace SpectrumAnalyzer {
 			OpenFile(FileList[PlayFileIndex]);
 		}
 
-		public void Next() {
+		public void NextFile() {
 			if (FileList.Count == 0) {
 				return;
 			}
@@ -85,7 +84,7 @@ namespace SpectrumAnalyzer {
 			var playing = Playing;
 			Stop();
 			File.Dispose();
-			File = new WavReader(filePath, SampleRate, BufferSamples, 1.0);
+			File = new WavReader(filePath, SampleRate, BufferSamples, 4.0);
 			OnOpened(File.IsOpened);
 			if (playing) {
 				Start();
@@ -97,12 +96,12 @@ namespace SpectrumAnalyzer {
 			var pDivBuffer = pBuffer;
 			for (int d = 0; d < DIV_COUNT; ++d) {
 				Spectrum.Update(pDivBuffer, DIV_SAMPLES);
-				Marshal.Copy(MuteData, 0, pDivBuffer, MuteData.Length);
+				Marshal.Copy(MuteData, 0, pDivBuffer, DIV_SIZE);
 				Osc.WriteBuffer(pDivBuffer, DIV_SAMPLES);
 				pDivBuffer += DIV_SIZE;
 			}
 			if (File.Position >= File.SampleCount) {
-				Terminate = true;
+				EndOfFile = true;
 			}
 		}
 	}

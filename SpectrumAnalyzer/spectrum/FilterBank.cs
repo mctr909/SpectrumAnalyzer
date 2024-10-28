@@ -7,20 +7,17 @@ namespace Spectrum {
 		public double KA2;
 		public double KA1;
 		public double SIGMA;
-		public double SIGMA_DISP;
 
-		public double Lb2;
-		public double Lb1;
-		public double La2;
-		public double La1;
-		public double LPower;
-		public double LPowerDisp;
+		public double lb2;
+		public double lb1;
+		public double la2;
+		public double la1;
+		public double l;
 
-		public double Rb2;
-		public double Rb1;
-		public double Ra2;
-		public double Ra1;
-		public double RPower;
-		public double RPowerDisp;
+		public double rb2;
+		public double rb1;
+		public double ra2;
+		public double ra1;
+		public double r;
 	}
 }
