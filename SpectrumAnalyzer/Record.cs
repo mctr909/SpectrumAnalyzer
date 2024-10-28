@@ -7,7 +7,7 @@ namespace SpectrumAnalyzer {
 
 		public Record(int sampleRate)
 			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 400, 30) {
-			Spectrum = new Spectrum.Spectrum(sampleRate, SettingsForm.BASE_FREQ);
+			Spectrum = new Spectrum.Spectrum(sampleRate);
 		}
 
 		public void Open() {

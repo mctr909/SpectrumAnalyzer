@@ -2,47 +2,61 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
-using Spectrum;
+using static Spectrum.Spectrum;
 
 namespace SpectrumAnalyzer {
 	static class Drawer {
 		const int SCROLL_SPEED = 3;
 
-		static readonly Font FONT = new Font("Meiryo UI", 8f);
-		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(167, 167, 167), 1.0f);
+		static readonly Font FONT_OCT = new Font("Meiryo UI", 10f);
+		static readonly Font FONT_DB = new Font("Meiryo UI", 9f);
+		static readonly Pen OCT_BORDER = new Pen(Color.FromArgb(171, 171, 147), 1.0f);
 		static readonly Pen KEY_BORDER = new Pen(Color.FromArgb(95, 95, 95), 1.0f);
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(71, 71, 71), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
-		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(147, 147, 0), 1.0f);
-		static readonly Pen GRID_MINOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f);
+		static readonly Pen GRID_MAJOR = new Pen(Color.FromArgb(167, 147, 0), 1.0f);
+		static readonly Pen GRID_MINOR = new Pen(Color.FromArgb(131, 131, 131), 1.0f);
 
-		static readonly Brush PEAK = new Pen(Color.FromArgb(255, 0, 0)).Brush;
-		static readonly Brush SURFACE = new Pen(Color.FromArgb(147, 63, 255, 63)).Brush;
+		static readonly Brush PEAK_TOP = new Pen(Color.FromArgb(63, 255, 63)).Brush;
+		static readonly Brush SURFACE = new Pen(Color.FromArgb(127, 63, 255, 63)).Brush;
+		static readonly Brush SURFACE_H = new Pen(Color.FromArgb(95, 255, 255, 255)).Brush;
 
-		public static readonly Pen THRESHOLD = Pens.Cyan;
+		/// <summary>ゲイン自動調整 最大[10^-(db/10)]</summary>
+		public const double AUTOGAIN_MAX = 3.981e-03;
+		/// <summary>ゲイン自動調整 速度[秒]</summary>
+		public const double AUTOGAIN_SPEED = 3.0;
 
-		public const int KEYBOARD_HEIGHT = 18;
-		public static byte[] ScrollCanvas;
-		public static int MinLevel = -24;
-		public static int KeyboardShift = 0;
-
-		public static bool DisplayThreshold = false;
-		public static bool DisplayScroll = true;
-		public static bool DisplayPeak = false;
-		public static bool DisplayCurve = true;
-
-		static int DbToY(double db, int height) {
-			if (db < MinLevel) {
-				db = MinLevel;
-			}
-			return (int)(db * height / MinLevel);
+		static double mOffsetGain = 3.981;
+		public static int OffsetDb {
+			get { return (int)(20 * Math.Log10(mOffsetGain) + 0.5); }
+			set { mOffsetGain = Math.Pow(10, value / 20.0); }
 		}
 
-		static int AmpToY(double amp, int height) {
-			if (amp < 1e-6) {
-				amp = 1e-6;
+		public const int DB_LABEL_WIDTH = 40;
+		public const int KEYBOARD_HEIGHT = 24;
+		public static byte[] ScrollCanvas;
+		public static int MinDb = -36;
+		public static int KeyboardShift = 0;
+
+		public static bool DisplayScroll = false;
+		public static bool DisplayPeak = false;
+		public static bool DisplayCurve = false;
+
+		public static bool AutoGain = true;
+		public static bool NormGain = false;
+
+		static int DbToY(double db, int height) {
+			if (db < MinDb) {
+				db = MinDb;
 			}
-			var db = 20 * Math.Log10(amp) / MinLevel;
+			return (int)(db * height / MinDb);
+		}
+
+		static int LinearToY(double linear, int height) {
+			if (linear < 1e-8) {
+				linear = 1e-8;
+			}
+			var db = 20 * Math.Log10(linear) / MinDb;
 			if (db < 0) {
 				db = 0;
 			}
@@ -52,11 +66,11 @@ namespace SpectrumAnalyzer {
 			return (int)(db * height);
 		}
 
-		static void SetHue(double amp, int offset, int width) {
-			if (amp < 1e-6) {
-				amp = 1e-6;
+		static void SetHue(double linear, int offset, int width) {
+			if (linear < 1e-8) {
+				linear = 1e-8;
 			}
-			var db = 20 * Math.Log10(amp) / MinLevel;
+			var db = 20 * Math.Log10(linear) / MinDb;
 			if (db < 0) {
 				db = 0;
 			}
@@ -107,36 +121,39 @@ namespace SpectrumAnalyzer {
 			int width, int height, int gaugeHeight,
 			int noteCount
 		) {
-			var barBottom = height - 1;
+			width -= DB_LABEL_WIDTH;
+			var right = width + DB_LABEL_WIDTH - 1;
+			var bottom = height - 1;
+			var keyDWidth = (double)width / noteCount;
 			for (int n = 0; n < noteCount; n++) {
-				var note = n + KeyboardShift;
-				var px = (n + 0.0f) * width / noteCount;
-				var barWidth = (n + 1.0f) * width / noteCount - px + 1;
-				switch ((note + 24) % 12) {
+				var px = (int)(n * keyDWidth);
+				var keyWidth = (int)((n + 1) * keyDWidth) - px + 1;
+				px += DB_LABEL_WIDTH;
+				var note = (n + KeyboardShift + 24) % 12;
+				switch (note) {
 				case 0:
-					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
-					g.DrawLine(OCT_BORDER, px, 0, px, barBottom);
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, keyWidth, height);
+					g.DrawLine(OCT_BORDER, px, 0, px, bottom);
 					break;
 				case 2:
 				case 4:
 				case 7:
 				case 9:
 				case 11:
-					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, keyWidth, height);
 					break;
 				case 5:
-					g.FillRectangle(WHITE_KEY.Brush, px, 0, barWidth, height);
-					g.DrawLine(KEY_BORDER, px, 0, px, barBottom);
+					g.FillRectangle(WHITE_KEY.Brush, px, 0, keyWidth, height);
+					g.DrawLine(KEY_BORDER, px, 0, px, bottom);
 					break;
 				default:
-					g.FillRectangle(BLACK_KEY.Brush, px, 0, barWidth, height);
+					g.FillRectangle(BLACK_KEY.Brush, px, 0, keyWidth, height);
 					break;
 				}
 			}
-			var right = width - 1;
 			var keyboardBottom = gaugeHeight + KEYBOARD_HEIGHT - 1;
 			var textBottom = keyboardBottom + 1;
-			var textHeight = g.MeasureString("9", FONT).Height;
+			var textHeight = g.MeasureString("9", FONT_OCT).Height;
 			var textOfsX = textHeight * 0.5f;
 			var textArea = new RectangleF(0f, 0f, KEYBOARD_HEIGHT, textHeight);
 			var stringFormat = new StringFormat() {
@@ -145,78 +162,62 @@ namespace SpectrumAnalyzer {
 			};
 			for (int n = -12; n < noteCount + 12; n += 12) {
 				var note = n - KeyboardShift;
-				var px = 6 + width * note / noteCount - textOfsX;
+				var px = (float)(note * keyDWidth) + 6;
+				if (px < 0) {
+					continue;
+				}
+				px += DB_LABEL_WIDTH - textOfsX;
 				g.TranslateTransform(px, textBottom);
 				g.RotateTransform(-90);
-				g.DrawString("" + (n / 12), FONT, Brushes.LightGray, textArea, stringFormat);
+				g.DrawString("" + (n / 12), FONT_OCT, Brushes.LightGray, textArea, stringFormat);
 				g.RotateTransform(90);
 				g.TranslateTransform(-px, -textBottom);
 			}
-			g.DrawLine(OCT_BORDER, 0, keyboardBottom, right, keyboardBottom);
+			g.DrawLine(OCT_BORDER, DB_LABEL_WIDTH, keyboardBottom, right, keyboardBottom);
 		}
 
 		public static void Gauge(Graphics g, int width, int height) {
-			var dbOfs = Settings.AutoGain || Settings.NormGain ? 0 : SettingsForm.OFS_DB;
-			var dbMin = MinLevel + dbOfs;
+			var dbOfs = AutoGain || NormGain ? 0 : -OffsetDb;
+			var dbMin = MinDb + dbOfs;
 			var right = width - 1;
+			g.DrawLine(GRID_MINOR, DB_LABEL_WIDTH, height, width, height);
+			g.DrawLine(GRID_MINOR, DB_LABEL_WIDTH, 0, DB_LABEL_WIDTH, height + KEYBOARD_HEIGHT);
 			for (var db = dbOfs; dbMin <= db; --db) {
 				var py = DbToY(db - dbOfs, height);
-				if (db % 12 == 0) {
-					g.DrawLine(GRID_MAJOR, 0, py, right, py);
-				}
-				else if (db % 3 == 0) {
-					g.DrawLine(GRID_MINOR, 0, py, right, py);
+				if (db % 6 == 0) {
+					g.DrawLine(GRID_MAJOR, DB_LABEL_WIDTH - 3, py, right, py);
 				}
 			}
-			var textSize = g.MeasureString("9", FONT);
-			var textArea = new RectangleF(0f, 0f, 24, textSize.Height);
-			var textBottom = height - textArea.Height + 4;
+			var textSize = g.MeasureString("-12db", FONT_DB);
+			var textArea = new RectangleF(0f, 0f, DB_LABEL_WIDTH, textSize.Height);
 			var stringFormat = new StringFormat() {
-				Alignment = StringAlignment.Near
+				Alignment = StringAlignment.Center
 			};
 			for (var db = dbOfs; dbMin <= db; --db) {
-				if (db % 12 == 0) {
-					var py = DbToY(db - dbOfs, height) - 2;
-					if (py < textBottom) {
-						g.TranslateTransform(0, py);
-						g.DrawString(db + "", FONT, Brushes.Yellow, textArea, stringFormat);
-						g.TranslateTransform(0, -py);
+				if (db % 6 == 0) {
+					var py = DbToY(db - dbOfs, height) - 9;
+					if (py < -2) {
+						py = -2;
 					}
-					else {
-						g.TranslateTransform(0, textBottom);
-						g.DrawString(db + "", FONT, Brushes.Yellow, textArea, stringFormat);
-						g.TranslateTransform(0, -textBottom);
-					}
+					g.TranslateTransform(0, py);
+					g.DrawString(db + "db", FONT_DB, Brushes.Yellow, textArea, stringFormat);
+					g.TranslateTransform(0, -py);
 				}
 			}
 		}
 
-		public static void Surface(Graphics g, double[] arr, int count, int width, int height) {
-			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
-			var minValue = Math.Pow(10, MinLevel / 20.0);
-			for (int x = 0, i = 0; x < count; x++, i++) {
-				var val = arr[i] * scale;
-				if (val > minValue) {
-					var barX = (x - 0.5f) * width / count;
-					var barWidth = (x + 0.5f) * width / count - barX;
-					var barY = AmpToY(val, height);
-					var barHeight = height - barY;
-					g.FillRectangle(SURFACE, barX, barY, barWidth, barHeight);
-				}
-			}
-		}
-
-		public static void Curve(Graphics g, double[] arr, int count, int width, int height, Pen color) {
-			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
-			var idxA = 0;
-			var preX = 0;
-			var preY = AmpToY(arr[idxA] * scale, height);
-			for (int x = 0; x < width; x++) {
-				var idxB = x * count / width;
-				int y;
-				if (1 < idxB - idxA) {
-					y = AmpToY(arr[idxA] * scale, height);
-					g.DrawLine(color, preX, preY, x, y);
+		public static void Curve(Graphics g, double[] arr, int width, int height, Pen color) {
+			width -= DB_LABEL_WIDTH;
+			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var px0 = DB_LABEL_WIDTH;
+			var py0 = LinearToY(arr[0] * scale, height);
+			if (BANK_COUNT > width) {
+				var idxA = 0;
+				for (int x = 0; x < width; x++) {
+					var idxB = x * BANK_COUNT / width;
+					var px1 = x + DB_LABEL_WIDTH;
+					var py1 = LinearToY(arr[idxA] * scale, height);
+					g.DrawLine(color, px0, py0, px1, py1);
 					var max = double.MinValue;
 					var min = double.MaxValue;
 					for (var i = idxA; i <= idxB; i++) {
@@ -224,64 +225,97 @@ namespace SpectrumAnalyzer {
 						min = Math.Min(min, v);
 						max = Math.Max(max, v);
 					}
-					var minY = AmpToY(min, height);
-					var maxY = AmpToY(max, height);
-					g.DrawLine(color, x, minY, x, maxY);
-					y = AmpToY(arr[idxB] * scale, height);
+					var minY = LinearToY(min, height);
+					var maxY = LinearToY(max, height);
+					g.DrawLine(color, px1, minY, px1, maxY);
+					py1 = LinearToY(arr[idxB] * scale, height);
+					px0 = px1;
+					py0 = py1;
+					idxA = idxB;
 				}
-				else {
-					y = AmpToY(arr[idxB] * scale, height);
-					g.DrawLine(color, preX, preY, x, y);
+			}
+			else {
+				for (int x = 0; x < width; x++) {
+					var idxD = (double)x * BANK_COUNT / width;
+					var idxA = (int)idxD;
+					var idxB = Math.Min(idxA + 1, BANK_COUNT - 1);
+					var a2b = idxD - idxA;
+					var px1 = x + DB_LABEL_WIDTH;
+					var py1 = LinearToY((arr[idxA] * (1 - a2b) + arr[idxB] * a2b) * scale, height);
+					g.DrawLine(color, px0, py0, px1, py1);
+					px0 = px1;
+					py0 = py1;
 				}
-				preX = x;
-				preY = y;
-				idxA = idxB;
 			}
 		}
 
-		public static void Peak(Graphics g, double[] arr, int count, int width, int height) {
-			var color = DisplayCurve ? PEAK : SURFACE;
-			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
-			var minValue = Math.Pow(10, MinLevel / 20.0);
-			var dx = (double)width / count;
-			var ox = Settings.HALFTONE_DIV * dx * 0.5;
-			for (int x = 0, i = 0; x < count; x++, i++) {
+		public static void Surface(Graphics g, double[] arr, int width, int height) {
+			var color = DisplayPeak ? SURFACE_H : SURFACE;
+			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var minValue = Math.Pow(10, MinDb / 20.0);
+			var dx = (float)(width - DB_LABEL_WIDTH) / BANK_COUNT;
+			for (int x = 0, i = 0; x < BANK_COUNT; x++, i++) {
 				var val = arr[i] * scale;
 				if (val > minValue) {
-					var barA = (int)(x*dx - ox) + 1;
-					var barB = (int)(x*dx + ox);
-					var barY = AmpToY(val, height);
-					var barHeight = height - barY;
-					g.FillRectangle(color, barA, barY, barB - barA, barHeight);
+					var px0 = (x - 0.5f) * dx;
+					var px1 = (x + 0.5f) * dx;
+					var py = LinearToY(val, height);
+					var barWidth = px1 - px0;
+					var barHeight = height - py;
+					px0 += DB_LABEL_WIDTH;
+					g.FillRectangle(color, px0, py, barWidth, barHeight);
 				}
 			}
 		}
 
-		public static void Scroll(Bitmap bmp, double[] arr, int count, int top, int scrollHeight, int keyboardHeight) {
-			var scale = Settings.AutoGain || Settings.NormGain ? 1 : SettingsForm.OFS_GAIN;
-			var width = bmp.Width;
+		public static void Peak(Graphics g, double[] arr, int width, int height) {
+			width -= DB_LABEL_WIDTH;
+			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var minValue = Math.Pow(10, MinDb / 20.0);
+			var dx = (float)width / BANK_COUNT;
+			var ox = HALFTONE_DIV * dx * 0.5f;
+			for (int x = 0, i = 0; x < BANK_COUNT; x++, i++) {
+				var val = arr[i] * scale;
+				if (val > minValue) {
+					var px0 = (int)(x*dx - ox);
+					var px1 = (int)(x*dx + ox);
+					var py = LinearToY(val, height);
+					var barWidth = px1 - px0;
+					px0 += DB_LABEL_WIDTH;
+					g.FillRectangle(PEAK_TOP, px0, py, barWidth, barWidth);
+				}
+			}
+		}
+
+		public static void Scroll(Bitmap bmp, double[] arr, int top, int scrollHeight, int keyboardHeight) {
+			var scale = AutoGain || NormGain ? 1 : mOffsetGain;
+			var width = bmp.Width - DB_LABEL_WIDTH;
 			var pix = bmp.LockBits(new Rectangle(Point.Empty, bmp.Size), ImageLockMode.WriteOnly, bmp.PixelFormat);
 			var offsetY0 = pix.Stride * top;
-			var minValue = Math.Pow(10, MinLevel / 20.0);
 			Array.Clear(ScrollCanvas, offsetY0, pix.Stride);
 			if (DisplayPeak) {
-				var dx = (double)width / count;
-				var ox = Settings.HALFTONE_DIV * dx * 0.5;
-				for (int x = 0, i = 0; x < count; x++, i++) {
-					if (arr[i] * scale > minValue) {
-						var barA = (int)(x*dx - ox) + 1;
-						var barB = (int)(x*dx + ox);
-						SetHue(arr[i] * scale, offsetY0 + barA * 4, barB - barA);
+				var dx = (float)width / BANK_COUNT;
+				var ox = HALFTONE_DIV * dx * 0.5f;
+				var minValue = Math.Pow(10, MinDb / 20.0);
+				for (int i = 0; i < BANK_COUNT; i++) {
+					var value = arr[i] * scale;
+					if (value > minValue) {
+						var px0 = (int)(i*dx - ox);
+						var px1 = (int)(i*dx + ox);
+						var hueWidth = px1 - px0;
+						px0 += DB_LABEL_WIDTH;
+						SetHue(value, offsetY0 + px0 * 4, hueWidth);
 					}
 				}
 			}
 			else {
-				for (int x = 0, i = 0; x < count; x++, i++) {
-					if (arr[i] * scale > minValue) {
-						var barA = x * width / count;
-						var barB = (x + Settings.HALFTONE_DIV) * width / count;
-						SetHue(arr[i] * scale, offsetY0 + barA * 4, barB - barA);
-					}
+				for (int x = 0; x < width; x++) {
+					var idxD = (double)x * BANK_COUNT / width;
+					var idxA = (int)idxD;
+					var idxB = Math.Min(idxA + 1, BANK_COUNT - 1);
+					var a2b = idxD - idxA;
+					var px = x + DB_LABEL_WIDTH;
+					SetHue((arr[idxA] * (1 - a2b) + arr[idxB] * a2b) * scale, offsetY0 + px * 4, 1);
 				}
 			}
 			for (int y = 1; y < keyboardHeight; y++) {

@@ -78,43 +78,48 @@
       <DesignTime>True</DesignTime>
       <DependentUpon>Resources.resx</DependentUpon>
     </Compile>
-    <Compile Include="spectrum\FilterBank.cs" />
-    <Compile Include="spectrum\OscillatorBank.cs" />
-    <Compile Include="spectrum\PeakBank.cs" />
-    <Compile Include="spectrum\Settings.cs" />
-    <Compile Include="winmm\MMResult.cs" />
-    <Compile Include="Record.cs" />
-    <Compile Include="forms\SettingsForm.cs">
+    <Compile Include="Forms\Main.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="forms\SettingsForm.Designer.cs">
-      <DependentUpon>SettingsForm.cs</DependentUpon>
+    <Compile Include="Forms\Main.Designer.cs">
+      <DependentUpon>Main.cs</DependentUpon>
     </Compile>
-    <Compile Include="spectrum\Spectrum.cs" />
-    <Compile Include="forms\MainForm.cs">
+    <Compile Include="Forms\Settings.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="forms\MainForm.Designer.cs">
-      <DependentUpon>MainForm.cs</DependentUpon>
+    <Compile Include="Forms\Settings.Designer.cs">
+      <DependentUpon>Settings.cs</DependentUpon>
     </Compile>
-    <Compile Include="spectrum\WaveSynth.cs" />
+    <Compile Include="Spectrum\FilterBank.cs" />
+    <Compile Include="Spectrum\OscillatorBank.cs" />
+    <Compile Include="Spectrum\PeakBank.cs" />
+    <Compile Include="Spectrum\Spectrum.cs" />
+    <Compile Include="Spectrum\Spectrum.Settings.cs">
+      <DependentUpon>Spectrum.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Spectrum\WaveSynth.cs" />
+    <Compile Include="Spectrum\WaveSynth.Settings.cs">
+      <DependentUpon>WaveSynth.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="RiffWav.cs" />
-    <Compile Include="winmm\WaveIn.cs" />
-    <Compile Include="winmm\Wave.cs" />
     <Compile Include="Playback.cs" />
-    <Compile Include="winmm\WaveOut.cs" />
-    <EmbeddedResource Include="forms\MainForm.resx">
-      <DependentUpon>MainForm.cs</DependentUpon>
+    <Compile Include="Record.cs" />
+    <Compile Include="RiffWav.cs" />
+    <Compile Include="WinMM\MMResult.cs" />
+    <Compile Include="WinMM\WaveIn.cs" />
+    <Compile Include="WinMM\Wave.cs" />
+    <Compile Include="WinMM\WaveOut.cs" />
+    <EmbeddedResource Include="Forms\Main.resx">
+      <DependentUpon>Main.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <SubType>Designer</SubType>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <EmbeddedResource Include="forms\SettingsForm.resx">
-      <DependentUpon>SettingsForm.cs</DependentUpon>
+    <EmbeddedResource Include="Forms\Settings.resx">
+      <DependentUpon>Settings.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>

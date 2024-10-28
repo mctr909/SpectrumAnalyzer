@@ -1,6 +1,6 @@
-﻿namespace SpectrumAnalyzer
+﻿namespace SpectrumAnalyzer.Forms
 {
-	partial class MainForm
+	partial class Main
 	{
 		/// <summary>
 		/// 必要なデザイナー変数です。
@@ -166,7 +166,7 @@
 			// 
 			this.TimerDisplay.Tick += new System.EventHandler(this.TimerDisplay_Tick);
 			// 
-			// MainForm
+			// Main
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
@@ -175,7 +175,7 @@
 			this.Controls.Add(this.toolStrip1);
 			this.Controls.Add(this.pictureBox1);
 			this.MinimumSize = new System.Drawing.Size(320, 168);
-			this.Name = "MainForm";
+			this.Name = "Main";
 			this.Text = "SpectrumAnalyzer";
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);
 			this.Load += new System.EventHandler(this.Form1_Load);

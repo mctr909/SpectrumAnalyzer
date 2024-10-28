@@ -7,7 +7,7 @@ using Spectrum;
 
 namespace SpectrumAnalyzer {
 	public class Playback : WaveOut {
-		const int DIV = 10;
+		const int DIV_COUNT = 10;
 		readonly int DIV_SAMPLES;
 		readonly int DIV_SIZE;
 
@@ -27,14 +27,14 @@ namespace SpectrumAnalyzer {
 		DOpened OnOpened;
 		float[] MuteData;
 
-		public Playback(int sampleRate)
-			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV, 16) {
-			DIV_SAMPLES = BufferSamples / DIV;
+		public Playback(int sampleRate, int bufferCount = 20)
+			: base(sampleRate, 2, BUFFER_TYPE.F32, sampleRate / 1000 * DIV_COUNT, bufferCount) {
+			DIV_SAMPLES = BufferSamples / DIV_COUNT;
 			DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
-			Spectrum = new Spectrum.Spectrum(sampleRate, SettingsForm.BASE_FREQ);
+			Spectrum = new Spectrum.Spectrum(sampleRate);
 			OnOpened = (isOpen) => {
 				PlayingName = Path.GetFileNameWithoutExtension(FileList[PlayFileIndex]);
-				File.Speed = SettingsForm.Speed;
+				File.Speed = Forms.Settings.Speed;
 			};
 			mOnTerminated = () => {
 				if (FileList.Count > 0) {
@@ -95,7 +95,7 @@ namespace SpectrumAnalyzer {
 		protected override void WriteBuffer(IntPtr pBuffer) {
 			File.Read(pBuffer);
 			var pDivBuffer = pBuffer;
-			for (int d = 0; d < DIV; ++d) {
+			for (int d = 0; d < DIV_COUNT; ++d) {
 				Spectrum.Update(pDivBuffer, DIV_SAMPLES);
 				Marshal.Copy(MuteData, 0, pDivBuffer, MuteData.Length);
 				Osc.WriteBuffer(pDivBuffer, DIV_SAMPLES);
