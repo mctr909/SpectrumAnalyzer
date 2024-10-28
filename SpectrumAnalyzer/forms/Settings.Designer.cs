@@ -28,6 +28,7 @@
 			this.GrbKey = new System.Windows.Forms.GroupBox();
 			this.GrbSpeed = new System.Windows.Forms.GroupBox();
 			this.GrbDisplaySettings = new System.Windows.Forms.GroupBox();
+			this.ChkThreshold = new System.Windows.Forms.CheckBox();
 			this.ChkFreq = new System.Windows.Forms.CheckBox();
 			this.TrkDispMax = new System.Windows.Forms.TrackBar();
 			this.RbNormGain = new System.Windows.Forms.RadioButton();
@@ -41,6 +42,7 @@
 			this.CmbOutput = new System.Windows.Forms.ComboBox();
 			this.GrbInput = new System.Windows.Forms.GroupBox();
 			this.CmbInput = new System.Windows.Forms.ComboBox();
+			this.TrkScrollSpeed = new System.Windows.Forms.TrackBar();
 			((System.ComponentModel.ISupportInitialize)(this.TrkSpeed)).BeginInit();
 			((System.ComponentModel.ISupportInitialize)(this.TrkKey)).BeginInit();
 			this.GrbKey.SuspendLayout();
@@ -50,6 +52,7 @@
 			((System.ComponentModel.ISupportInitialize)(this.TrkDispRange)).BeginInit();
 			this.GrbOutput.SuspendLayout();
 			this.GrbInput.SuspendLayout();
+			((System.ComponentModel.ISupportInitialize)(this.TrkScrollSpeed)).BeginInit();
 			this.SuspendLayout();
 			// 
 			// TrkSpeed
@@ -60,7 +63,7 @@
 			this.TrkSpeed.Maximum = 12;
 			this.TrkSpeed.Minimum = -24;
 			this.TrkSpeed.Name = "TrkSpeed";
-			this.TrkSpeed.Size = new System.Drawing.Size(314, 24);
+			this.TrkSpeed.Size = new System.Drawing.Size(337, 24);
 			this.TrkSpeed.TabIndex = 1;
 			this.TrkSpeed.Scroll += new System.EventHandler(this.TrkSpeed_Scroll);
 			// 
@@ -72,7 +75,7 @@
 			this.TrkKey.Maximum = 12;
 			this.TrkKey.Minimum = -12;
 			this.TrkKey.Name = "TrkKey";
-			this.TrkKey.Size = new System.Drawing.Size(313, 24);
+			this.TrkKey.Size = new System.Drawing.Size(336, 24);
 			this.TrkKey.TabIndex = 1;
 			this.TrkKey.Scroll += new System.EventHandler(this.TrkKey_Scroll);
 			// 
@@ -82,7 +85,7 @@
 			this.GrbKey.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
 			this.GrbKey.Location = new System.Drawing.Point(5, 0);
 			this.GrbKey.Name = "GrbKey";
-			this.GrbKey.Size = new System.Drawing.Size(326, 47);
+			this.GrbKey.Size = new System.Drawing.Size(349, 47);
 			this.GrbKey.TabIndex = 1;
 			this.GrbKey.TabStop = false;
 			this.GrbKey.Text = "キー";
@@ -93,13 +96,15 @@
 			this.GrbSpeed.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
 			this.GrbSpeed.Location = new System.Drawing.Point(5, 53);
 			this.GrbSpeed.Name = "GrbSpeed";
-			this.GrbSpeed.Size = new System.Drawing.Size(326, 47);
+			this.GrbSpeed.Size = new System.Drawing.Size(349, 47);
 			this.GrbSpeed.TabIndex = 2;
 			this.GrbSpeed.TabStop = false;
 			this.GrbSpeed.Text = "速さ";
 			// 
 			// GrbDisplaySettings
 			// 
+			this.GrbDisplaySettings.Controls.Add(this.TrkScrollSpeed);
+			this.GrbDisplaySettings.Controls.Add(this.ChkThreshold);
 			this.GrbDisplaySettings.Controls.Add(this.ChkFreq);
 			this.GrbDisplaySettings.Controls.Add(this.TrkDispMax);
 			this.GrbDisplaySettings.Controls.Add(this.RbNormGain);
@@ -112,15 +117,26 @@
 			this.GrbDisplaySettings.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
 			this.GrbDisplaySettings.Location = new System.Drawing.Point(5, 106);
 			this.GrbDisplaySettings.Name = "GrbDisplaySettings";
-			this.GrbDisplaySettings.Size = new System.Drawing.Size(326, 159);
+			this.GrbDisplaySettings.Size = new System.Drawing.Size(349, 203);
 			this.GrbDisplaySettings.TabIndex = 4;
 			this.GrbDisplaySettings.TabStop = false;
 			this.GrbDisplaySettings.Text = "表示";
 			// 
+			// ChkThreshold
+			// 
+			this.ChkThreshold.AutoSize = true;
+			this.ChkThreshold.Location = new System.Drawing.Point(126, 132);
+			this.ChkThreshold.Name = "ChkThreshold";
+			this.ChkThreshold.Size = new System.Drawing.Size(50, 19);
+			this.ChkThreshold.TabIndex = 11;
+			this.ChkThreshold.Text = "閾値";
+			this.ChkThreshold.UseVisualStyleBackColor = true;
+			this.ChkThreshold.CheckedChanged += new System.EventHandler(this.ChkThreshold_CheckedChanged);
+			// 
 			// ChkFreq
 			// 
 			this.ChkFreq.AutoSize = true;
-			this.ChkFreq.Location = new System.Drawing.Point(159, 132);
+			this.ChkFreq.Location = new System.Drawing.Point(182, 132);
 			this.ChkFreq.Name = "ChkFreq";
 			this.ChkFreq.Size = new System.Drawing.Size(86, 19);
 			this.ChkFreq.TabIndex = 10;
@@ -136,7 +152,7 @@
 			this.TrkDispMax.Maximum = 24;
 			this.TrkDispMax.Name = "TrkDispMax";
 			this.TrkDispMax.RightToLeft = System.Windows.Forms.RightToLeft.No;
-			this.TrkDispMax.Size = new System.Drawing.Size(314, 42);
+			this.TrkDispMax.Size = new System.Drawing.Size(336, 42);
 			this.TrkDispMax.TabIndex = 9;
 			this.TrkDispMax.TickFrequency = 6;
 			this.TrkDispMax.TickStyle = System.Windows.Forms.TickStyle.Both;
@@ -172,9 +188,9 @@
 			this.ChkPeak.AutoSize = true;
 			this.ChkPeak.Location = new System.Drawing.Point(67, 132);
 			this.ChkPeak.Name = "ChkPeak";
-			this.ChkPeak.Size = new System.Drawing.Size(86, 19);
+			this.ChkPeak.Size = new System.Drawing.Size(53, 19);
 			this.ChkPeak.TabIndex = 7;
-			this.ChkPeak.Text = "ピークを抽出";
+			this.ChkPeak.Text = "ピーク";
 			this.ChkPeak.UseVisualStyleBackColor = true;
 			this.ChkPeak.CheckedChanged += new System.EventHandler(this.ChkPeak_CheckedChanged);
 			// 
@@ -193,7 +209,7 @@
 			// ChkScroll
 			// 
 			this.ChkScroll.AutoSize = true;
-			this.ChkScroll.Location = new System.Drawing.Point(251, 132);
+			this.ChkScroll.Location = new System.Drawing.Point(274, 132);
 			this.ChkScroll.Name = "ChkScroll";
 			this.ChkScroll.Size = new System.Drawing.Size(72, 19);
 			this.ChkScroll.TabIndex = 6;
@@ -222,7 +238,7 @@
 			this.TrkDispRange.Minimum = -48;
 			this.TrkDispRange.Name = "TrkDispRange";
 			this.TrkDispRange.RightToLeft = System.Windows.Forms.RightToLeft.Yes;
-			this.TrkDispRange.Size = new System.Drawing.Size(314, 42);
+			this.TrkDispRange.Size = new System.Drawing.Size(336, 42);
 			this.TrkDispRange.TabIndex = 1;
 			this.TrkDispRange.TickFrequency = 6;
 			this.TrkDispRange.TickStyle = System.Windows.Forms.TickStyle.Both;
@@ -233,9 +249,9 @@
 			// 
 			this.GrbOutput.Controls.Add(this.CmbOutput);
 			this.GrbOutput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbOutput.Location = new System.Drawing.Point(5, 271);
+			this.GrbOutput.Location = new System.Drawing.Point(5, 315);
 			this.GrbOutput.Name = "GrbOutput";
-			this.GrbOutput.Size = new System.Drawing.Size(326, 47);
+			this.GrbOutput.Size = new System.Drawing.Size(349, 47);
 			this.GrbOutput.TabIndex = 5;
 			this.GrbOutput.TabStop = false;
 			this.GrbOutput.Text = "出力デバイス";
@@ -246,7 +262,7 @@
 			this.CmbOutput.FormattingEnabled = true;
 			this.CmbOutput.Location = new System.Drawing.Point(6, 18);
 			this.CmbOutput.Name = "CmbOutput";
-			this.CmbOutput.Size = new System.Drawing.Size(314, 23);
+			this.CmbOutput.Size = new System.Drawing.Size(337, 23);
 			this.CmbOutput.TabIndex = 0;
 			this.CmbOutput.SelectedIndexChanged += new System.EventHandler(this.CmbOutput_SelectedIndexChanged);
 			// 
@@ -254,9 +270,9 @@
 			// 
 			this.GrbInput.Controls.Add(this.CmbInput);
 			this.GrbInput.Font = new System.Drawing.Font("Meiryo UI", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(128)));
-			this.GrbInput.Location = new System.Drawing.Point(5, 324);
+			this.GrbInput.Location = new System.Drawing.Point(5, 368);
 			this.GrbInput.Name = "GrbInput";
-			this.GrbInput.Size = new System.Drawing.Size(326, 47);
+			this.GrbInput.Size = new System.Drawing.Size(349, 47);
 			this.GrbInput.TabIndex = 6;
 			this.GrbInput.TabStop = false;
 			this.GrbInput.Text = "入力デバイス";
@@ -267,15 +283,30 @@
 			this.CmbInput.FormattingEnabled = true;
 			this.CmbInput.Location = new System.Drawing.Point(6, 18);
 			this.CmbInput.Name = "CmbInput";
-			this.CmbInput.Size = new System.Drawing.Size(314, 23);
+			this.CmbInput.Size = new System.Drawing.Size(337, 23);
 			this.CmbInput.TabIndex = 0;
 			this.CmbInput.SelectedIndexChanged += new System.EventHandler(this.CmbInput_SelectedIndexChanged);
+			// 
+			// TrkScrollSpeed
+			// 
+			this.TrkScrollSpeed.AutoSize = false;
+			this.TrkScrollSpeed.LargeChange = 1;
+			this.TrkScrollSpeed.Location = new System.Drawing.Point(7, 155);
+			this.TrkScrollSpeed.Maximum = 8;
+			this.TrkScrollSpeed.Minimum = 1;
+			this.TrkScrollSpeed.Name = "TrkScrollSpeed";
+			this.TrkScrollSpeed.RightToLeft = System.Windows.Forms.RightToLeft.No;
+			this.TrkScrollSpeed.Size = new System.Drawing.Size(336, 42);
+			this.TrkScrollSpeed.TabIndex = 12;
+			this.TrkScrollSpeed.TickStyle = System.Windows.Forms.TickStyle.Both;
+			this.TrkScrollSpeed.Value = 1;
+			this.TrkScrollSpeed.Scroll += new System.EventHandler(this.TrkScrollSpeed_Scroll);
 			// 
 			// Settings
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(336, 376);
+			this.ClientSize = new System.Drawing.Size(360, 419);
 			this.Controls.Add(this.GrbInput);
 			this.Controls.Add(this.GrbOutput);
 			this.Controls.Add(this.GrbDisplaySettings);
@@ -297,6 +328,7 @@
 			((System.ComponentModel.ISupportInitialize)(this.TrkDispRange)).EndInit();
 			this.GrbOutput.ResumeLayout(false);
 			this.GrbInput.ResumeLayout(false);
+			((System.ComponentModel.ISupportInitialize)(this.TrkScrollSpeed)).EndInit();
 			this.ResumeLayout(false);
 
 		}
@@ -321,5 +353,7 @@
 		private System.Windows.Forms.CheckBox ChkCurve;
 		private System.Windows.Forms.TrackBar TrkDispMax;
 		private System.Windows.Forms.CheckBox ChkFreq;
+		private System.Windows.Forms.CheckBox ChkThreshold;
+		private System.Windows.Forms.TrackBar TrkScrollSpeed;
 	}
 }

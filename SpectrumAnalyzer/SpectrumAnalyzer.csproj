@@ -90,8 +90,6 @@
     <Compile Include="Forms\Settings.Designer.cs">
       <DependentUpon>Settings.cs</DependentUpon>
     </Compile>
-    <Compile Include="Spectrum\FilterBank.cs" />
-    <Compile Include="Spectrum\OscillatorBank.cs" />
     <Compile Include="Spectrum\PeakBank.cs" />
     <Compile Include="Spectrum\Spectrum.cs" />
     <Compile Include="Spectrum\Spectrum.Settings.cs">
@@ -106,7 +104,8 @@
     <Compile Include="Playback.cs" />
     <Compile Include="Record.cs" />
     <Compile Include="RiffWav.cs" />
-    <Compile Include="WinMM\MMResult.cs" />
+    <Compile Include="WinMM\MMCallback.cs" />
+    <Compile Include="WinMM\MMSysErr.cs" />
     <Compile Include="WinMM\WaveIn.cs" />
     <Compile Include="WinMM\Wave.cs" />
     <Compile Include="WinMM\WaveOut.cs" />

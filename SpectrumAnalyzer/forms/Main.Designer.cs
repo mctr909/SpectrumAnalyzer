@@ -174,7 +174,7 @@
 			this.Controls.Add(this.TrkSeek);
 			this.Controls.Add(this.toolStrip1);
 			this.Controls.Add(this.pictureBox1);
-			this.MinimumSize = new System.Drawing.Size(320, 168);
+			this.MinimumSize = new System.Drawing.Size(320, 128);
 			this.Name = "Main";
 			this.Text = "SpectrumAnalyzer";
 			this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.MainForm_FormClosing);

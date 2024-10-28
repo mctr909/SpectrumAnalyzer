@@ -5,145 +5,144 @@ using System.Threading;
 
 namespace WinMM {
 	public abstract class WaveIn : Wave {
+		[StructLayout(LayoutKind.Sequential)]
+		public struct WaveInCaps {
+			public ushort wMid;
+			public ushort wPid;
+			public uint vDriverVersion;
+			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
+			public string szPname;
+			public EAvailableFormats dwFormats;
+			public ushort wChannels;
+			public ushort wReserved1;
+		}
+
 		enum MM_WIM {
 			OPEN = 0x3BE,
 			CLOSE = 0x3BF,
 			DATA = 0x3C0
 		}
 
-		[StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-		struct WAVEINCAPS {
-			public ushort wMid;
-			public ushort wPid;
-			public uint vDriverVersion;
-			[MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
-			public string szPname;
-			private uint dwFormats;
-			public ushort wChannels;
-			public ushort wReserved1;
-			public List<WAVE_FORMAT> Formats {
-				get {
-					var list = new List<WAVE_FORMAT>();
-					for (int i = 0, s = 1; i < 32; i++, s <<= 1) {
-						if (0 < (dwFormats & s)) {
-							list.Add((WAVE_FORMAT)s);
-						}
-					}
-					return list;
-				}
-			}
-		}
-
 		delegate void DCallback(IntPtr hwi, MM_WIM uMsg, int dwUser, IntPtr lpWaveHdr, int dwParam2);
 		DCallback Callback;
-		int ProcessedBufferCount = 0;
 
-		#region dll
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern uint waveInGetNumDevs();
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInGetDevCaps(uint uDeviceID, ref WAVEINCAPS pwic, int size);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInOpen(ref IntPtr hwi, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, uint dwFlags = 0x00030000);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInClose(IntPtr hwi);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInPrepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		#region winmm.dll
 		[DllImport("winmm.dll")]
-		static extern MMResult waveInUnprepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInReset(IntPtr hwi);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInAddBuffer(IntPtr hwi, IntPtr lpWaveHdr, int size);
-		[DllImport("winmm.dll", SetLastError = true, CharSet = CharSet.Auto)]
-		static extern MMResult waveInStart(IntPtr hwi);
+		static extern uint waveInGetNumDevs();
+		[DllImport("winmm.dll", CharSet = CharSet.Ansi)]
+		static extern MMSysErr waveInGetDevCaps(uint uDeviceID, ref WaveInCaps pwic, int size);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInOpen(ref IntPtr hwi, uint uDeviceID, ref WAVEFORMATEX lpFormat, DCallback dwCallback, IntPtr dwInstance, MMCallback dwFlags);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInClose(IntPtr hwi);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInPrepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInUnprepareHeader(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInReset(IntPtr hwi);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInAddBuffer(IntPtr hwi, IntPtr lpWaveHdr, int size);
+		[DllImport("winmm.dll")]
+		static extern MMSysErr waveInStart(IntPtr hwi);
 		#endregion
 
-		public static List<string> GetDeviceList() {
-			var list = new List<string>();
-			var deviceCount = waveInGetNumDevs();
-			for (uint i = 0; i < deviceCount; i++) {
-				var caps = new WAVEINCAPS();
-				var ret = waveInGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
-				if (MMResult.MMSYSERR_NOERROR == ret) {
-					list.Add(caps.szPname);
-				}
-				else {
-					list.Add(ret.ToString());
-				}
-			}
-			return list;
-		}
-
-		public WaveIn(int sampleRate, int channels, VALUE_TYPE type, int bufferSamples, int bufferCount)
-			: base(sampleRate, channels, type, bufferSamples, bufferCount) {
+		public WaveIn(int sampleRate, int channels, EBufferType bufferType, int bufferSamples, int bufferCount)
+			: base(sampleRate, channels, bufferType, bufferSamples, bufferCount) {
 			Callback = (hwi, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WIM.OPEN:
-					AllocHeader();
+					DeviceEnabled = true;
 					break;
 				case MM_WIM.CLOSE:
-					DisposeHeader();
+					DeviceEnabled = false;
 					break;
 				case MM_WIM.DATA:
+					CallbackEnabled = true;
+					if (Closing) {
+						break;
+					}
 					lock (LockBuffer) {
-						if (Closing) {
-							break;
-						}
+						var header = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
+						header.dwFlags |= WHDR_FLAG.INQUEUE;
+						Marshal.StructureToPtr(header, lpWaveHdr, false);
 						waveInAddBuffer(hwi, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
-						if (ProcessedBufferCount > 0) {
-							ProcessedBufferCount--;
-						}
 					}
 					break;
 				}
 			};
 		}
 
-		protected override void BufferTask() {
-			Closing = false;
-			Pause = false;
-			Paused = false;
-			ProcessedBufferCount = 0;
-			var mr = waveInOpen(ref DeviceHandle, DeviceId, ref WaveFormatEx, Callback, IntPtr.Zero);
-			if (MMResult.MMSYSERR_NOERROR != mr) {
-				return;
+		public static List<WaveInCaps> GetDeviceList() {
+			var list = new List<WaveInCaps>();
+			var deviceCount = waveInGetNumDevs();
+			for (uint i = 0; i < deviceCount; i++) {
+				var caps = new WaveInCaps();
+				waveInGetDevCaps(i, ref caps, Marshal.SizeOf(caps));
+				list.Add(caps);
 			}
-			for (int i = 0; i < BufferCount; ++i) {
-				waveInPrepareHeader(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-				waveInAddBuffer(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
+			return list;
+		}
+
+		protected override bool InitializeTask() {
+			var res = waveInOpen(ref DeviceHandle, DeviceId, ref WaveFormatEx, Callback, IntPtr.Zero, MMCallback.FUNCTION);
+			WaitEnable(ref DeviceEnabled);
+			if (DeviceEnabled) {
+				Console.WriteLine($"[WaveIn] Device Enabled");
+			} else {
+				Console.WriteLine($"[WaveIn] Device Open error:{res}");
+				return false;
 			}
+			foreach (var pHeader in WaveHeaders) {
+				waveInPrepareHeader(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
+				waveInAddBuffer(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
+			}
+			Console.WriteLine($"[WaveIn] Header Prepared");
 			waveInStart(DeviceHandle);
-			var readIndex = 0;
+			WaitEnable(ref CallbackEnabled);
+			if (CallbackEnabled) {
+				Console.WriteLine($"[WaveIn] Callback Enabled");
+			} else {
+				Console.WriteLine($"[WaveIn] Callback error");
+				return false;
+			}
+			return true;
+		}
+
+		protected override void FinalizeTask() {
+			waveInReset(DeviceHandle);
+			Console.WriteLine($"[WaveIn] Reset Device");
+			foreach (var pHeader in WaveHeaders) {
+				waveInUnprepareHeader(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
+			}
+			Console.WriteLine($"[WaveIn] Header Unprepared");
+			waveInClose(DeviceHandle);
+			WaitDisable(ref DeviceEnabled);
+			Console.WriteLine($"[WaveIn] Device Closed");
+		}
+
+		protected override void Task() {
 			while (!Closing) {
-				var enableWait = false;
-				lock (LockBuffer) {
-					if (BufferCount <= ProcessedBufferCount + 1) {
-						enableWait = true;
-					}
-					else {
+				for (var nonQueueCount = 0; nonQueueCount < BufferCount;) {
+					lock (LockBuffer) {
+						var pHeader = WaveHeaders[BufferIndex];
+						BufferIndex = ++BufferIndex % BufferCount;
+						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
+						if (0 == (header.dwFlags & WHDR_FLAG.INQUEUE)) {
+							++nonQueueCount;
+							continue;
+						}
+						header.dwFlags &= ~WHDR_FLAG.INQUEUE;
+						Marshal.StructureToPtr(header, pHeader, false);
 						if (Pause) {
 							Paused = true;
 						}
 						else {
-							var header = Marshal.PtrToStructure<WAVEHDR>(mpWaveHeader[readIndex]);
 							ReadBuffer(header.lpData);
-							readIndex = (readIndex + 1) % BufferCount;
-							ProcessedBufferCount++;
 						}
 					}
 				}
-				if (enableWait) {
-					Thread.Sleep(1);
-				}
-			}
-			waveInReset(DeviceHandle);
-			for (int i = 0; i < BufferCount; ++i) {
-				waveInUnprepareHeader(DeviceHandle, mpWaveHeader[i], Marshal.SizeOf<WAVEHDR>());
-			}
-			waveInClose(DeviceHandle);
-			for (int i = 0; i < 40 && DeviceEnabled; ++i) {
-				Thread.Sleep(50);
+				Thread.Sleep(1);
 			}
 		}
 
