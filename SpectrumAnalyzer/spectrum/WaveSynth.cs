@@ -89,7 +89,7 @@ namespace Spectrum {
 				if (pOsc->LCurrent == 0 && pOsc->RCurrent == 0) {
 					/* 直近低音側の振幅を確認して位相を設定 */
 					var lowToneAmp = PURGE_THRESHOLD;
-					var lowToneEnd = Math.Max(idxTone - 5, 0);
+					var lowToneEnd = Math.Max(idxTone - 7, 0);
 					for (int t = idxTone - 1; t >= lowToneEnd; --t) {
 						var lowOsc = *(OscillatorBank*)mpOscillatorBanks[t];
 						var amp = Math.Max(lowOsc.LCurrent, lowOsc.RCurrent);
@@ -100,7 +100,7 @@ namespace Spectrum {
 						}
 					}
 					/* 直近高音側の振幅を確認して位相を設定 */
-					var highToneEnd = Math.Min(idxTone + 5, HALFTONE_COUNT - 1);
+					var highToneEnd = Math.Min(idxTone + 7, HALFTONE_COUNT - 1);
 					for (int t = idxTone + 1; t <= highToneEnd; ++t) {
 						var highOsc = *(OscillatorBank*)mpOscillatorBanks[t];
 						var amp = Math.Max(highOsc.LCurrent, highOsc.RCurrent);
