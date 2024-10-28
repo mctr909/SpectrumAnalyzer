@@ -1,18 +1,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <math.h>
 
-#include <Windows.h>
-
-#include "wave.h"
-#include "wave_out.h"
+#include "winmm_wave.h"
 #include "riff_wav.h"
+#include "spectrum.h"
+#include "wave_synth.h"
 #include "playback.h"
 
-constexpr int32_t DIV = 20;
+constexpr int32_t DIV = 25;
+constexpr int32_t NOTE_COUNT = 126;
+constexpr double PITCH = 440;
 
 Playback::Playback(
-	int sampleRate,
+	int32_t sampleRate,
+	void(*fpOnOpened)(bool),
 	void(*fpOnTerminated)(void)
 ) : WaveOut(
 	BUFFER_TYPE::F32,
@@ -22,42 +25,39 @@ Playback::Playback(
 ) {
 	DIV_SAMPLES = BufferSamples / DIV;
 	DIV_SIZE = WaveFormatEx.nBlockAlign * DIV_SAMPLES;
-	mfpOnTerminated = fpOnTerminated;
+	auto baseFreq = PITCH * pow(2.0, 3 / 12.0 - 5);
+	cSpectrum = new Spectrum(sampleRate, baseFreq, NOTE_COUNT, true);
+	cWaveSynth = new WaveSynth(cSpectrum);
+	this->fpOnOpened = fpOnOpened;
+	this->fpOnTerminated = fpOnTerminated;
 }
-
-void
-Playback::Open() {
+void Playback::Open() {
 	OpenDevice();
 }
-
-void
-Playback::Close() {
+void Playback::Close() {
 	CloseDevice();
 }
-
-void
-Playback::OpenFile(LPCWCHAR filePath) {
+void Playback::OpenFile(wchar_t* filePath) {
 	Pause();
-	if (File == nullptr) {
-		delete File;
+	if (cFile != nullptr) {
+		delete cFile;
 	}
-	File = new WavReader(filePath, SampleRate, BufferSamples, 1.0);
+	cFile = new WavReader(filePath, WaveFormatEx.nSamplesPerSec, BufferSamples, 1.0);
+	fpOnOpened(cFile->IsOpened);
 }
-
-void
-Playback::WriteBuffer(LPSTR lpData) {
-	if (File == nullptr) {
+void Playback::WriteBuffer(void* lpData) {
+	if (cFile == nullptr) {
 		return;
 	}
-	File->fpRead(File, (float*)lpData);
-	auto pDivBuffer = lpData;
-	for (int d = 0; d < DIV; ++d) {
-		//Spectrum.Calc((float*)pDivBuffer, DIV_SAMPLES);
-		//memset(pDivBuffer, 0, DIV_SIZE);
-		//mOsc.WriteBuffer((float*)pDivBuffer, DIV_SAMPLES);
-		//pDivBuffer += DIV_SIZE;
+	cFile->fpRead(cFile, (float*)lpData);
+	auto pDivBuffer = (uint8_t*)lpData;
+	for (int32_t d = 0; d < DIV; ++d) {
+		cSpectrum->Calc((float*)pDivBuffer, DIV_SAMPLES);
+		memset(pDivBuffer, 0, DIV_SIZE);
+		cWaveSynth->WriteBuffer((float*)pDivBuffer, DIV_SAMPLES);
+		pDivBuffer += DIV_SIZE;
 	}
-	if (File->Position >= File->Length) {
-		mTerminate = true;
+	if (cFile->Position >= cFile->SampleCount) {
+		Terminating = true;
 	}
 }

@@ -1,19 +1,28 @@
 #pragma once
 
 class WavReader;
+class Spectrum;
+class WaveSynth;
 
-class Playback : protected WaveOut {
+class Playback : public WaveOut {
 public:
+	WavReader* cFile = nullptr;
+	Spectrum* cSpectrum = nullptr;
+	WaveSynth* cWaveSynth = nullptr;
+
+private:
 	int32_t DIV_SAMPLES;
 	int32_t DIV_SIZE;
-	WavReader* File = nullptr;
+	void (*fpOnOpened)(bool) = nullptr;
 
 public:
-	Playback(int sampleRate, void(*fpOnTerminated)(void));
+	Playback(int32_t sampleRate,
+		void(*fpOnOpened)(bool),
+		void(*fpOnTerminated)(void));
 	void Open();
 	void Close();
-	void OpenFile(LPCWCHAR filePath);
+	void OpenFile(wchar_t* filePath);
 
 protected:
-	void WriteBuffer(LPSTR lpData);
+	void WriteBuffer(void* lpData) override;
 };

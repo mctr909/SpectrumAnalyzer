@@ -10,6 +10,7 @@ namespace SpectrumAnalyzer {
 	public partial class MainForm : Form {
 		public Playback Playback;
 		public Record Record;
+		public SpectrumDll Spectrum;
 
 		public bool DoSetLayout { get; set; } = true;
 
@@ -24,6 +25,7 @@ namespace SpectrumAnalyzer {
 
 		public MainForm() {
 			InitializeComponent();
+			//Spectrum = new SpectrumDll();
 			Playback = new Playback(48000, (isOpened) => {
 				mPlayingName = Path.GetFileNameWithoutExtension(mFileList[mPlayFileIndex]);
 				Playback.File.Speed = Settings.Speed;
@@ -42,6 +44,9 @@ namespace SpectrumAnalyzer {
 			if(null != Playback) {
 				Playback.Dispose();
 			}
+			//if (null != Spectrum) {
+			//	Spectrum.Dispose();
+			//}
 			if (null != Record) {
 				Record.Dispose();
 			}
@@ -86,22 +91,49 @@ namespace SpectrumAnalyzer {
 			mPlayFileIndex = 0;
 			mFileList.Clear();
 			mFileList.AddRange(fileList);
+			//Spectrum.SetFiles(fileList);
 
 			var playing = Playback.Playing;
+			//var playing = Spectrum.Playing;
 			Playback.OpenFile(mFileList[mPlayFileIndex]);
 			if (playing) {
 				Playback.Start();
+				//Spectrum.Start();
+			}
+		}
+
+		private void TsbRec_Click(object sender, EventArgs e) {
+			if (Record.Playing) {
+				Record.Pause();
+				TsbRec.Text = "録音";
+				TsbRec.Image = Resources.rec;
+			}
+			else {
+				Playback.Pause();
+				//Spectrum.Pause();
+				Record.Start();
+				TsbPlay.Text = "再生";
+				TsbPlay.Image = Resources.play;
+				TsbRec.Text = "停止";
+				TsbRec.Image = Resources.rec_stop;
+				TrkSeek.Enabled = false;
+				TsbNext.Enabled = false;
+				TsbRestart.Enabled = false;
+				TsbPrevious.Enabled = false;
 			}
 		}
 
 		private void TsbPlay_Click(object sender, EventArgs e) {
 			if (Playback.Playing) {
+			//if (Spectrum.Playing) {
 				Playback.Pause();
+				//Spectrum.Pause();
 				TsbPlay.Text = "再生";
 				TsbPlay.Image = Resources.play;
 			} else {
 				Record.Pause();
 				Playback.Start();
+				//Spectrum.Start();
 				TsbRec.Text = "録音";
 				TsbRec.Image = Resources.rec;
 				TsbPlay.Text = "停止";
@@ -115,9 +147,11 @@ namespace SpectrumAnalyzer {
 
 		private void TsbRestart_Click(object sender, EventArgs e) {
 			Playback.File.Position = 0;
+			//Spectrum.Position = 0;
 		}
 
 		private void TsbPrevious_Click(object sender, EventArgs e) {
+			//Spectrum.Previous();
 			if (mFileList.Count == 0) {
 				return;
 			}
@@ -133,6 +167,7 @@ namespace SpectrumAnalyzer {
 		}
 
 		private void TsbNext_Click(object sender, EventArgs e) {
+			//Spectrum.Next();
 			if (mFileList.Count == 0) {
 				return;
 			}
@@ -147,25 +182,6 @@ namespace SpectrumAnalyzer {
 			}
 		}
 
-		private void TsbRec_Click(object sender, EventArgs e) {
-			if (Record.Playing) {
-				Record.Pause();
-				TsbRec.Text = "録音";
-				TsbRec.Image = Resources.rec;
-			} else {
-				Playback.Pause();
-				Record.Start();
-				TsbPlay.Text = "再生";
-				TsbPlay.Image = Resources.play;
-				TsbRec.Text = "停止";
-				TsbRec.Image = Resources.rec_stop;
-				TrkSeek.Enabled = false;
-				TsbNext.Enabled = false;
-				TsbRestart.Enabled = false;
-				TsbPrevious.Enabled = false;
-			}
-		}
-
 		private void TsbSetting_Click(object sender, EventArgs e) {
 			Settings.Open(this);
 		}
@@ -176,6 +192,7 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSeek_MouseUp(object sender, EventArgs e) {
 			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
+			//Spectrum.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
 			mGripSeekBar = false;
 		}
 
@@ -185,6 +202,7 @@ namespace SpectrumAnalyzer {
 
 		private void TrkSeek_KeyUp(object sender, KeyEventArgs e) {
 			Playback.File.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
+			//Spectrum.Position = TrkSeek.Value * Playback.File.Format.SampleRate / SEEK_SEC_DIV;
 			mGripSeekBar = false;
 		}
 
@@ -216,7 +234,7 @@ namespace SpectrumAnalyzer {
 			var min = ((int)(posSec / 60)).ToString("00");
 			var sec = isec.ToString("00");
 			var csec = ((int)((fsec - isec) * 100)).ToString("00");
-			Text = $"{mPlayingName} [{min}:{sec}.{csec}]";
+			Text = $"[{min}:{sec}.{csec}] {mPlayingName}";
 		}
 
 		private void TimerDisplay_Tick(object sender, EventArgs e) {

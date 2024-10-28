@@ -4,34 +4,74 @@
 #include <math.h>
 
 #include <Windows.h>
-#include <mmsystem.h>
-#pragma comment (lib, "winmm.lib")
 
-#include "main.h"
-#include "wave.h"
-#include "wave_out.h"
+#include "winmm_wave.h"
+#include "riff_wav.h"
+#include "spectrum.h"
 #include "playback.h"
-
-Playback* pp = nullptr;
-
-uint8_t* WINAPI
-WaveOutOpen(
-	int32_t sample_rate,
-	int32_t buffer_length,
-	int32_t buffer_count,
-	void(*fpOnTerminate)(void)
-) {
-	if (pp == nullptr) {
-		pp = new Playback(44100, fpOnTerminate);
-	}
-	pp->Open();
-	return nullptr;
-}
+#include "main.h"
 
 void WINAPI
-OpenFile(LPCWCHAR filePath) {
-	if (pp == nullptr) {
+OutputOpen(
+	Playback** hInstance,
+	int32_t sampleRate,
+	void(*fpOnOpened)(bool),
+	void(*fpOnTerminate)(void)
+) {
+	if (*hInstance == nullptr) {
+		*hInstance = new Playback(sampleRate, fpOnOpened, fpOnTerminate);
+	}
+	(*hInstance)->Open();
+}
+void WINAPI
+OutputClose(Playback** hInstance) {
+	if (*hInstance == nullptr) {
 		return;
 	}
-	pp->OpenFile(filePath);
+	(*hInstance)->Close();
+	delete* hInstance;
+	hInstance = nullptr;
+}
+void WINAPI
+OutputStart(Playback* hInstance) {
+	if (hInstance == nullptr) {
+		return;
+	}
+	hInstance->Start();
+}
+void WINAPI
+OutputPause(Playback* hInstance) {
+	if (hInstance == nullptr) {
+		return;
+	}
+	hInstance->Pause();
+}
+void WINAPI
+SetPlaybackFile(Playback* hInstance, LPCWCHAR filePath) {
+	if (hInstance == nullptr) {
+		return;
+	}
+	hInstance->OpenFile((wchar_t*)filePath);
+}
+void WINAPI
+SetSpeed(Playback* hInstance, double speed) {
+
+}
+double WINAPI
+GetSpeed(Playback* hInstance) {
+	if (hInstance == nullptr) {
+		return 1.0;
+	}
+	return hInstance->cFile->Speed;
+}
+void WINAPI
+SetTranspose(Playback* hInstance, int32_t trancepose) {
+
+}
+int32_t WINAPI
+GetTranspose(Playback* hInstance) {
+	if (hInstance == nullptr) {
+		return 1.0;
+	}
+	return (int32_t)hInstance->cSpectrum->Transpose;
 }
