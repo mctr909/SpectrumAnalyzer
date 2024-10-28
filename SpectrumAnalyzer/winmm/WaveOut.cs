@@ -71,7 +71,7 @@ namespace WinMM {
 					}
 					lock (LockBuffer) {
 						var header = Marshal.PtrToStructure<WAVEHDR>(lpWaveHdr);
-						header.dwFlags &= ~WHDR_FLAG.INQUEUE;
+						header.dwUser &= ~WHDR_FLAG.INQUEUE;
 						Marshal.StructureToPtr(header, lpWaveHdr, false);
 						waveOutWrite(hwo, lpWaveHdr, Marshal.SizeOf<WAVEHDR>());
 					}
@@ -101,6 +101,9 @@ namespace WinMM {
 				return false;
 			}
 			foreach (var pHeader in WaveHeaders) {
+				var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
+				header.dwUser |= WHDR_FLAG.INQUEUE;
+				Marshal.StructureToPtr(header, pHeader, false);
 				waveOutPrepareHeader(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
 				waveOutWrite(DeviceHandle, pHeader, Marshal.SizeOf<WAVEHDR>());
 			}
@@ -132,36 +135,39 @@ namespace WinMM {
 		}
 
 		protected override void Task() {
+			int writeBuffer = 0;
 			while (!Closing) {
-				for (var nonInqueues = BufferCount; nonInqueues != 0;) {
-					lock (LockBuffer) {
-						var pHeader = WaveHeaders[BufferIndex];
-						BufferIndex = ++BufferIndex % BufferCount;
-						var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
-						if (0 != (header.dwFlags & WHDR_FLAG.INQUEUE)) {
-							nonInqueues--;
-							continue;
-						}
-						header.dwFlags |= WHDR_FLAG.INQUEUE;
-						Marshal.StructureToPtr(header, pHeader, false);
+				bool enableWait;
+				lock (LockBuffer) {
+					var pHeader = WaveHeaders[writeBuffer];
+					var header = Marshal.PtrToStructure<WAVEHDR>(pHeader);
+					if (0 == (header.dwUser & WHDR_FLAG.INQUEUE)) {
 						if (Pause || EndOfFile) {
 							Marshal.Copy(MuteData, 0, header.lpData, MuteData.Length);
 							Paused = true;
 						} else {
 							WriteBuffer(header.lpData);
 						}
+						header.dwUser |= WHDR_FLAG.INQUEUE;
+						Marshal.StructureToPtr(header, pHeader, false);
+						writeBuffer = ++writeBuffer % BufferCount;
+						enableWait = false;
+					} else {
+						enableWait = true;
 					}
 				}
-				if (++ProcessInterval >= PROCESS_TIMEOUT) {
-					Closing = true;
-					break;
+				if (enableWait) {
+					if (++ProcessInterval >= PROCESS_TIMEOUT) {
+						Closing = true;
+						break;
+					}
+					if (Paused && EndOfFile) {
+						EndOfFile = false;
+						Pause = true;
+						new Task(() => { OnEndOfFile(); }).Start();
+					}
+					Thread.Sleep(1);
 				}
-				if (Paused && EndOfFile) {
-					EndOfFile = false;
-					Pause = true;
-					new Task(() => { OnEndOfFile(); }).Start();
-				}
-				Thread.Sleep(1);
 			}
 		}
 

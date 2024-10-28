@@ -64,7 +64,7 @@ namespace WinMM {
 			public IntPtr lpData;
 			public uint dwBufferLength;
 			public uint dwBytesRecorded;
-			public uint dwUser;
+			public WHDR_FLAG dwUser;
 			public WHDR_FLAG dwFlags;
 			public uint dwLoops;
 			public IntPtr lpNext;

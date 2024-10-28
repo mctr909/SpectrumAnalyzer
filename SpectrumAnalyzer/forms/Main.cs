@@ -45,6 +45,7 @@ namespace SpectrumAnalyzer.Forms {
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
+			Playback?.Save(Application.ExecutablePath);
 			Playback?.Dispose();
 			Record?.Dispose();
 		}
@@ -60,6 +61,8 @@ namespace SpectrumAnalyzer.Forms {
 			TimerDisplay.Start();
 			Playback.Open();
 			Record.Open();
+			Playback.File.Speed = Settings.Speed;
+			Playback.Load(Application.ExecutablePath);
 		}
 
 		private void Form1_Resize(object sender, EventArgs e) {
