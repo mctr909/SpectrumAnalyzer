@@ -25,6 +25,9 @@ namespace Spectrum {
 		/// <summary>帯域通過フィルタバンク</summary>
 		IntPtr[] mpFilterBanks;
 
+		double mMax = 1.0;
+		double mAutoGain = 1.0;
+
 		public Spectrum(int sampleRate) {
 			SampleRate = sampleRate;
 			Peak = new double[BANK_COUNT];
@@ -40,7 +43,6 @@ namespace Spectrum {
 				mpFilterBanks[b] = Marshal.AllocHGlobal(Marshal.SizeOf<FilterBank>());
 				SetBPF(b, frequency);
 			}
-			SetResponceSpeed(DISP_SPEED);
 		}
 
 		public void Dispose() {
@@ -61,19 +63,6 @@ namespace Spectrum {
 			ExtractPeak();
 		}
 
-		/// <summary>
-		/// 表示応答速度を設定
-		/// </summary>
-		/// <param name="responceSpeed">応答速度[Hz]</param>
-		public unsafe void SetResponceSpeed(double responceSpeed) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
-			for (int b = 0; b < BANK_COUNT; ++b) {
-				var pBank = (FilterBank*)mpFilterBanks[b];
-				var bankFreq = PeakBanks[b].DELTA * SampleRate;
-				pBank->SIGMA_DISP = GetAlpha(sampleOmega, (responceSpeed > bankFreq) ? bankFreq : responceSpeed);
-			}
-		}
-
 		static double GetAlpha(double sampleRate, double frequency) {
 			var halfToneWidth = 1.0 + Math.Log(FREQ_AT_HALFTONE_WIDTH / frequency, 2.0);
 			if (halfToneWidth < 1.0) {
@@ -90,7 +79,7 @@ namespace Spectrum {
 		}
 
 		unsafe void SetBPF(int index, double frequency) {
-			var sampleOmega = SampleRate / (2 * Math.PI);
+			var sampleOmega = SampleRate / Math.PI;
 			var omega = 2 * Math.PI * frequency / SampleRate;
 			var alpha = GetAlpha(SampleRate, frequency);
 			var a0 = 1.0 + alpha;
@@ -103,14 +92,14 @@ namespace Spectrum {
 		}
 
 		unsafe void CalcPower(float *pInput, int sampleCount) {
+			mMax = AUTOGAIN_MAX;
 			Parallel.ForEach(mpFilterBanks, ptr => {
+				var pWave = pInput;
 				var pBank = (FilterBank*)ptr;
 				var KB0 = pBank->KB0;
 				var KA2 = pBank->KA2;
 				var KA1 = pBank->KA1;
 				var SIGMA = pBank->SIGMA;
-				var SIGMA_DISP = pBank->SIGMA_DISP;
-				var pWave = pInput;
 				for (int s = sampleCount; s != 0; --s) {
 					/*** 左チャンネル ***/
 					{
@@ -127,7 +116,6 @@ namespace Spectrum {
 						/* パワースペクトルを得る */
 						a0 *= a0;
 						pBank->LPower += (a0 - pBank->LPower) * SIGMA;
-						pBank->LPowerDisp += (a0 - pBank->LPowerDisp) * SIGMA_DISP;
 					}
 					/*** 右チャンネル ***/
 					{
@@ -144,10 +132,19 @@ namespace Spectrum {
 						/* パワースペクトルを得る */
 						a0 *= a0;
 						pBank->RPower += (a0 - pBank->RPower) * SIGMA;
-						pBank->RPowerDisp += (a0 - pBank->RPowerDisp) * SIGMA_DISP;
 					}
 				}
+				/* 最大値を更新 */
+				var linear = Math.Sqrt(Math.Max(pBank->LPower, pBank->RPower) * 2);
+				mMax = Math.Max(mMax, linear);
 			});
+			/* 最大値に追随して自動ゲインを更新 */
+			var autoGainCoef = sampleCount / (SampleRate * AUTOGAIN_SPEED);
+			var diff = mMax - mAutoGain;
+			if (diff > 0) {
+				autoGainCoef *= 4;
+			}
+			mAutoGain += autoGainCoef * diff;
 		}
 
 		unsafe void ExtractPeak() {
@@ -161,8 +158,6 @@ namespace Spectrum {
 				/*** ピーク抽出用の閾値を算出 ***/
 				var thresholdL = 0.0;
 				var thresholdR = 0.0;
-				var thresholdLDisp = 0.0;
-				var thresholdRDisp = 0.0;
 				{
 					/* 音域によって閾値幅と閾値ゲインを選択 */
 					int width;
@@ -187,16 +182,12 @@ namespace Spectrum {
 						var b = *(FilterBank*)mpFilterBanks[bw];
 						thresholdL += b.LPower;
 						thresholdR += b.RPower;
-						thresholdLDisp += b.LPowerDisp;
-						thresholdRDisp += b.RPowerDisp;
 					}
 					width = width * 2 + 1;
 					/* パワー⇒リニア変換した値に閾値ゲインを掛ける */
 					var scale = 2.0 / width;
 					thresholdL = Math.Sqrt(thresholdL * scale) * gain;
 					thresholdR = Math.Sqrt(thresholdR * scale) * gain;
-					thresholdLDisp = Math.Sqrt(thresholdLDisp * scale) * gain;
-					thresholdRDisp = Math.Sqrt(thresholdRDisp * scale) * gain;
 				}
 				var bank = *(FilterBank*)mpFilterBanks[idxB];
 				/*** 波形合成用のピークを抽出 ***/
@@ -233,10 +224,18 @@ namespace Spectrum {
 				}
 				/*** 表示用のピークを抽出、曲線を設定 ***/
 				{
-					var linear = Math.Sqrt(Math.Max(bank.LPowerDisp, bank.RPowerDisp) * 2);
-					var threshold = Math.Max(thresholdLDisp, thresholdRDisp);
-					Peak[idxB] = 0.0;
+					var linear = Math.Sqrt(Math.Max(bank.LPower, bank.RPower) * 2);
+					var threshold = Math.Max(thresholdL, thresholdR);
+					if (EnableNormalize) {
+						linear /= mMax;
+						threshold /= mMax;
+					}
+					if (EnableAutoGain) {
+						linear /= mAutoGain;
+						threshold /= mAutoGain;
+					}
 					Curve[idxB] = linear;
+					Peak[idxB] = 0.0;
 					if (linear < threshold) {
 						if (0 <= lastDispIndex) {
 							Peak[lastDispIndex] = lastDisp;
