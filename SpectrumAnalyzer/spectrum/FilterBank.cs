@@ -15,6 +15,7 @@ namespace Spectrum {
 		public double La1;
 		public double LPower;
 		public double LPowerDisp;
+
 		public double Rb2;
 		public double Rb1;
 		public double Ra2;
