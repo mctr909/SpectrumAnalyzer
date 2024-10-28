@@ -77,6 +77,13 @@ namespace Spectrum {
 				if (pOsc->RTarget < TERGET_THRESHOLD) {
 					pOsc->RTarget = 0;
 				}
+				/* 対象の最大値制限 */
+				if (pOsc->LTarget > TERGET_MAX) {
+					pOsc->LTarget = TERGET_MAX;
+				}
+				if (pOsc->RTarget > TERGET_MAX) {
+					pOsc->RTarget = TERGET_MAX;
+				}
 				/* 破棄閾値未満の振幅を0クリア */
 				if (pOsc->LCurrent < PURGE_THRESHOLD) {
 					pOsc->LCurrent = 0;

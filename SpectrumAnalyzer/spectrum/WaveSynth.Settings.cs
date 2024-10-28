@@ -2,6 +2,8 @@
 	public partial class WaveSynth {
 		/// <summary>対象閾値[10^(db/20)]</summary>
 		const double TERGET_THRESHOLD = 1.0 / 10000.0;
+		/// <summary>対象の最大値[10^(db/20)]</summary>
+		const double TERGET_MAX = 0.355;
 		/// <summary>破棄閾値[10^(db/20)]</summary>
 		const double PURGE_THRESHOLD = 1.0 / 32768.0;
 		/// <summary>デクリック速度</summary>
