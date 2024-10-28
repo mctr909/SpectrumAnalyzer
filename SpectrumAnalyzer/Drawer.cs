@@ -14,9 +14,9 @@ namespace SpectrumAnalyzer {
 		static readonly Pen WHITE_KEY = new Pen(Color.FromArgb(31, 31, 31), 1.0f);
 		static readonly Pen BLACK_KEY = new Pen(Color.FromArgb(0, 0, 0), 1.0f);
 		static readonly Pen LEVEL_MAJOR = new Pen(Color.FromArgb(127, 127, 0), 1.0f);
-		static readonly Pen LEVEL_MINOR = new Pen(Color.FromArgb(63, 63, 0), 1.0f);
-		static readonly Pen FREQ_MAJOR = new Pen(Color.FromArgb(131, 131, 131), 1.0f);
-		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(127, 127, 127), 1.0f)
+		static readonly Pen LEVEL_MINOR = new Pen(Color.FromArgb(47, 47, 47), 1.0f);
+		static readonly Pen FREQ_MAJOR = new Pen(Color.FromArgb(91, 91, 91), 1.0f);
+		static readonly Pen FREQ_MINOR = new Pen(Color.FromArgb(91, 91, 91), 1.0f)
 		{
 			DashStyle = DashStyle.Custom,
 			DashPattern = new float[] { 1, 3 }
@@ -232,20 +232,14 @@ namespace SpectrumAnalyzer {
 
 		public static void Peak(Graphics g, double[] arr, int ofsX, int width, int height, Pen color) {
 			var scale = EnableAutoGain || EnableNormalize ? 1 : mOffsetGain;
-			var left = ofsX - (float)width / BANK_COUNT;
-			var minValue = Math.Pow(10, MinDb / 20.0);
-			var dx = (float)width / BANK_COUNT;
-			var r = 0.5f * width / HALFTONE_COUNT - 1;
-			for (int i = 0; i < BANK_COUNT; i++) {
-				var value = arr[i] * scale;
-				if (value > minValue) {
-					var x0 = (i - 0.5f) * dx - r;
-					var x1 = (i + 0.5f) * dx + r;
-					var y = LinearToY(value, height);
-					x0 += Math.Max(2, x1 - x0) / 2;
-					x0 += left;
-					g.DrawLine(color, x0, y, x0, height);
-				}
+			var left = ofsX - width / BANK_COUNT;
+			var dx = (float)BANK_COUNT / width;
+			for (int x = 0; x < width; x++) {
+				var px = x + left;
+				var ix = (int)(x * dx);
+				var value = arr[ix] * scale;
+				var py = LinearToY(value, height);
+				g.DrawLine(color, px, height, px, py);
 			}
 		}
 
@@ -266,12 +260,9 @@ namespace SpectrumAnalyzer {
 			var left = ofsX - width / BANK_COUNT;
 			var dx = (double)BANK_COUNT / width;
 			for (int x = 0; x < width; x++) {
-				var ixD = x * dx;
-				var ixA = (int)ixD;
-				var ixB = Math.Min(ixA + 1, BANK_COUNT - 1);
-				var a2b = ixD - ixA;
+				var ix = (int)(x * dx);
 				var pos = ofsKeyboardTop + Math.Max(ofsX, x + left) * 4;
-				SetHue((arr[ixA] * (1 - a2b) + arr[ixB] * a2b) * scale, pos);
+				SetHue(arr[ix] * scale, pos);
 			}
 			for (int y = 1; y < scrollTop; y++) {
 				Buffer.BlockCopy(

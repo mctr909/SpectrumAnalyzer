@@ -5,8 +5,9 @@ namespace SpectrumAnalyzer {
 	public class Record : WaveIn {
 		public Spectrum.Spectrum Spectrum;
 
-		public Record(int sampleRate, int bufferCount = 10)
-			: base(sampleRate, 2, EBufferType.FLOAT32, sampleRate / 1000 * 10, bufferCount) {
+		public Record(int sampleRate, double calcUnitTime, int divCount) : base(
+			sampleRate, 2, (int)(sampleRate * calcUnitTime) * divCount, divCount * 4
+		) {
 			Spectrum = new Spectrum.Spectrum(sampleRate);
 		}
 

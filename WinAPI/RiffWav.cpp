@@ -2,8 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <cstdint>
-#include <Windows.h>
+#include <stdint.h>
 #include "RiffWav.h"
 
 constexpr auto SCALE_8BIT = 1.0f / (1 << 7);;
@@ -21,7 +20,7 @@ RiffWav::~RiffWav() {
 	Dispose();
 }
 
-bool RiffWav::Load(LPCWSTR fileName, int32_t playbackSampleRate, int32_t outputSamples, double loadUnitTime) {
+bool RiffWav::Load(const wchar_t* fileName, int32_t playbackSampleRate, int32_t outputSamples, double loadUnitTime) {
 	IsOpened = false;
 	Dispose();
 	_wfopen_s(&fp, fileName, L"rb");
@@ -47,11 +46,8 @@ bool RiffWav::Load(LPCWSTR fileName, int32_t playbackSampleRate, int32_t outputS
 	} else {
 		memset(MuteData, 0, BufferSize);
 	}
-	Buffers[0] = malloc(BufferSize);
-	Buffers[1] = malloc(BufferSize);
-	LoadOffset = 0;
-	ReadBuffer = nullptr;
-	ReadOffset = 0;
+	Buffer = malloc(BufferSize);
+	Offset = 0;
 	LoadData();
 	IsOpened = true;
 	return true;
@@ -109,28 +105,21 @@ bool RiffWav::LoadHeader() {
 }
 
 void RiffWav::LoadData() {
-	auto diffD = Position - ReadOffset;
+	auto diffD = Position - Offset;
 	auto diffI = (int32_t)diffD;
 	diffI += _dsign(diffD - diffI);
-	ReadOffset += diffI;
-	if (ReadOffset > SampleNum) {
-		ReadOffset = SampleNum;
+	Offset += diffI;
+	if (Offset > SampleNum) {
+		Offset = SampleNum;
 	}
-	LoadOffset += diffI;
-	if (LoadOffset > SampleNum) {
-		LoadOffset = SampleNum;
-	}
-	ReadBuffer = Buffers[0];
-	LoadBuffer = Buffers[0];
-
-	fseek(fp, DataOffset + Format.BlockSize * LoadOffset, SEEK_SET);
-	auto remainSampleNum = SampleNum - LoadOffset;
+	fseek(fp, DataOffset + Format.BlockSize * Offset, SEEK_SET);
+	auto remainSampleNum = SampleNum - Offset;
 	if (remainSampleNum <= BufferSampleNum) {
-		memcpy_s(LoadBuffer, BufferSize, MuteData, BufferSize);
-		fread_s(LoadBuffer, BufferSize, Format.BlockSize, remainSampleNum, fp);
-		LoadOffset = SampleNum;
+		memcpy_s(Buffer, BufferSize, MuteData, BufferSize);
+		fread_s(Buffer, BufferSize, Format.BlockSize, remainSampleNum, fp);
+		Offset = SampleNum;
 	} else {
-		fread_s(LoadBuffer, BufferSize, BufferSize, 1, fp);
+		fread_s(Buffer, BufferSize, BufferSize, 1, fp);
 		fseek(fp, -Format.BlockSize, SEEK_CUR);
 	}
 }
@@ -212,28 +201,24 @@ void RiffWav::Dispose() {
 		free(MuteData);
 		MuteData = nullptr;
 	}
-	if (nullptr != LoadBuffers[0]) {
-		free(LoadBuffers[0]);
-		LoadBuffers[0] = nullptr;
-	}
-	if (nullptr != LoadBuffers[1]) {
-		free(LoadBuffers[1]);
-		LoadBuffers[1] = nullptr;
+	if (nullptr != Buffer) {
+		free(Buffer);
+		Buffer = nullptr;
 	}
 }
 
 void RiffWav::ReadI16S(RiffWav* self, float* output) {
 	int32_t s;
 	for (s = 0; s < self->OutputSampleNum && self->Position < self->SampleNum; ++s, self->Position += self->Delta * self->Speed) {
-		auto diff = self->Position - self->ReadOffset;
+		auto diff = self->Position - self->Offset;
 		if (diff >= self->BufferSampleNum || diff < 0) {
 			self->LoadData();
 		}
-		auto indexD = self->Position - self->ReadOffset;
+		auto indexD = self->Position - self->Offset;
 		auto indexI = (int32_t)indexD;
 		auto b = (float)(indexD - indexI) * SCALE_16BIT;
 		auto a = SCALE_16BIT - b;
-		auto buffer = (int16_t*)self->ReadBuffer;
+		auto buffer = (int16_t*)self->Buffer;
 		buffer += indexI << 1;
 		auto l = *buffer++ * a;
 		auto r = *buffer++ * a;

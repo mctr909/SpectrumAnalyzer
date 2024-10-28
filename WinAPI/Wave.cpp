@@ -1,7 +1,3 @@
-#include <windows.h>
-#include <mmsystem.h>
-#include <stdlib.h>
-#include <string.h>
 #include "Wave.h"
 
 #pragma comment(lib, "winmm.lib")
@@ -17,8 +13,7 @@ Wave::Wave(int32_t sampleRate, int32_t channels, EBufferType bufferType, int32_t
 	BufferSamples = bufferSamples;
 	BufferSize = bufferSamples * bytesPerSample;
 	BufferCount = bufferCount;
-	BufferIndex = 0;
-    WaveFormatEx = {};
+	WaveFormatEx = {};
 	WaveFormatEx.wFormatTag = isFloat ? 3 : 1;
 	WaveFormatEx.nChannels = (WORD)channels;
 	WaveFormatEx.nSamplesPerSec = (DWORD)sampleRate;
@@ -143,7 +138,6 @@ DWORD Wave::Task(LPVOID *lpParam) {
 	InitializeCriticalSection(&self->LockBuffer);
 	self->AllocateHeader();
 	self->ClearFlags();
-	self->BufferIndex = 0;
 	if (self->InitializeTask()) {
 		self->BufferTask();
 		self->FinalizeTask();

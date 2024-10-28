@@ -27,6 +27,7 @@ namespace SpectrumAnalyzer.Forms {
 
 		const int DB_LABEL_WIDTH = 52;
 		const int KEYBOARD_HEIGHT = 24;
+		readonly double[] PeakThick = new double[BANK_COUNT];
 		readonly double[] Peak = new double[BANK_COUNT];
 		readonly double[] Curve = new double[BANK_COUNT];
 		readonly double[] Threshold = new double[BANK_COUNT];
@@ -38,13 +39,14 @@ namespace SpectrumAnalyzer.Forms {
 		Graphics G;
 		public Main() {
 			InitializeComponent();
-			Playback = new Playback(48000, 1e-3, 12);
-			Record = new Record(48000);
-			MinimumSize = new Size(DB_LABEL_WIDTH + HALFTONE_COUNT * 2 + 16, 192);
+			Playback = new Playback(48000, 5e-4, 8);
+			Record = new Record(48000, 1e-3, 6);
+			MinimumSize = new Size(DB_LABEL_WIDTH + BANK_COUNT + 16, 192);
 			Size = MinimumSize;
 		}
 
 		private void MainForm_FormClosing(object sender, FormClosingEventArgs e) {
+			Playback?.Save(Application.ExecutablePath);
 			Playback?.Dispose();
 			Record?.Dispose();
 		}
@@ -60,6 +62,8 @@ namespace SpectrumAnalyzer.Forms {
 			TimerDisplay.Start();
 			Playback.Open();
 			Record.Open();
+			Playback.File.Speed = Settings.Speed;
+			Playback.Load(Application.ExecutablePath);
 		}
 
 		private void Form1_Resize(object sender, EventArgs e) {
@@ -236,6 +240,7 @@ namespace SpectrumAnalyzer.Forms {
 			if (null == spectrum) {
 				return;
 			}
+			Array.Copy(spectrum.PeakThick, PeakThick, BANK_COUNT);
 			Array.Copy(spectrum.Peak, Peak, BANK_COUNT);
 			Array.Copy(spectrum.Curve, Curve, BANK_COUNT);
 			Array.Copy(spectrum.Threshold, Threshold, BANK_COUNT);
@@ -257,7 +262,7 @@ namespace SpectrumAnalyzer.Forms {
 			}
 			if (Settings.DisplayPeak) {
 				Drawer.Peak(G, Peak, DB_LABEL_WIDTH, plotWidth, GaugeHeight, PEAK);
-				Drawer.Scroll(bmp, Peak, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
+				Drawer.Scroll(bmp, PeakThick, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
 			} else {
 				Drawer.Scroll(bmp, Curve, DB_LABEL_WIDTH, GaugeHeight + 1, ScrollHeight - 1, KEYBOARD_HEIGHT, Settings.ScrollSpeed);
 			}

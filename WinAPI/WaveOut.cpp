@@ -1,13 +1,17 @@
-#include <windows.h>
-#include <mmsystem.h>
 #include <iostream>
 #include "WaveOut.h"
 
-constexpr auto PROCESS_TIMEOUT = 100;
-
-WaveOut::WaveOut(int32_t sampleRate, int32_t channels, EBufferType bufferType, int32_t bufferSamples, int32_t bufferCount, void (*fpWriteBuffer)(LPSTR lpData))
-    : Wave(sampleRate, channels, bufferType, bufferSamples, bufferCount) {
+WaveOut::WaveOut(
+	int32_t sampleRate,
+	int32_t channels,
+	EBufferType bufferType,
+	int32_t bufferSamples,
+	int32_t bufferCount,
+	void (*fpWriteBuffer)(LPSTR lpData),
+	void (*fpOnEndOfFile)(void)
+) : Wave(sampleRate, channels, bufferType, bufferSamples, bufferCount) {
 	this->fpWriteBuffer = fpWriteBuffer;
+	this->fpOnEndOfFile = fpOnEndOfFile;
 }
 
 WaveOut::~WaveOut() {
@@ -25,79 +29,75 @@ bool WaveOut::InitializeTask() {
 	);
 	WaitEnable(&DeviceEnabled);
 	if (DeviceEnabled) {
-		std::wcout << "[WaveOut] Device Enabled\r\n";
+		std::cout << "[WaveOut] Device Enabled\r\n";
 	} else {
-		std::wcout << "[WaveOut] Device Open error:" << res << "\r\n";
+		std::cout << "[WaveOut] Device Open error:" << res << "\r\n";
 		return false;
 	}
 	for (int i = 0; i < BufferCount; i++) {
 		auto pHeader = WaveHeaders + i;
+		pHeader->dwUser = WHDR_INQUEUE;
 		waveOutPrepareHeader((HWAVEOUT)DeviceHandle, pHeader, sizeof(WAVEHDR));
 		waveOutWrite((HWAVEOUT)DeviceHandle, pHeader, sizeof(WAVEHDR));
 	}
-	std::wcout << "[WaveOut] Header Prepared\r\n";
+	std::cout << "[WaveOut] Header Prepared\r\n";
 	WaitEnable(&CallbackEnabled);
 	if (CallbackEnabled) {
-		std::wcout << "[WaveOut] Callback Enabled\r\n";
+		std::cout << "[WaveOut] Callback Enabled\r\n";
 	} else {
-		std::wcout << "[WaveOut] Callback error\r\n";
+		std::cout << "[WaveOut] Callback error\r\n";
 		return false;
 	}
 	return true;
 }
 
 void WaveOut::FinalizeTask() {
-	if (ProcessInterval < PROCESS_TIMEOUT) {
-		waveOutReset((HWAVEOUT)DeviceHandle);
-		std::wcout << "[WaveOut] Reset Device\r\n";
-		for (int i = 0; i < BufferCount; i++) {
-			auto pHeader = WaveHeaders + i;
-			waveOutUnprepareHeader((HWAVEOUT)DeviceHandle, pHeader, sizeof(WAVEHDR));
-		}
-		std::wcout << "[WaveOut] Header Unprepared\r\n";
-		waveOutClose((HWAVEOUT)DeviceHandle);
-		WaitDisable(&DeviceEnabled);
-		std::wcout << "[WaveOut] Device Closed\r\n";
-	} else {
-		std::wcout << "[WaveOut] Device Locked\r\n";
+	waveOutReset((HWAVEOUT)DeviceHandle);
+	std::cout << "[WaveOut] Reset Device\r\n";
+	for (int i = 0; i < BufferCount; i++) {
+		auto pHeader = WaveHeaders + i;
+		waveOutUnprepareHeader((HWAVEOUT)DeviceHandle, pHeader, sizeof(WAVEHDR));
 	}
+	std::cout << "[WaveOut] Header Unprepared\r\n";
+	waveOutClose((HWAVEOUT)DeviceHandle);
+	WaitDisable(&DeviceEnabled);
+	std::cout << "[WaveOut] Device Closed\r\n";
 }
 
 void WaveOut::BufferTask() {
+	int32_t writeIndex = 0;
 	while (!Closing) {
-		for (int nonInqueues = BufferCount; nonInqueues != 0;) {
-			EnterCriticalSection(&LockBuffer);
-			auto pHeader = WaveHeaders + BufferIndex;
-			BufferIndex = ++BufferIndex % BufferCount;
-			if (pHeader->dwFlags & WHDR_INQUEUE) {
-				nonInqueues--;
-				LeaveCriticalSection(&LockBuffer);
-				continue;
-			}
-			pHeader->dwFlags |= WHDR_INQUEUE;
+		bool enableWait;
+		auto pHeader = WaveHeaders + writeIndex;
+		EnterCriticalSection(&LockBuffer);
+		if (pHeader->dwUser & WHDR_INQUEUE) {
+			enableWait = true;
+		} else {
+			enableWait = false;
 			if (Pause || EndOfFile) {
 				memcpy_s(pHeader->lpData, BufferSize, MuteData, BufferSize);
 				Paused = true;
 			} else {
 				fpWriteBuffer(pHeader->lpData);
 			}
-			LeaveCriticalSection(&LockBuffer);
+			writeIndex = ++writeIndex % BufferCount;
+			pHeader->dwUser |= WHDR_INQUEUE;
 		}
-		if (++ProcessInterval >= PROCESS_TIMEOUT) {
-			Closing = true;
-			break;
+		LeaveCriticalSection(&LockBuffer);
+		if (enableWait) {
+			Sleep(10);
 		}
 		if (Paused && EndOfFile) {
 			EndOfFile = false;
 			Pause = true;
-			//new Task(() = > { OnEndOfFile(); }).Start();
+			if (nullptr != fpOnEndOfFile) {
+				fpOnEndOfFile();
+			}
 		}
-		Sleep(1);
 	}
 }
 
-void WaveOut::Callback(HWAVEOUT hwo, WORD uMsg, DWORD_PTR dwInstance, LPWAVEHDR lpWaveHdr, DWORD dwParam2) {
-	auto self = (WaveOut*)dwInstance;
+void WaveOut::Callback(HWAVEOUT hwo, WORD uMsg, WaveOut *self, LPWAVEHDR lpWaveHdr, DWORD dwParam2) {
 	switch (uMsg) {
 	case MM_WOM_OPEN:
 		self->DeviceEnabled = true;
@@ -107,13 +107,12 @@ void WaveOut::Callback(HWAVEOUT hwo, WORD uMsg, DWORD_PTR dwInstance, LPWAVEHDR 
 		break;
 	case MM_WOM_DONE:
 		self->CallbackEnabled = true;
-		self->ProcessInterval = 0;
 		if (self->Closing) {
 			break;
 		}
 		EnterCriticalSection(&self->LockBuffer);
 		waveOutWrite(hwo, lpWaveHdr, sizeof(WAVEHDR));
-		lpWaveHdr->dwFlags &= ~(DWORD)WHDR_INQUEUE;
+		lpWaveHdr->dwUser &= ~(DWORD)WHDR_INQUEUE;
 		LeaveCriticalSection(&self->LockBuffer);
 		break;
 	}

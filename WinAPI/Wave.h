@@ -1,5 +1,6 @@
 #pragma once
-#include <stdint.h>
+#include <windows.h>
+#include <cstdint>
 
 class Wave {
 public:
@@ -25,7 +26,6 @@ protected:
 	int32_t BufferSamples;
 	int32_t BufferSize;
 	int32_t BufferCount;
-	int32_t BufferIndex;
 	WAVEFORMATEX WaveFormatEx;
 
 	HANDLE DeviceHandle = nullptr;

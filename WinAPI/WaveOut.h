@@ -1,15 +1,23 @@
 #pragma once
-#include <mmsystem.h>
 #include "Wave.h"
 
 class WaveOut : public Wave {
-private:
-	int32_t ProcessInterval = 0;
+public:
 	bool EndOfFile = false;
+
+private:
 	void (*fpWriteBuffer)(LPSTR lpData) = nullptr;
+	void (*fpOnEndOfFile)(void) = nullptr;
 
 public:
-	WaveOut(int32_t sampleRate, int32_t channels, EBufferType bufferType, int32_t bufferSamples, int32_t bufferCount, void (*fpWriteBuffer)(LPSTR lpData));
+	WaveOut(
+		int32_t sampleRate,
+		int32_t channels,
+		EBufferType bufferType,
+		int32_t bufferSamples,
+		int32_t bufferCount,
+		void (*fpWriteBuffer)(LPSTR lpData),
+		void (*fpOnEndOfFile)(void));
 	~WaveOut();
 
 protected:
@@ -18,5 +26,5 @@ protected:
 	void BufferTask() override;
 
 private:
-	static void Callback(HWAVEOUT hwo, WORD uMsg, DWORD_PTR dwInstance, LPWAVEHDR lpWaveHdr, DWORD dwParam2);
+	static void Callback(HWAVEOUT hwo, WORD uMsg, WaveOut *self, LPWAVEHDR lpWaveHdr, DWORD dwParam2);
 };

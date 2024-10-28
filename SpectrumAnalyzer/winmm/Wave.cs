@@ -4,16 +4,6 @@ using System.Threading;
 
 namespace WinMM {
 	public abstract class Wave : IDisposable {
-		public enum EBufferType {
-			INT8 = 8,
-			INT16 = 16,
-			INT24 = 24,
-			INT32 = 32,
-			BITS_MASK = 255,
-			FLOAT = 256,
-			FLOAT32 = FLOAT | 32,
-		}
-
 		public enum EAvailableFormats : uint {
 			MONO_8bit_11kHz = 0x1,
 			MONO_8bit_22kHz = 0x10,
@@ -46,8 +36,6 @@ namespace WinMM {
 			INQUEUE = 0x00000010
 		}
 
-		protected const uint WAVE_MAPPER = unchecked((uint)-1);
-
 		[StructLayout(LayoutKind.Sequential)]
 		protected struct WAVEFORMATEX {
 			public ushort wFormatTag;
@@ -64,17 +52,18 @@ namespace WinMM {
 			public IntPtr lpData;
 			public uint dwBufferLength;
 			public uint dwBytesRecorded;
-			public uint dwUser;
+			public WHDR_FLAG dwUser;
 			public WHDR_FLAG dwFlags;
 			public uint dwLoops;
 			public IntPtr lpNext;
 			public uint reserved;
 		}
 
+		protected const uint WAVE_MAPPER = unchecked((uint)-1);
+
 		protected WAVEFORMATEX WaveFormatEx;
 		protected IntPtr DeviceHandle;
 		protected IntPtr[] WaveHeaders;
-		protected EBufferType BufferType;
 		protected int BufferSamples;
 		protected int BufferSize;
 		protected int BufferCount;
@@ -93,25 +82,19 @@ namespace WinMM {
 		public uint DeviceId { get; private set; }
 		public bool Playing { get; private set; }
 
-		protected Wave(int sampleRate, int channels, EBufferType bufferType, int bufferSamples, int bufferCount) {
-			var bits = (ushort)(bufferType & EBufferType.BITS_MASK);
+		protected Wave(int sampleRate, int channels, int bufferSamples, int bufferCount) {
+			var bits = (ushort)32;
 			var bytesPerSample = channels * bits >> 3;
 			SampleRate = sampleRate;
 			Channels = channels;
 			DeviceId = WAVE_MAPPER;
-			BufferType = bufferType;
 			BufferSamples = bufferSamples;
 			BufferSize = bufferSamples * bytesPerSample;
 			BufferCount = bufferCount;
 			LockBuffer = new object();
 			MuteData = new byte[BufferSize];
-			if (8 == bits) {
-				for (int i = 0; i < BufferSize; ++i) {
-					MuteData[i] = 128;
-				}
-			}
 			WaveFormatEx = new WAVEFORMATEX() {
-				wFormatTag = (ushort)((bufferType & EBufferType.FLOAT) > 0 ? 3 : 1),
+				wFormatTag = 3,
 				nChannels = (ushort)channels,
 				nSamplesPerSec = (uint)sampleRate,
 				nAvgBytesPerSec = (uint)(sampleRate * bytesPerSample),

@@ -47,8 +47,9 @@ namespace WinMM {
 		static extern MMSysErr waveInStart(IntPtr hwi);
 		#endregion
 
-		public WaveIn(int sampleRate, int channels, EBufferType bufferType, int bufferSamples, int bufferCount)
-			: base(sampleRate, channels, bufferType, bufferSamples, bufferCount) {
+		public WaveIn(int sampleRate, int channels, int bufferSamples, int bufferCount) : base(
+			sampleRate, channels, bufferSamples, bufferCount
+		) {
 			Callback = (hwi, uMsg, dwUser, lpWaveHdr, dwParam2) => {
 				switch (uMsg) {
 				case MM_WIM.OPEN:

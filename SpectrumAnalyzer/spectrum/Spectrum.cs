@@ -16,6 +16,9 @@ namespace Spectrum {
 		public double AutoGain { get; private set; } = AUTOGAIN_MIN;
 
 		/// <summary>表示用ピーク</summary>
+		public double[] PeakThick { get; private set; } = new double[BANK_COUNT];
+
+		/// <summary>表示用ピーク</summary>
 		public double[] Peak { get; private set; } = new double[BANK_COUNT];
 
 		/// <summary>表示用曲線</summary>
@@ -101,21 +104,21 @@ namespace Spectrum {
 			float b0, a0;
 			float k_b0, k_a2, k_a1, delta;
 			for (int ixB = 0; ixB < BANK_COUNT; ++ixB) {
-				var p_bank = (float*)(mp_bpf_banks + ixB);
-				k_b0 = *p_bank++;
-				k_a2 = *p_bank++;
-				k_a1 = *p_bank++;
-				delta = *p_bank++;
-				l_b2 = *p_bank++;
-				l_b1 = *p_bank++;
-				l_a2 = *p_bank++;
-				l_a1 = *p_bank++;
-				r_b2 = *p_bank++;
-				r_b1 = *p_bank++;
-				r_a2 = *p_bank++;
-				r_a1 = *p_bank++;
-				ms_l = *p_bank++;
-				ms_r = *p_bank;
+				var p_bank = mp_bpf_banks + ixB;
+				k_b0 = p_bank->k_b0;
+				k_a2 = p_bank->k_a2;
+				k_a1 = p_bank->k_a1;
+				delta = p_bank->delta;
+				l_b2 = p_bank->l_b2;
+				l_b1 = p_bank->l_b1;
+				l_a2 = p_bank->l_a2;
+				l_a1 = p_bank->l_a1;
+				r_b2 = p_bank->r_b2;
+				r_b1 = p_bank->r_b1;
+				r_a2 = p_bank->r_a2;
+				r_a1 = p_bank->r_a1;
+				ms_l = p_bank->ms_l;
+				ms_r = p_bank->ms_r;
 				var p_wave = (float*)p_input;
 				for (int ixS = sample_count; ixS != 0; --ixS) {
 					/*** [左チャンネル] ***/
@@ -149,16 +152,16 @@ namespace Spectrum {
 					a0 -= ms_r;
 					ms_r += a0 * delta;
 				}
-				*p_bank-- = ms_r;
-				*p_bank-- = ms_l;
-				*p_bank-- = r_a1;
-				*p_bank-- = r_a2;
-				*p_bank-- = r_b1;
-				*p_bank-- = r_b2;
-				*p_bank-- = l_a1;
-				*p_bank-- = l_a2;
-				*p_bank-- = l_b1;
-				*p_bank = l_b2;
+				p_bank->ms_r = ms_r;
+				p_bank->ms_l = ms_l;
+				p_bank->r_a1 = r_a1;
+				p_bank->r_a2 = r_a2;
+				p_bank->r_b1 = r_b1;
+				p_bank->r_b2 = r_b2;
+				p_bank->l_a1 = l_a1;
+				p_bank->l_a2 = l_a2;
+				p_bank->l_b1 = l_b1;
+				p_bank->l_b2 = l_b2;
 			}
 		}
 
@@ -248,6 +251,18 @@ namespace Spectrum {
 				Curve[ixB] = amp;
 				Threshold[ixB] = threshold;
 				Peak[ixB] = amp < threshold ? 0.0 : amp;
+			}
+			for (int ixB = 0; ixB < BANK_COUNT; ++ixB) {
+				var max = 0.0;
+				for (int ixW = -1; ixW <= 1; ++ixW) {
+					var bw = Math.Min(BANK_COUNT - 1, Math.Max(0, ixB + ixW));
+					var val = Peak[bw];
+					if (ixW != 0) {
+						val *= 0.5;
+					}
+					max = Math.Max(val, max);
+				}
+				PeakThick[ixB] = max;
 			}
 		}
 	}
